@@ -1,0 +1,23 @@
+# Line endings are not cosmetic here.
+#
+# This machine has core.autocrlf=true, so without this file a `git clone` or
+# `git checkout` on Windows rewrites text files with CRLF. scripts/backup.sh is
+# bind-mounted straight into a Linux container, where a trailing \r turns
+# `set -eu` into an illegal option and the backup silently fails into a logfile
+# nobody reads. Everything we ship runs on Linux; the repo is LF.
+* text=auto eol=lf
+
+# Shell scripts must be LF, no exceptions — they execute inside containers.
+*.sh text eol=lf
+
+# Don't let git touch these at all.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.gz binary
+*.zip binary
+*.pdf binary
