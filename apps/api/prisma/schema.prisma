@@ -11,7 +11,7 @@
 //  - ADDED    referral tracking on Visit
 //  - ADDED    demographic fields Medi-Pro carried (occupation, nationality, passport)
 //
-// Table count: 43
+// Table count: 45
 // ============================================================
 
 generator client {
