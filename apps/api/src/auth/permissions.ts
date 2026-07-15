@@ -1,0 +1,291 @@
+/**
+ * The RBAC matrix, transcribed 1:1 from roles-and-permissions.md.
+ *
+ * That document is the source of truth and this file is its executable copy.
+ * They are laid out in the same order, with the same section headings, so the
+ * two can be read side by side and diffed by eye. If they ever disagree, the
+ * document is right and this file is a bug.
+ *
+ * It lives in src/ rather than prisma/ because it has two consumers: the seed
+ * (task 1.2) writes it to the database, and the PermissionsGuard (task 1.3)
+ * checks against it. Exporting PermissionCode as a union means
+ * `@RequirePermission('patient.creat')` is a compile error rather than a
+ * runtime 403 that nobody notices until a receptionist cannot register anyone.
+ *
+ * Absence is denial. A role that does not appear in a permission's grant list
+ * does not have it. There is no ❌ to write down, which is deliberate — the
+ * document says "Default to denial", and a matrix where denial requires an
+ * explicit entry is a matrix where a forgotten entry means access.
+ */
+
+/** The 7 roles. `cashier` is not among them: the receptionist is the cashier. */
+export const ROLES = [
+  {
+    code: 'admin',
+    name: 'Administrator',
+    description:
+      'Configuration, users, prices, reports, read-all. Cannot write clinical records (R2).',
+  },
+  {
+    code: 'receptionist',
+    name: 'Receptionist / Cashier',
+    description: 'Registration, visits, billing, payments. No clinical access.',
+  },
+  {
+    code: 'nurse',
+    name: 'Nurse',
+    description: 'Vitals, triage, allergies. Limited clinical read (R7).',
+  },
+  {
+    code: 'doctor',
+    name: 'Doctor / Consultant',
+    description: 'Full clinical record. Prescribes, diagnoses, orders labs.',
+  },
+  {
+    code: 'lab_tech',
+    name: 'Lab technician',
+    description: 'Lab queue, samples, results.',
+  },
+  {
+    code: 'pharmacist',
+    name: 'Pharmacist',
+    description: 'Dispensing, pharmacy till. Sees drugs + allergies only (R6).',
+  },
+  {
+    code: 'management',
+    name: 'CEO / Management',
+    description: 'Read-only reports and audit. No patient-level clinical access.',
+  },
+] as const satisfies ReadonlyArray<{ code: string; name: string; description: string }>;
+
+export type RoleCode = (typeof ROLES)[number]['code'];
+
+/**
+ * The rules that qualify a grant, from the Rules section of the document.
+ *
+ * R1 and R3 are deliberately absent. R1 ("every clinical read is audited, none
+ * are blocked") and R3 ("doctors get unrestricted history, fully logged") do
+ * not restrict access — they mandate logging. Storing them as conditions would
+ * make the guard treat an unrestricted read as gated, which is exactly the
+ * obstruction R1 exists to prevent. They are implemented by the AuditInterceptor
+ * in tasks 1.4 and 1.5.
+ */
+export type RuleCode = 'R2' | 'R4' | 'R5' | 'R6' | 'R7' | 'R8' | 'R9' | 'R10' | 'R11';
+
+/**
+ * An unconditional grant — ✅ in the document. Reads as `admin: YES`.
+ * Stored as NULL in RolePermission.condition.
+ */
+const YES = null;
+
+/** null = unconditional (✅). A rule code = ⚠️, allowed only within that rule. */
+type Grant = typeof YES | RuleCode;
+
+/** Absent role = denied. */
+type Grants = Partial<Record<RoleCode, Grant>>;
+
+/**
+ * Every row of the document, in document order.
+ *
+ * `satisfies` rather than a type annotation, so the keys stay a literal union
+ * for PermissionCode below instead of widening to string.
+ */
+export const PERMISSION_MATRIX = {
+  // ---- 1. Authentication & Users -------------------------------------------
+  'auth.login': {
+    admin: YES,
+    receptionist: YES,
+    nurse: YES,
+    doctor: YES,
+    lab_tech: YES,
+    pharmacist: YES,
+    management: YES,
+  },
+  'user.create': { admin: YES },
+  'user.edit': { admin: YES },
+  'user.deactivate': { admin: YES },
+  'user.reset_password': { admin: YES },
+  'role.assign': { admin: YES },
+
+  // ---- 2. Configuration ----------------------------------------------------
+  'facility.manage': { admin: YES },
+  'department.manage': { admin: YES },
+  'room.manage': { admin: YES },
+  'practitioner.manage': { admin: YES },
+  /** Consultation fees. */
+  'service.manage': { admin: YES },
+  'price.change': { admin: YES },
+  /** Formulary. Pharmacist proposes, admin approves (R9). */
+  'drug.manage': { admin: YES, pharmacist: 'R9' },
+  /** Test catalog. Lab proposes, admin approves (R9). */
+  'labtest.manage': { admin: YES, lab_tech: 'R9' },
+  /** Insurance panels. Open question 5: may not exist at Farhat. */
+  'panel.manage': { admin: YES },
+  'template.manage.own': { admin: YES, doctor: YES },
+  'template.manage.shared': { admin: YES },
+  'setting.manage': { admin: YES },
+
+  // ---- 3. Patient ----------------------------------------------------------
+  'patient.create': { receptionist: YES },
+  'patient.edit_demographics': { admin: YES, receptionist: YES },
+  'patient.search': {
+    admin: YES,
+    receptionist: YES,
+    nurse: YES,
+    doctor: YES,
+    lab_tech: YES,
+    pharmacist: YES,
+  },
+  'patient.read_demographics': {
+    admin: YES,
+    receptionist: YES,
+    nurse: YES,
+    doctor: YES,
+    lab_tech: YES,
+    pharmacist: YES,
+  },
+  /**
+   * The confidentiality core. Doctor is unconditional: R1 audits the read, it
+   * does not gate it — a doctor is never made to ask permission to read the
+   * record of a patient sitting in front of them.
+   */
+  'patient.read_clinical': {
+    admin: 'R2',
+    nurse: 'R7',
+    doctor: YES,
+    lab_tech: 'R8',
+    pharmacist: 'R6',
+  },
+  /** > 1 month. Doctor unconditional per R3; the gate is on bulk export (R11). */
+  'patient.read_history': { admin: 'R2', doctor: YES },
+  'patient.merge_duplicates': { admin: YES },
+  /** entered_in_error. */
+  'patient.void': { admin: YES },
+  /**
+   * R4 — nobody, ever. Granted to no role, deliberately.
+   *
+   * Seeded with zero grants rather than omitted so that "who can delete a
+   * patient?" is an answerable question with an empty answer, instead of a
+   * silence that could mean nobody asked. Note the real defence is that no
+   * delete endpoint exists and none will be built; this row is the record of
+   * that decision, not the enforcement of it.
+   */
+  'patient.delete': {},
+  'allergy.record': { nurse: YES, doctor: YES },
+  /** R6 — the pharmacist MUST see this. Dispensing without allergies is unsafe. */
+  'allergy.read': { admin: YES, nurse: YES, doctor: YES, pharmacist: YES },
+
+  // ---- 4. Visit & Queue ----------------------------------------------------
+  'visit.create': { receptionist: YES },
+  'visit.read_queue': {
+    admin: YES,
+    receptionist: YES,
+    nurse: YES,
+    doctor: YES,
+    management: YES,
+  },
+  'visit.change_status': { receptionist: YES, nurse: YES, doctor: YES },
+  'visit.cancel': { admin: YES, receptionist: 'R5' },
+  /** entered_in_error. */
+  'visit.void': { admin: YES },
+  'appointment.create': { receptionist: YES },
+  'appointment.cancel': { admin: YES, receptionist: YES },
+
+  // ---- 5. Clinical record --------------------------------------------------
+  // Farhat is a psychiatric hospital. A leaked diagnosis does real harm in a
+  // small community. Default to denial.
+  'vitals.record': { nurse: YES, doctor: YES },
+  'vitals.read': { admin: 'R2', nurse: YES, doctor: YES },
+  'diagnosis.record': { doctor: YES },
+  'diagnosis.read': { admin: 'R2', doctor: YES },
+  'clinical_note.write': { doctor: YES },
+  /**
+   * Denied even to admin — the one clinical read R2 does not grant them.
+   * Psychiatric notes are the most sensitive artefact in the building.
+   * If you are tempted to add `admin` here, re-read R2 first.
+   */
+  'clinical_note.read': { doctor: YES },
+  'attachment.upload': { nurse: YES, doctor: YES, lab_tech: YES },
+  'attachment.read': { admin: 'R2', nurse: YES, doctor: YES },
+
+  // ---- 6. Prescription -----------------------------------------------------
+  'prescription.write': { doctor: YES },
+  /** Pharmacist is unconditional here: the drug list IS what R6 grants them. */
+  'prescription.read': { admin: 'R2', nurse: 'R7', doctor: YES, pharmacist: YES },
+  'prescription.print': { receptionist: YES, doctor: YES, pharmacist: YES },
+  'prescription.cancel': { doctor: 'R5' },
+
+  // ---- 7. Laboratory -------------------------------------------------------
+  'lab_order.create': { doctor: YES },
+  'lab_order.read_queue': { admin: YES, receptionist: 'R8', doctor: YES, lab_tech: YES },
+  /** Nurse's R9 looks wrong — see OPEN QUESTIONS at the foot of this file. */
+  'lab.collect_sample': { nurse: 'R9', lab_tech: YES },
+  'lab.enter_result': { lab_tech: YES },
+  /** Open question 1: the same tech enters and verifies. Real labs separate these. */
+  'lab.verify_result': { lab_tech: YES },
+  'lab.print_result': { receptionist: YES, doctor: YES, lab_tech: YES },
+  'lab_result.read': { admin: 'R2', nurse: 'R7', doctor: YES, lab_tech: YES },
+  /** R4 — an amendment is a new record; the original stays visible. */
+  'lab.amend_result': { lab_tech: 'R4' },
+
+  // ---- 8. Pharmacy ---------------------------------------------------------
+  'pharmacy.read_queue': { admin: YES, pharmacist: YES },
+  'pharmacy.dispense': { pharmacist: YES },
+  'pharmacy.return_medicine': { pharmacist: 'R5' },
+
+  // ---- 9. Billing ----------------------------------------------------------
+  'invoice.create': { receptionist: YES, pharmacist: YES },
+  'invoice.read': { admin: YES, receptionist: YES, pharmacist: YES, management: YES },
+  'invoice.print': { receptionist: YES, pharmacist: YES },
+  'payment.receive': { receptionist: YES, pharmacist: YES },
+  'payment.refund': { admin: YES, receptionist: 'R5', pharmacist: 'R5' },
+  'refund.print': { receptionist: YES, pharmacist: YES },
+  /** R10 — 10% ceiling at the till. Uncapped discount authority leaks cash. */
+  'discount.apply': { admin: YES, receptionist: 'R10', pharmacist: 'R10' },
+  'discount.approve_over_threshold': { admin: YES },
+  'invoice.void': { admin: YES },
+
+  // ---- 10. Reports, audit & data -------------------------------------------
+  /** Census, wait times. */
+  'report.operational': { admin: YES, receptionist: 'R8', management: YES },
+  'report.financial': { admin: YES, management: YES },
+  /** Counts, no names. */
+  'report.clinical_aggregate': { admin: YES, doctor: YES, management: YES },
+  'audit_log.read': { admin: YES, management: YES },
+  /** R11 — the real defence against someone walking off with the patient list. */
+  'data.export': { admin: 'R11' },
+} as const satisfies Record<string, Grants>;
+
+export type PermissionCode = keyof typeof PERMISSION_MATRIX;
+
+/**
+ * Splits 'patient.read_clinical' into resource 'patient', action
+ * 'read_clinical' for the Permission table's columns.
+ *
+ * First dot only, because 'template.manage.own' is the template resource with
+ * a 'manage.own' action, not a 'template.manage' resource.
+ */
+export function splitPermissionCode(code: string): { resource: string; action: string } {
+  const dot = code.indexOf('.');
+  if (dot <= 0 || dot === code.length - 1) {
+    throw new Error(`Permission code "${code}" must look like "resource.action"`);
+  }
+  return { resource: code.slice(0, dot), action: code.slice(dot + 1) };
+}
+
+/* -----------------------------------------------------------------------------
+ * OPEN QUESTIONS carried over from roles-and-permissions.md — for the hospital,
+ * not for us to answer by guessing:
+ *
+ *  - `lab.collect_sample` grants the nurse ⚠️ R9, but R9 is "propose additions
+ *    to the formulary or test catalog; admin approves". That rule has nothing
+ *    to do with collecting a sample. Transcribed as written rather than
+ *    silently corrected, because guessing at a permission rule is how you end
+ *    up with a matrix nobody trusts. Likely a typo for R8 (task-scoped) — needs
+ *    confirming.
+ *  - `lab.verify_result`: the same tech enters and verifies. If Farhat has a
+ *    lab supervisor this needs a `lab_supervisor` role (doc question 1).
+ *  - R7 may be too tight if nurses assist in consultations (doc question 3).
+ *  - No "break glass" emergency access exists (doc question 7). Recommended by
+ *    the document, not yet specified, not built.
+ * -------------------------------------------------------------------------- */

@@ -280,7 +280,10 @@ model AppUser {
   @@map("app_user")
 }
 
-/// 5 — receptionist, doctor, nurse, lab_tech, pharmacist, cashier, admin
+/// 5 — admin, receptionist, nurse, doctor, lab_tech, pharmacist, management.
+/// Seeded from roles-and-permissions.md (task 1.2), which is the source of
+/// truth. There is no `cashier`: the hospital confirmed the receptionist is
+/// also the cashier, so the two are one role.
 model Role {
   id          String   @id @default(uuid())
   code        String   @unique
@@ -306,10 +309,24 @@ model Permission {
   @@map("permission")
 }
 
-/// 7
+/// 7 — the matrix itself. A row here is a grant; no row is a denial.
 model RolePermission {
   roleId       String @map("role_id")
   permissionId String @map("permission_id")
+
+  /// The rule from roles-and-permissions.md that CONSTRAINS this grant —
+  /// "R5", "R10", "R2". NULL means unconditional (✅ in the matrix); a value
+  /// means ⚠️: allowed, but only within the rule.
+  ///
+  /// This column exists because without it the matrix cannot be stored. A
+  /// receptionist's `discount.apply ⚠️ R10` (10% ceiling) and an admin's
+  /// unconditional `invoice.void` would be identical rows, and the DB would
+  /// answer "what can a receptionist do?" by over-reporting her authority.
+  ///
+  /// It is a plain string, not an enum, because the rules live in a document
+  /// the hospital revises. An enum would mean a migration every time a rule is
+  /// renamed, and the guard has to fail closed on an unrecognised code anyway.
+  condition String?
 
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
