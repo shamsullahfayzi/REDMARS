@@ -1,0 +1,18 @@
+{
+  "app": {
+    "name": "REDMARS HMIS"
+  },
+  "shell": {
+    "subtitle": "Blank shell. Phase 0, task 0.6."
+  },
+  "language": {
+    "label": "Language",
+    "chooseTitle": "Choose your language",
+    "chooseHint": "You can change this at any time."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "That page does not exist.",
+    "back": "Back to start"
+  }
+}

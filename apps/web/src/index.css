@@ -3,12 +3,17 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+/* Dari + Pashto. Self-hosted, never a CDN — deployment is offline-capable.
+   Noto ships no Latin subset, so unicode-range makes the browser use Geist for
+   Latin/digits and Noto only for Arabic-script text. That is what keeps
+   numerals Latin in every language. */
+@import "@fontsource-variable/noto-sans-arabic";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-sans: 'Geist Variable', 'Noto Sans Arabic Variable', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

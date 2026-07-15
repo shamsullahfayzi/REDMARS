@@ -1,11 +1,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { RouterProvider } from 'react-router'
 import './index.css'
-import { router } from '@/router'
+// Side-effect import: i18next must be initialised before any component renders.
+import '@/i18n/config'
+import { AppRoot } from '@/AppRoot'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <AppRoot />
   </StrictMode>,
 )
