@@ -1,17 +1,35 @@
-# docker-compose.yml in root
+# REDMARS — local dev stack. One DB per hospital in production; this is the dev box.
+# Values come from .env (gitignored). Start: `pnpm db:up`  ·  Stop: `pnpm db:down`
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: monorepo-postgres
+    container_name: redmars-postgres
+    restart: unless-stopped
     ports:
-      - '5432:5432'
+      # host:container — host is POSTGRES_PORT (5433) to dodge a local Postgres on 5432
+      - '${POSTGRES_PORT:-5433}:5432'
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 7863
-      POSTGRES_DB: nest_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - redmars_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer:latest
+    container_name: redmars-adminer
+    restart: unless-stopped
+    ports:
+      - '${ADMINER_PORT:-8080}:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
-  pgdata:
+  redmars_pgdata:
     driver: local

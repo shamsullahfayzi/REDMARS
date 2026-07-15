@@ -4,8 +4,10 @@
   "description": "",
   "main": "index.js",
  "scripts": {
-  "db:up": "docker compose up -d",
+  "db:up": "docker compose up -d --wait",
   "db:down": "docker compose down",
+  "db:logs": "docker compose logs -f postgres",
+  "db:reset": "docker compose down -v",
   "dev:api": "pnpm --filter api start:dev",
   "dev:web": "pnpm --filter web dev",
   "dev": "pnpm --parallel -r dev"
