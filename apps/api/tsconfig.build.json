@@ -5,7 +5,17 @@
     // every included file, so the moment anything outside src/ got compiled
     // (prisma/seed.ts did, at 0.8) the whole build silently shifted down into
     // dist/src/ and `start:prod` — node dist/main — stopped pointing at a file.
-    "rootDir": "./src"
+    "rootDir": "./src",
+
+    // The incremental cache must live inside the directory it describes.
+    //
+    // tsc places this file relative to the inferred source root, so pinning
+    // rootDir above moved it out of dist/ and next to this config. That breaks
+    // `nest start --watch`, which deletes dist/ on every boot: the cache
+    // survived the delete, tsc read it, concluded the (now absent) output was
+    // current, emitted nothing, and node found no dist/main. A build cache that
+    // outlives its build output is a cache that lies.
+    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
   },
   // prisma/ excluded because seed.ts is a developer tool: it runs through
   // ts-node with its own tsconfig.seed.json and has no business in a production
