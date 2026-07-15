@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+build/
+apps/web/dist/
+apps/api/dist/
+
+# prisma / db (added in 0.3)
+apps/api/prisma/*.db
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# backups (0.9)
+backups/
+
+# logs / os / editor
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# test coverage
+coverage/

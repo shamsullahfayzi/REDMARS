@@ -1,0 +1,1169 @@
+// ============================================================
+// HMIS — v1 OPD core schema  (rev 2)
+// Postgres + Prisma. Multi-tenant by facility_id, one DB per hospital.
+//
+// CHANGES IN REV 2 (from Shamo's review + the Medi-Pro/Zoya screenshot):
+//  - DROPPED  Complaint table  → Visit.chiefComplaint is enough. Shamo was right.
+//  - FIXED    Practitioner.departmentId → PractitionerDepartment (a doctor does OPD *and* IPD)
+//  - ADDED    age in years/months/days (infants — Medi-Pro had this and it matters)
+//  - ADDED    guardian name + relation (S/o, D/o, W/o)
+//  - ADDED    Panel (insurance / corporate / NGO payer) + Invoice.panelId
+//  - ADDED    referral tracking on Visit
+//  - ADDED    demographic fields Medi-Pro carried (occupation, nationality, passport)
+//
+// Table count: 43
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Gender {
+  male
+  female
+  other
+  unknown
+}
+
+/// FHIR Encounter.status.
+/// arrived      = checked in, sitting in the waiting room  ← THIS is your queue
+/// in_progress  = the doctor has called them in and is seeing them now
+/// The gap between the two is how you measure waiting time.
+enum VisitStatus {
+  planned
+  arrived
+  in_progress
+  on_hold
+  completed
+  cancelled
+  entered_in_error
+}
+
+/// Absorbs walk-ins without special-casing anything.
+/// A walk-in HbA1c = type walk_in_lab, practitionerId null, appointmentId null.
+enum VisitType {
+  opd_consult
+  follow_up
+  walk_in_lab
+  walk_in_pharmacy
+  emergency
+  ipd
+}
+
+enum AppointmentStatus {
+  booked
+  arrived
+  fulfilled
+  cancelled
+  no_show
+}
+
+enum DepartmentType {
+  opd
+  ipd
+  emergency
+  laboratory
+  pharmacy
+  radiology
+  administration
+}
+
+/// S/o, D/o, W/o — straight off the Medi-Pro form.
+enum GuardianRelation {
+  son_of
+  daughter_of
+  wife_of
+  husband_of
+  father_of
+  mother_of
+  other
+}
+
+enum OrderStatus {
+  draft
+  active
+  on_hold
+  completed
+  cancelled
+  entered_in_error
+}
+
+enum LabOrderItemStatus {
+  ordered
+  sample_collected
+  in_progress
+  resulted
+  verified
+  cancelled
+}
+
+enum DiagnosisCertainty {
+  provisional
+  differential
+  confirmed
+  refuted
+}
+
+enum AllergySeverity {
+  mild
+  moderate
+  severe
+}
+
+enum InvoiceStatus {
+  draft
+  issued
+  partially_paid
+  paid
+  cancelled
+}
+
+enum PaymentMethod {
+  cash
+  card
+  bank_transfer
+  mobile_money
+  panel
+  waiver
+}
+
+enum AuditAction {
+  create
+  update
+  delete
+  read
+  login
+  logout
+  failed_login
+  print
+  export
+}
+
+/// Toggleable modules. OPD is the core and is never toggleable — the system IS OPD.
+enum ModuleKey {
+  lab
+  pharmacy
+  ipd
+  emergency
+  radiology
+  billing
+  reports
+}
+
+/// License states. Note: expiry NEVER blocks a clinical action — it drives a
+/// banner/nag only. See build order Phase 7 and the ModuleGuard note.
+enum LicenseStatus {
+  active
+  expiring_soon
+  past_due
+  suspended
+}
+
+// ============================================================
+// 1. TENANCY & ORGANISATION
+// ============================================================
+
+/// 1
+model Facility {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  nameLocal String?  @map("name_local") // Dari
+  address   String?
+  phone     String?
+  logoPath  String?  @map("logo_path")
+  timezone  String   @default("Asia/Kabul")
+  currency  String   @default("AFN")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  departments     Department[]
+  rooms           Room[]
+  users           AppUser[]
+  practitioners   Practitioner[]
+  patients        Patient[]
+  visits          Visit[]
+  appointments    Appointment[]
+  drugs           Drug[]
+  labTests        LabTest[]
+  labPanels       LabPanel[]
+  services        Service[]
+  invoices        Invoice[]
+  panels          Panel[]
+  auditLogs       AuditLog[]
+  numberSequences NumberSequence[]
+  settings        Setting[]
+  templates       Template[]
+  license         License?
+  modules         FacilityModule[]
+
+  @@map("facility")
+}
+
+/// 2 — ONE department table with a type enum.
+model Department {
+  id         String         @id @default(uuid())
+  facilityId String         @map("facility_id")
+  code       String
+  name       String
+  nameLocal  String?        @map("name_local")
+  type       DepartmentType
+  isActive   Boolean        @default(true) @map("is_active")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+
+  facility     Facility               @relation(fields: [facilityId], references: [id])
+  rooms        Room[]
+  services     Service[]
+  visits       Visit[]
+  appointments Appointment[]
+  staff        PractitionerDepartment[]
+
+  @@unique([facilityId, code])
+  @@index([facilityId, type])
+  @@map("department")
+}
+
+/// 3
+model Room {
+  id           String   @id @default(uuid())
+  facilityId   String   @map("facility_id")
+  departmentId String   @map("department_id")
+  code         String
+  name         String
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  facility   Facility   @relation(fields: [facilityId], references: [id])
+  department Department @relation(fields: [departmentId], references: [id])
+  visits     Visit[]
+
+  @@unique([facilityId, code])
+  @@map("room")
+}
+
+// ============================================================
+// 2. IDENTITY, AUTH & RBAC
+// ============================================================
+
+/// 4
+model AppUser {
+  id           String    @id @default(uuid())
+  facilityId   String    @map("facility_id")
+  username     String
+  email        String?
+  passwordHash String    @map("password_hash")
+  fullName     String    @map("full_name")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  facility     Facility      @relation(fields: [facilityId], references: [id])
+  practitioner Practitioner?
+  userRoles    UserRole[]
+  sessions     Session[]
+  auditLogs    AuditLog[]
+
+  @@unique([facilityId, username])
+  @@map("app_user")
+}
+
+/// 5 — receptionist, doctor, nurse, lab_tech, pharmacist, cashier, admin
+model Role {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@map("role")
+}
+
+/// 6 — "patient.create", "prescription.write", "lab.result.enter"
+model Permission {
+  id       String @id @default(uuid())
+  code     String @unique
+  resource String
+  action   String
+
+  rolePermissions RolePermission[]
+
+  @@map("permission")
+}
+
+/// 7
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permission")
+}
+
+/// 8
+model UserRole {
+  userId String @map("user_id")
+  roleId String @map("role_id")
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_role")
+}
+
+/// 9
+model Session {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  refreshTokenHash String    @map("refresh_token_hash")
+  ipAddress        String?   @map("ip_address")
+  userAgent        String?   @map("user_agent")
+  expiresAt        DateTime  @map("expires_at")
+  revokedAt        DateTime? @map("revoked_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+/// 10 — written by a NestJS interceptor on every mutating request. Append-only.
+model AuditLog {
+  id         String      @id @default(uuid())
+  facilityId String      @map("facility_id")
+  userId     String?     @map("user_id")
+  action     AuditAction
+  entity     String
+  entityId   String?     @map("entity_id")
+  before     Json?
+  after      Json?
+  ipAddress  String?     @map("ip_address")
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  facility Facility @relation(fields: [facilityId], references: [id])
+  user     AppUser? @relation(fields: [userId], references: [id])
+
+  @@index([facilityId, entity, entityId])
+  @@index([facilityId, createdAt])
+  @@map("audit_log")
+}
+
+// ============================================================
+// 3. PRACTITIONERS
+// ============================================================
+
+/// 11
+model Speciality {
+  id   String @id @default(uuid())
+  code String @unique
+  name String
+
+  practitioners Practitioner[]
+
+  @@map("speciality")
+}
+
+/// 12 — FHIR Practitioner. Linked 1:1 to AppUser when they log in.
+/// NOTE: no departmentId. A doctor works across departments — see PractitionerDepartment.
+model Practitioner {
+  id           String    @id @default(uuid())
+  facilityId   String    @map("facility_id")
+  userId       String?   @unique @map("user_id")
+  specialityId String?   @map("speciality_id")
+  code         String
+  firstName    String    @map("first_name")
+  lastName     String    @map("last_name")
+  licenseNo    String?   @map("license_no")
+  phone        String?
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  facility      Facility                @relation(fields: [facilityId], references: [id])
+  user          AppUser?                @relation(fields: [userId], references: [id])
+  speciality    Speciality?             @relation(fields: [specialityId], references: [id])
+  departments   PractitionerDepartment[]
+  visits        Visit[]
+  appointments  Appointment[]
+  prescriptions Prescription[]
+  labOrders     LabOrder[]
+  diagnoses     Diagnosis[]
+  clinicalNotes ClinicalNote[]
+
+  @@unique([facilityId, code])
+  @@map("practitioner")
+}
+
+/// 13 — Shamo's catch. A doctor does OPD Monday and IPD Wednesday.
+/// Which hat he wore on a given day lives on Visit.departmentId.
+model PractitionerDepartment {
+  practitionerId String @map("practitioner_id")
+  departmentId   String @map("department_id")
+
+  practitioner Practitioner @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  department   Department   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@id([practitionerId, departmentId])
+  @@map("practitioner_department")
+}
+
+// ============================================================
+// 4. PATIENT
+// ============================================================
+
+/// 14 — dateOfBirth, NOT age. Age is derived.
+model Patient {
+  id          String    @id @default(uuid())
+  facilityId  String    @map("facility_id")
+  mrn         String // human-facing medical record number
+  prefix      String? // Mr. / Mrs. / Dr.
+  firstName   String    @map("first_name")
+  lastName    String    @map("last_name")
+  dateOfBirth DateTime? @map("date_of_birth") @db.Date
+
+  /// DOB is often genuinely unknown here. When it is, record the ESTIMATE —
+  /// years+months+days, because "1 year old" is useless for an infant.
+  /// Straight off the Medi-Pro form. Never store a computed age.
+  estimatedAgeYears  Int?      @map("estimated_age_years")
+  estimatedAgeMonths Int?      @map("estimated_age_months")
+  estimatedAgeDays   Int?      @map("estimated_age_days")
+  ageRecordedAt      DateTime? @map("age_recorded_at") @db.Date // anchor for the estimate
+
+  gender          Gender
+  guardianName    String?           @map("guardian_name")
+  guardianRelation GuardianRelation? @map("guardian_relation") // S/o, D/o, W/o
+  phone           String?
+  altPhone        String?           @map("alt_phone")
+  address         String?
+  district        String?
+  province        String?
+  nationalId      String?           @map("national_id") // tazkira
+  passportNo      String?           @map("passport_no")
+  occupation      String?
+  nationality     String?
+  bloodGroup      String?           @map("blood_group")
+  isDeceased      Boolean           @default(false) @map("is_deceased")
+  deceasedDate    DateTime?         @map("deceased_date")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  deletedAt       DateTime?         @map("deleted_at")
+  createdBy       String?           @map("created_by")
+
+  facility     Facility            @relation(fields: [facilityId], references: [id])
+  identifiers  PatientIdentifier[]
+  allergies    Allergy[]
+  visits       Visit[]
+  appointments Appointment[]
+  invoices     Invoice[]
+
+  @@unique([facilityId, mrn])
+  @@index([facilityId, phone])
+  @@index([facilityId, lastName, firstName])
+  @@map("patient")
+}
+
+/// 15 — the same human has: your MRN, an old Medi-Pro patient no, a tazkira
+/// number, an insurance/panel number, an AXON number. One table, not a column each.
+/// THIS IS HOW YOU MIGRATE THE OLD MEDI-PRO DATA — keep the legacy number.
+model PatientIdentifier {
+  id        String   @id @default(uuid())
+  patientId String   @map("patient_id")
+  system    String // "medipro_legacy", "tazkira", "moph", "panel_x"
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@unique([system, value])
+  @@index([patientId])
+  @@map("patient_identifier")
+}
+
+/// 16 — safety table. Checked at prescribing time.
+/// substance is free text + autocomplete; drugId set only if it's a formulary drug.
+model Allergy {
+  id        String          @id @default(uuid())
+  patientId String          @map("patient_id")
+  drugId    String?         @map("drug_id")
+  substance String
+  reaction  String?
+  severity  AllergySeverity
+  notedAt   DateTime        @default(now()) @map("noted_at")
+  notedBy   String?         @map("noted_by")
+  isActive  Boolean         @default(true) @map("is_active")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  drug    Drug?   @relation(fields: [drugId], references: [id])
+
+  @@index([patientId])
+  @@map("allergy")
+}
+
+// ============================================================
+// 5. APPOINTMENT & VISIT — the spine
+// ============================================================
+
+/// 17 — the PLAN. Optional. Separate from what actually happened.
+model Appointment {
+  id             String            @id @default(uuid())
+  facilityId     String            @map("facility_id")
+  patientId      String            @map("patient_id")
+  practitionerId String?           @map("practitioner_id")
+  departmentId   String            @map("department_id")
+  scheduledAt    DateTime          @map("scheduled_at")
+  status         AppointmentStatus @default(booked)
+  reason         String?
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  createdBy      String?           @map("created_by")
+
+  facility     Facility      @relation(fields: [facilityId], references: [id])
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  practitioner Practitioner? @relation(fields: [practitionerId], references: [id])
+  department   Department    @relation(fields: [departmentId], references: [id])
+  visit        Visit?
+
+  @@index([facilityId, scheduledAt])
+  @@index([patientId])
+  @@map("appointment")
+}
+
+/// 18 — THE SPINE. FHIR Encounter.
+/// Every clinical record points HERE, never straight at the patient.
+model Visit {
+  id             String      @id @default(uuid())
+  facilityId     String      @map("facility_id")
+  patientId      String      @map("patient_id")
+  appointmentId  String?     @unique @map("appointment_id")
+  departmentId   String      @map("department_id")
+  practitionerId String?     @map("practitioner_id") // null for walk-in lab
+  roomId         String?     @map("room_id")
+  visitNo        String      @map("visit_no") // OPD-2026-04671
+  type           VisitType
+  status         VisitStatus @default(arrived)
+
+  /// Free text. "oliguria, frequency, nocturia" — exactly as the old system does it.
+  /// The separate Complaint table was over-modeling. Shamo was right to kill it.
+  chiefComplaint String? @map("chief_complaint")
+
+  /// Referral tracking — off the Medi-Pro form. This is marketing data:
+  /// which outside doctor sends you patients.
+  referredBy     String? @map("referred_by")
+  referralSource String? @map("referral_source")
+
+  startedAt DateTime  @default(now()) @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdBy String?   @map("created_by")
+
+  facility      Facility             @relation(fields: [facilityId], references: [id])
+  patient       Patient              @relation(fields: [patientId], references: [id])
+  appointment   Appointment?         @relation(fields: [appointmentId], references: [id])
+  department    Department           @relation(fields: [departmentId], references: [id])
+  practitioner  Practitioner?        @relation(fields: [practitionerId], references: [id])
+  room          Room?                @relation(fields: [roomId], references: [id])
+  statusHistory VisitStatusHistory[]
+  vitals        Vitals[]
+  diagnoses     Diagnosis[]
+  clinicalNotes ClinicalNote[]
+  prescriptions Prescription[]
+  labOrders     LabOrder[]
+  attachments   Attachment[]
+  invoices      Invoice[]
+
+  @@unique([facilityId, visitNo])
+  /// THIS INDEX IS THE DOCTOR'S QUEUE.
+  @@index([facilityId, departmentId, status, startedAt])
+  @@index([patientId, startedAt])
+  @@map("visit")
+}
+
+/// 19 — who moved the visit to which status, and when. Medico-legal.
+model VisitStatusHistory {
+  id        String      @id @default(uuid())
+  visitId   String      @map("visit_id")
+  status    VisitStatus
+  changedBy String?     @map("changed_by")
+  changedAt DateTime    @default(now()) @map("changed_at")
+  note      String?
+
+  visit Visit @relation(fields: [visitId], references: [id])
+
+  @@index([visitId])
+  @@map("visit_status_history")
+}
+
+// ============================================================
+// 6. CLINICAL RECORD
+// ============================================================
+
+/// 20 — BMI is DERIVED. Do not store it.
+model Vitals {
+  id           String   @id @default(uuid())
+  visitId      String   @map("visit_id")
+  systolicBp   Int?     @map("systolic_bp")
+  diastolicBp  Int?     @map("diastolic_bp")
+  pulse        Int?
+  temperatureC Decimal? @map("temperature_c") @db.Decimal(4, 1)
+  respiratory  Int?
+  spo2         Int?
+  weightKg     Decimal? @map("weight_kg") @db.Decimal(5, 2)
+  heightCm     Decimal? @map("height_cm") @db.Decimal(5, 2)
+  recordedBy   String?  @map("recorded_by")
+  recordedAt   DateTime @default(now()) @map("recorded_at")
+
+  visit Visit @relation(fields: [visitId], references: [id])
+
+  @@index([visitId])
+  @@map("vitals")
+}
+
+/// 21 — WHO's international disease codes. F32.1 = moderate depressive episode.
+/// Seed once (~70k rows, free from WHO). Doctors type text; the UI suggests the code.
+model IcdCode {
+  code       String  @id // "F32.1"
+  title      String
+  titleLocal String? @map("title_local")
+  chapter    String?
+  isBillable Boolean @default(true) @map("is_billable")
+
+  diagnoses Diagnosis[]
+
+  @@index([title])
+  @@map("icd_code")
+}
+
+/// 22 — FHIR Condition. The doctor's conclusion.
+model Diagnosis {
+  id             String             @id @default(uuid())
+  visitId        String             @map("visit_id")
+  practitionerId String?            @map("practitioner_id")
+  icdCode        String?            @map("icd_code")
+  /// Free text ALWAYS allowed — they won't always find a code.
+  text           String
+  certainty      DiagnosisCertainty @default(provisional)
+  isPrimary      Boolean            @default(false) @map("is_primary")
+  notes          String?
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  visit        Visit         @relation(fields: [visitId], references: [id])
+  practitioner Practitioner? @relation(fields: [practitionerId], references: [id])
+  icd          IcdCode?      @relation(fields: [icdCode], references: [code])
+
+  @@index([visitId])
+  @@map("diagnosis")
+}
+
+/// 23 — SOAP = Subjective / Objective / Assessment / Plan.
+/// FOR FARHAT THIS IS THE MOST IMPORTANT CLINICAL TABLE: a psychiatric
+/// assessment (mental state exam, risk assessment, history) is long-form and
+/// shaped nothing like a surgical note. `content` is Json so each noteType
+/// carries its own fields — this is the flexibility Mongo promised, inside Postgres.
+model ClinicalNote {
+  id             String   @id @default(uuid())
+  visitId        String   @map("visit_id")
+  practitionerId String?  @map("practitioner_id")
+  noteType       String   @map("note_type") // soap | psych_assessment | mse | risk_assessment | progress
+  content        Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  visit        Visit         @relation(fields: [visitId], references: [id])
+  practitioner Practitioner? @relation(fields: [practitionerId], references: [id])
+
+  @@index([visitId])
+  @@map("clinical_note")
+}
+
+/// 24
+model Attachment {
+  id         String   @id @default(uuid())
+  visitId    String   @map("visit_id")
+  fileName   String   @map("file_name")
+  filePath   String   @map("file_path")
+  mimeType   String   @map("mime_type")
+  sizeBytes  Int      @map("size_bytes")
+  uploadedBy String?  @map("uploaded_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  visit Visit @relation(fields: [visitId], references: [id])
+
+  @@index([visitId])
+  @@map("attachment")
+}
+
+/// 25 — "Copy Last Prescription" + complaint/diagnosis/advice templates.
+/// Keep this. Doctors will riot without it.
+model Template {
+  id             String   @id @default(uuid())
+  facilityId     String   @map("facility_id")
+  practitionerId String?  @map("practitioner_id") // null = shared across the hospital
+  type           String // complaint | diagnosis | prescription | advice
+  name           String
+  content        Json
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  facility Facility @relation(fields: [facilityId], references: [id])
+
+  @@index([facilityId, type])
+  @@map("template")
+}
+
+// ============================================================
+// 7. DRUGS & PRESCRIPTIONS
+// ============================================================
+
+/// 26 — the FORMULARY. What you PRESCRIBE.
+/// Deliberately separate from pharmacy stock (batches, quantities) — that's v2,
+/// and keeping them apart is what lets the pharmacy module ship standalone later.
+model Drug {
+  id              String   @id @default(uuid())
+  facilityId      String   @map("facility_id")
+  code            String
+  genericName     String   @map("generic_name")
+  brandName       String?  @map("brand_name")
+  atcCode         String?  @map("atc_code") // WHO ATC
+  strength        String? // "20mg"
+  form            String? // tablet | capsule | syrup | injection
+  /// Defaults that autofill the prescription form. THIS is what makes it fast.
+  defaultRoute    String?  @map("default_route")
+  defaultFreq     String?  @map("default_freq") // OD | BD | TDS | QID | PRN
+  defaultDuration String?  @map("default_duration")
+  isControlled    Boolean  @default(false) @map("is_controlled")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  facility          Facility           @relation(fields: [facilityId], references: [id])
+  prescriptionItems PrescriptionItem[]
+  allergies         Allergy[]
+  interactionsA     DrugInteraction[]  @relation("drugA")
+  interactionsB     DrugInteraction[]  @relation("drugB")
+
+  @@unique([facilityId, code])
+  @@index([facilityId, genericName])
+  @@map("drug")
+}
+
+/// 27 — drug A + drug B together = dangerous.
+/// Highly relevant here: duloxetine + an MAOI = serotonin syndrome.
+///
+/// HONEST LIMIT: you cannot build a comprehensive interaction database — the real
+/// ones are commercially licensed. Seed the 50–100 most dangerous psych interactions
+/// and say so plainly in the UI. A half-complete checker that LOOKS complete is
+/// worse than none, because it breeds false confidence.
+model DrugInteraction {
+  id          String @id @default(uuid())
+  drugAId     String @map("drug_a_id")
+  drugBId     String @map("drug_b_id")
+  severity    String // minor | moderate | major | contraindicated
+  description String
+
+  drugA Drug @relation("drugA", fields: [drugAId], references: [id])
+  drugB Drug @relation("drugB", fields: [drugBId], references: [id])
+
+  @@unique([drugAId, drugBId])
+  @@map("drug_interaction")
+}
+
+/// 28 — the clinical order. NO money here.
+model Prescription {
+  id             String      @id @default(uuid())
+  visitId        String      @map("visit_id")
+  practitionerId String      @map("practitioner_id")
+  status         OrderStatus @default(active)
+  advice         String?
+  followUpDate   DateTime?   @map("follow_up_date") @db.Date
+  printedAt      DateTime?   @map("printed_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  visit        Visit              @relation(fields: [visitId], references: [id])
+  practitioner Practitioner       @relation(fields: [practitionerId], references: [id])
+  items        PrescriptionItem[]
+
+  @@index([visitId])
+  @@map("prescription")
+}
+
+/// 29 — FHIR MedicationRequest.
+/// dose + frequency + duration + route + quantity. All of them — your screenshot had them.
+/// NO discount, NO total. Money lives on invoice_item.
+model PrescriptionItem {
+  id             String   @id @default(uuid())
+  prescriptionId String   @map("prescription_id")
+  drugId         String   @map("drug_id")
+  /// Snapshot the name. If the formulary is edited in 2028, a 2026 prescription
+  /// must still print what was ACTUALLY prescribed. Clinical records are
+  /// historical documents — they are not retroactively rewritten by a lookup table.
+  drugNameAtTime String   @map("drug_name_at_time")
+  dose           String? // "1 tab"
+  frequency      String // OD | BD | TDS
+  duration       String // "1 month"
+  route          String // oral | IV | IM
+  quantity       Int?
+  instructions   String? // "after food"
+  sequence       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  drug         Drug         @relation(fields: [drugId], references: [id])
+
+  @@index([prescriptionId])
+  @@map("prescription_item")
+}
+
+// ============================================================
+// 8. LABORATORY
+// ============================================================
+
+/// 30 — the CATALOG. The master list of tests you offer. LOINC-coded.
+model LabTest {
+  id         String   @id @default(uuid())
+  facilityId String   @map("facility_id")
+  code       String
+  name       String
+  nameLocal  String?  @map("name_local")
+  loincCode  String?  @map("loinc_code")
+  specimen   String? // blood | urine | csf
+  unit       String? // mg/dL | %
+  price      Decimal? @db.Decimal(12, 2)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  facility        Facility         @relation(fields: [facilityId], references: [id])
+  panelTests      LabPanelTest[]
+  orderItems      LabOrderItem[]
+  referenceRanges ReferenceRange[]
+
+  @@unique([facilityId, code])
+  @@map("lab_test")
+}
+
+/// 31 — a BUNDLE. "Liver Function Test" = 5 tests.
+/// The doctor clicks LFT once, not five times.
+model LabPanel {
+  id         String   @id @default(uuid())
+  facilityId String   @map("facility_id")
+  code       String
+  name       String
+  price      Decimal? @db.Decimal(12, 2)
+  isActive   Boolean  @default(true) @map("is_active")
+
+  facility Facility       @relation(fields: [facilityId], references: [id])
+  tests    LabPanelTest[]
+
+  @@unique([facilityId, code])
+  @@map("lab_panel")
+}
+
+/// 32
+model LabPanelTest {
+  panelId String @map("panel_id")
+  testId  String @map("test_id")
+
+  panel LabPanel @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  test  LabTest  @relation(fields: [testId], references: [id])
+
+  @@id([panelId, testId])
+  @@map("lab_panel_test")
+}
+
+/// 33 — NORMAL VALUES. Haemoglobin normal is ~13–17 g/dL for men, ~12–15 for women.
+/// The SAME number is normal for a woman and low for a man. This table is what
+/// auto-flags the H/L on a result.
+model ReferenceRange {
+  id        String   @id @default(uuid())
+  testId    String   @map("test_id")
+  gender    Gender?
+  minAge    Int?     @map("min_age")
+  maxAge    Int?     @map("max_age")
+  lowValue  Decimal? @map("low_value") @db.Decimal(12, 4)
+  highValue Decimal? @map("high_value") @db.Decimal(12, 4)
+  textValue String?  @map("text_value") // "Negative"
+
+  test LabTest @relation(fields: [testId], references: [id])
+
+  @@index([testId])
+  @@map("reference_range")
+}
+
+/// 34 — FHIR ServiceRequest. The doctor's request.
+model LabOrder {
+  id             String      @id @default(uuid())
+  visitId        String      @map("visit_id")
+  practitionerId String?     @map("practitioner_id")
+  orderNo        String      @unique @map("order_no")
+  status         OrderStatus @default(active)
+  clinicalNote   String?     @map("clinical_note") // why the test was ordered
+  orderedAt      DateTime    @default(now()) @map("ordered_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  visit        Visit          @relation(fields: [visitId], references: [id])
+  practitioner Practitioner?  @relation(fields: [practitionerId], references: [id])
+  items        LabOrderItem[]
+
+  @@index([visitId])
+  @@map("lab_order")
+}
+
+/// 35 — one test on the order. Carries its own status = the lab's state machine.
+model LabOrderItem {
+  id                String             @id @default(uuid())
+  labOrderId        String             @map("lab_order_id")
+  testId            String             @map("test_id")
+  testNameAtTime    String             @map("test_name_at_time")
+  status            LabOrderItemStatus @default(ordered)
+  sampleCollectedAt DateTime?          @map("sample_collected_at")
+  sampleCollectedBy String?            @map("sample_collected_by")
+
+  labOrder LabOrder   @relation(fields: [labOrderId], references: [id], onDelete: Cascade)
+  test     LabTest    @relation(fields: [testId], references: [id])
+  result   LabResult?
+
+  @@index([labOrderId])
+  @@index([status])
+  @@map("lab_order_item")
+}
+
+/// 36 — FHIR Observation. Flows back to the doctor via the visit.
+model LabResult {
+  id             String    @id @default(uuid())
+  labOrderItemId String    @unique @map("lab_order_item_id")
+  valueNumeric   Decimal?  @map("value_numeric") @db.Decimal(12, 4)
+  valueText      String?   @map("value_text")
+  unit           String?
+  isAbnormal     Boolean   @default(false) @map("is_abnormal")
+  flag           String? // H | L | HH | LL
+  comment        String?
+  enteredBy      String?   @map("entered_by")
+  enteredAt      DateTime  @default(now()) @map("entered_at")
+  verifiedBy     String?   @map("verified_by")
+  verifiedAt     DateTime? @map("verified_at")
+
+  labOrderItem LabOrderItem @relation(fields: [labOrderItemId], references: [id])
+
+  @@map("lab_result")
+}
+
+// ============================================================
+// 9. BILLING — deliberately minimal for v1
+// ============================================================
+
+/// 37 — consultation fees, card registration fee, procedures. Priced per department.
+model Service {
+  id           String   @id @default(uuid())
+  facilityId   String   @map("facility_id")
+  departmentId String   @map("department_id")
+  code         String
+  name         String
+  fee          Decimal  @db.Decimal(12, 2)
+  isActive     Boolean  @default(true) @map("is_active")
+
+  facility   Facility   @relation(fields: [facilityId], references: [id])
+  department Department @relation(fields: [departmentId], references: [id])
+
+  @@unique([facilityId, code])
+  @@map("service")
+}
+
+/// 38 — insurance / corporate / NGO payer. Straight off the Medi-Pro "Panel" field.
+/// An employer or NGO pays instead of the patient.
+/// ASK DR. HAFIZULLAH whether Farhat actually has panels before you build the UI.
+model Panel {
+  id             String   @id @default(uuid())
+  facilityId     String   @map("facility_id")
+  code           String
+  name           String
+  contactPerson  String?  @map("contact_person")
+  phone          String?
+  discountPct    Decimal? @map("discount_pct") @db.Decimal(5, 2)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  facility Facility  @relation(fields: [facilityId], references: [id])
+  invoices Invoice[]
+
+  @@unique([facilityId, code])
+  @@map("panel")
+}
+
+/// 39 — ONE invoice table. Not APPOINTMENTPAYMENT + LABTESTPAYMENT + ...
+model Invoice {
+  id         String        @id @default(uuid())
+  facilityId String        @map("facility_id")
+  patientId  String        @map("patient_id")
+  visitId    String?       @map("visit_id")
+  panelId    String?       @map("panel_id") // set when an employer/NGO pays
+  panelRefNo String?       @map("panel_ref_no")
+  invoiceNo  String        @map("invoice_no")
+  status     InvoiceStatus @default(draft)
+  subtotal   Decimal       @default(0) @db.Decimal(12, 2)
+  discount   Decimal       @default(0) @db.Decimal(12, 2)
+  total      Decimal       @default(0) @db.Decimal(12, 2)
+  paidAmount Decimal       @default(0) @map("paid_amount") @db.Decimal(12, 2)
+  currency   String        @default("AFN")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  createdBy  String?       @map("created_by")
+
+  facility Facility      @relation(fields: [facilityId], references: [id])
+  patient  Patient       @relation(fields: [patientId], references: [id])
+  visit    Visit?        @relation(fields: [visitId], references: [id])
+  panel    Panel?        @relation(fields: [panelId], references: [id])
+  items    InvoiceItem[]
+  payments Payment[]
+
+  @@unique([facilityId, invoiceNo])
+  @@index([patientId])
+  @@map("invoice")
+}
+
+/// 40 — polymorphic line. refType says what refId points at.
+/// This one table replaces the four payment tables in your original ERD.
+model InvoiceItem {
+  id          String  @id @default(uuid())
+  invoiceId   String  @map("invoice_id")
+  refType     String  @map("ref_type") // service | card_registration | lab_order_item | prescription_item
+  refId       String? @map("ref_id")
+  description String
+  quantity    Int     @default(1)
+  unitPrice   Decimal @map("unit_price") @db.Decimal(12, 2)
+  discount    Decimal @default(0) @db.Decimal(12, 2)
+  total       Decimal @db.Decimal(12, 2)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_item")
+}
+
+/// 41 — an invoice can be paid in instalments. Append-only; reverse, never delete.
+model Payment {
+  id         String        @id @default(uuid())
+  invoiceId  String        @map("invoice_id")
+  amount     Decimal       @db.Decimal(12, 2)
+  method     PaymentMethod
+  reference  String?
+  receiptNo  String?       @map("receipt_no")
+  receivedBy String?       @map("received_by")
+  receivedAt DateTime      @default(now()) @map("received_at")
+  isReversed Boolean       @default(false) @map("is_reversed")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@map("payment")
+}
+
+// ============================================================
+// 10. SYSTEM
+// ============================================================
+
+/// 42 — generates mrn, visit_no, invoice_no, order_no. Per facility, per year.
+model NumberSequence {
+  id         String   @id @default(uuid())
+  facilityId String   @map("facility_id")
+  key        String // patient_mrn | visit_no | invoice_no | lab_order_no
+  prefix     String?
+  year       Int?
+  current    Int      @default(0)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  facility Facility @relation(fields: [facilityId], references: [id])
+
+  @@unique([facilityId, key, year])
+  @@map("number_sequence")
+}
+
+/// 43
+model Setting {
+  id         String   @id @default(uuid())
+  facilityId String   @map("facility_id")
+  key        String
+  value      Json
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  facility Facility @relation(fields: [facilityId], references: [id])
+
+  @@unique([facilityId, key])
+  @@map("setting")
+}
+
+// ============================================================
+// 11. LICENSING & MODULES
+//
+// Business model: monthly cash, per hospital, per enabled module.
+//
+// TWO HARD RULES, both learned the expensive way:
+//  1. Expiry drives a BANNER/NAG. It NEVER blocks registration, consults,
+//     prescriptions, or lab. A patient in the waiting room is never turned away
+//     over a licensing dispute. Licensing pressure targets the ADMIN, not the patient.
+//  2. The license is a SIGNED TOKEN (signed with your private key), checked
+//     LOCALLY so no internet is required, and optionally bound to a hardware
+//     fingerprint so the folder can't be copied to another clinic's PC and just run.
+//     This is a speed bump + a dependency on you for updates/support — NOT a vault.
+//     A determined technical copier with your server cannot be stopped; don't
+//     pretend otherwise, and don't spend real time trying.
+// ============================================================
+
+/// 44 — one per facility. The signed agreement + the paid-through date.
+model License {
+  id                 String        @id @default(uuid())
+  facilityId         String        @unique @map("facility_id")
+  plan               String // e.g. "opd", "opd_lab", "full"
+  status             LicenseStatus @default(active)
+  /// The paid-through date. You flip this forward when cash is received. Manual — fine.
+  paidThroughDate    DateTime      @map("paid_through_date") @db.Date
+  /// Signed token (JWT-style, your private key). Server verifies locally, offline.
+  signedToken        String?       @map("signed_token") @db.Text
+  /// Hardware fingerprint the token is bound to (MAC/disk/CPU hash). Optional.
+  hardwareFingerprint String?      @map("hardware_fingerprint")
+  monthlyFee         Decimal?      @map("monthly_fee") @db.Decimal(12, 2)
+  currency           String        @default("AFN")
+  notes              String?
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  facility Facility @relation(fields: [facilityId], references: [id])
+
+  @@map("license")
+}
+
+/// 45 — which modules are turned on for this hospital.
+/// nav hides disabled modules AND the ModuleGuard 403s their endpoints
+/// (UI hiding is courtesy; the backend check is the control — same as RBAC).
+model FacilityModule {
+  facilityId String    @map("facility_id")
+  module     ModuleKey
+  enabled    Boolean   @default(false)
+  enabledAt  DateTime? @map("enabled_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@id([facilityId, module])
+  @@map("facility_module")
+}

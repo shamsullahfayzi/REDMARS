@@ -1,0 +1,17 @@
+# docker-compose.yml in root
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: monorepo-postgres
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 7863
+      POSTGRES_DB: nest_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+    driver: local
