@@ -1,0 +1,24 @@
+{
+  /* The ESM half of the dual build, for apps/web.
+   *
+   * Why this file exists: tsc compiles `export * from './auth'` into a runtime
+   * property-copying loop (__exportStar) in CommonJS output. Vite's dev server
+   * hands linked workspace packages to the browser without pre-bundling them,
+   * and a browser cannot statically find `healthResponseSchema` inside a
+   * runtime loop — it fails with "does not provide an export named". The
+   * production build hid this, because Rollup interops CJS properly.
+   *
+   * So: apps/api requires CJS, apps/web imports ESM, and the same source emits
+   * both. Neither app special-cases the other.
+   */
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ES2022",
+    "outDir": "./dist/esm",
+
+    /* The CJS build already emits declarations; a second identical copy is just
+       something else to drift. package.json points both conditions at it. */
+    "declaration": false,
+    "declarationMap": false
+  }
+}

@@ -4,6 +4,11 @@
 // single source: the API types its responses against it at compile time, the
 // web client parses against it at runtime. Change a field here and both halves
 // fail to build — which is the entire point of this package existing.
+//
+// The .js extensions are deliberate and are not a mistake: ESM requires a real
+// file extension, and TypeScript maps './auth.js' back to './auth.ts' when
+// compiling. Without them the ESM build emits specifiers Node refuses to
+// resolve. Both build halves need this spelling.
 
-export * from './auth'
-export * from './health'
+export * from './auth.js'
+export * from './health.js'

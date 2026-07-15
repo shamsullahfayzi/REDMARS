@@ -3,16 +3,17 @@
     "target": "ES2022",
     "lib": ["ES2022"],
 
-    /* CommonJS output on purpose: apps/api is a CJS NestJS build and would
-       throw "require() of an ES Module" on ESM output. Vite happily consumes
-       CJS for the web side, so CJS is the one format both halves can eat. */
+    /* The CommonJS half of a dual build. apps/api is a CJS NestJS build and
+       throws "require() of an ES Module" on ESM, so it eats this one.
+       tsconfig.esm.json emits the same source as real ESM for apps/web —
+       see the note there for why one format cannot serve both. */
     "module": "commonjs",
     "moduleResolution": "node",
 
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist",
+    "outDir": "./dist/cjs",
     "rootDir": "./src",
 
     "strict": true,
