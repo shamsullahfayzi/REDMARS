@@ -27,7 +27,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     const isHttpException = exception instanceof HttpException;
-    const status = isHttpException
+    // number, not HttpStatus: getStatus() returns a plain number and an
+    // HttpException can legally carry a code that is not in the enum. Typing
+    // this as HttpStatus would be a claim the runtime does not honour.
+    const status: number = isHttpException
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
 
@@ -47,7 +50,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const detail = exception instanceof Error ? exception.stack : String(exception);
     const line = `${request.method} ${request.url} -> ${status}`;
 
-    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    // A bare 500 rather than HttpStatus.INTERNAL_SERVER_ERROR: this is a range
+    // test for "5xx", not a comparison against one enum member, and writing it
+    // as the latter says something the check does not mean.
+    if (status >= 500) {
       this.logger.error(line, detail);
     } else {
       this.logger.warn(line);

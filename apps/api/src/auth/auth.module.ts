@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
@@ -24,8 +27,21 @@ import { AuthService } from './auth.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
-  // Exported for 1.3's guard, which verifies the tokens this module issues.
+  providers: [
+    AuthService,
+
+    // Global, not per-controller. Opt-in protection means an endpoint added in
+    // a hurry is unprotected until someone remembers, and the one nobody
+    // remembers is the one that matters. Every route is closed; @Public() opens
+    // one, and that shows up in a diff.
+    //
+    // ORDER IS LOAD-BEARING. Nest runs global guards in provider order, and
+    // PermissionsGuard reads the request.auth that JwtAuthGuard writes. Swap
+    // these two and every protected route 403s with "JwtAuthGuard did not run"
+    // in the log — it fails closed, but it fails.
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
+  ],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

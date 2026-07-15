@@ -1,5 +1,6 @@
 import { Controller, Get, Logger, ServiceUnavailableException } from '@nestjs/common';
 import type { HealthResponse } from '@redmars/shared';
+import { Public } from '../auth/decorators/public.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('health')
@@ -20,6 +21,17 @@ export class HealthController {
    * expects, this stops compiling. That is the whole trick — the type is not a
    * comment, it is a build failure.
    */
+  /**
+   * Public: whatever polls this — Docker, a load balancer, a monitor at 3am —
+   * has no credentials and should not need any. A health check that can fail
+   * because auth is broken reports "down" for a system that is up, and reports
+   * it in a way nobody can distinguish from the real thing.
+   *
+   * It leaks that a REDMARS API is running at this address and whether its
+   * database is reachable. Accepted: it is on the hospital LAN, and the
+   * alternative is an unmonitorable system.
+   */
+  @Public()
   @Get()
   async check(): Promise<HealthResponse> {
     try {

@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, HttpCode, Post, Req } from '@nes
 import type { Request } from 'express';
 import { loginRequestSchema, type LoginResponse } from '@redmars/shared';
 import { AuthService } from './auth.service';
+import { Public } from './decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -14,6 +15,12 @@ export class AuthController {
    * caller can go fetch. It does create a Session row, but that is ours, not
    * theirs — there is no URL for it.
    */
+  // Public by necessity, not by choice: you cannot present a token to the
+  // endpoint whose job is to give you one. Note the matrix has an `auth.login`
+  // permission granted to all 7 roles — it is not checked here and cannot be,
+  // for the same reason. It documents that login is a thing every role does;
+  // the actual gate is the password.
+  @Public()
   @Post('login')
   @HttpCode(200)
   async login(@Body() body: unknown, @Req() req: Request): Promise<LoginResponse> {

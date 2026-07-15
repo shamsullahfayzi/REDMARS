@@ -21,9 +21,10 @@ import {
  * The RBAC matrix (task 1.2) is the exception to "never overwrite": it
  * reconciles. See seedRbac.
  *
- * Scope note: the admin user is created without any role attached. Assigning
- * roles to users is task 1.7, and doing it here would hand out authority from a
- * script instead of from an audited action.
+ * Scope note: the admin user is created holding exactly one role — admin — and
+ * only at the moment it is created. Every other role assignment belongs to task
+ * 1.7, where it is an audited action by a named person rather than a line in a
+ * script. See seedAdminUser for why this one cannot wait for that.
  *
  * One DB per hospital, so there is exactly one facility here. Parameterising it
  * per deployment is Phase 7 work; for now these constants describe Farhat.
@@ -81,6 +82,20 @@ async function seedDepartments(facilityId: string) {
   console.log(`departments: ${DEPARTMENTS.map((d) => d.code).join(', ')}`);
 }
 
+/**
+ * Creates the one account a fresh deployment can be opened with.
+ *
+ * The admin role is attached here, at creation, and nowhere else. That is a
+ * bootstrap, not a shortcut: from task 1.3 the guards deny any route the caller
+ * holds no permission for, and the screens that assign roles are themselves
+ * admin-only. An admin user with no roles cannot log in and grant itself the
+ * role it needs to grant roles. Someone has to be let in from outside the
+ * system, once, or the database is a locked room with the key inside.
+ *
+ * Only on creation. A re-seed never re-attaches it — if an operator deliberately
+ * stripped the admin role from this account, handing it back because a script
+ * ran again would be the script overruling a person about who holds authority.
+ */
 async function seedAdminUser(facilityId: string) {
   const username = process.env.SEED_ADMIN_USERNAME ?? 'admin';
 
@@ -100,17 +115,31 @@ async function seedAdminUser(facilityId: string) {
   const supplied = process.env.SEED_ADMIN_PASSWORD;
   const password = supplied ?? randomBytes(18).toString('base64url');
 
-  await prisma.appUser.create({
-    data: {
-      facilityId,
-      username,
-      fullName: 'System Administrator',
-      // Only the argon2id hash is ever stored.
-      passwordHash: await hash(password),
-    },
+  const adminRole = await prisma.role.findUnique({ where: { code: 'admin' } });
+  if (!adminRole) {
+    // seedRbac runs before this in main(). If the role is missing the matrix
+    // did not land, and creating a roleless admin here would produce exactly
+    // the locked room described above — with no error to explain it.
+    throw new Error("Cannot create the admin user: role 'admin' does not exist. Did seedRbac run?");
+  }
+
+  // One transaction: an admin user without its role is the locked room, and the
+  // failure would be silent until the first login 403s on everything.
+  await prisma.$transaction(async (tx) => {
+    const user = await tx.appUser.create({
+      data: {
+        facilityId,
+        username,
+        fullName: 'System Administrator',
+        // Only the argon2id hash is ever stored.
+        passwordHash: await hash(password),
+      },
+    });
+
+    await tx.userRole.create({ data: { userId: user.id, roleId: adminRole.id } });
   });
 
-  console.log(`admin user: '${username}' created`);
+  console.log(`admin user: '${username}' created, holding role 'admin'`);
 
   if (!supplied) {
     console.log('');

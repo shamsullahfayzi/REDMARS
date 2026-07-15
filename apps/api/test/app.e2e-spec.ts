@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import type { HealthResponse } from '@redmars/shared';
 import { AppModule } from './../src/app.module';
 
 // Needs a reachable database — run `pnpm db:up` first.
@@ -22,8 +23,9 @@ describe('HealthController (e2e)', () => {
       .get('/health')
       .expect(200)
       .expect((res) => {
-        expect(res.body.status).toBe('ok');
-        expect(res.body.database).toBe('up');
+        const body = res.body as HealthResponse;
+        expect(body.status).toBe('ok');
+        expect(body.database).toBe('up');
       });
   });
 
