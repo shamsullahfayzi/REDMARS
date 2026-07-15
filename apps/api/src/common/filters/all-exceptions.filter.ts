@@ -31,11 +31,27 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    // Full detail, server-side only.
-    this.logger.error(
-      `${request.method} ${request.url} -> ${status}`,
-      exception instanceof Error ? exception.stack : String(exception),
-    );
+    // Severity follows fault, and the log is written for whoever is on call at
+    // 2am. A 404 for a browser's probe file and a Prisma connection collapse are
+    // not the same event, and logging both as ERROR with a stack trace means the
+    // real one is buried in noise nobody reads — the same way a backup that
+    // fails into an unread logfile is a backup that does not exist.
+    //
+    // 5xx is our fault: full stack, someone must look at it.
+    // 4xx is the caller's: one line, no stack. Nothing is broken here. Chrome
+    // DevTools probing /.well-known/appspecific/com.chrome.devtools.json is a
+    // 404 answered correctly, not an incident.
+    //
+    // No path is special-cased. A rule that needs a list of URLs to stay quiet
+    // is a rule that will be wrong about the next URL.
+    const detail = exception instanceof Error ? exception.stack : String(exception);
+    const line = `${request.method} ${request.url} -> ${status}`;
+
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logger.error(line, detail);
+    } else {
+      this.logger.warn(line);
+    }
 
     // HttpExceptions carry messages we authored, so they are safe to return.
     // Everything else is unknown territory and gets a generic message.
