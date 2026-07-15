@@ -1,13 +1,26 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+
+    /* CommonJS output on purpose: apps/api is a CJS NestJS build and would
+       throw "require() of an ES Module" on ESM output. Vite happily consumes
+       CJS for the web side, so CJS is the one format both halves can eat. */
+    "module": "commonjs",
+    "moduleResolution": "node",
+
     "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+
     "strict": true,
+    "isolatedModules": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }

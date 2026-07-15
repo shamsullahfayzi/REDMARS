@@ -10,7 +10,8 @@
   "db:reset": "docker compose down -v",
   "dev:api": "pnpm --filter api start:dev",
   "dev:web": "pnpm --filter web dev",
-  "dev": "pnpm --parallel -r dev"
+  "dev": "pnpm --filter @redmars/shared build && pnpm --parallel -r dev",
+  "build": "pnpm --filter @redmars/shared build && pnpm -r build"
 },
   "keywords": [],
   "author": "",

@@ -1,4 +1,5 @@
 import { Controller, Get, Logger, ServiceUnavailableException } from '@nestjs/common';
+import type { HealthResponse } from '@redmars/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('health')
@@ -14,8 +15,13 @@ export class HealthController {
    * while Postgres is unreachable, and a check that only proves "Node is up"
    * would report green through an outage.
    */
+  /**
+   * The return type is the shared contract, so if apps/web changes what it
+   * expects, this stops compiling. That is the whole trick — the type is not a
+   * comment, it is a build failure.
+   */
   @Get()
-  async check() {
+  async check(): Promise<HealthResponse> {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
     } catch (error) {

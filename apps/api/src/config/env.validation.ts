@@ -18,6 +18,15 @@ const envSchema = z.object({
     .refine((v) => v.startsWith('postgresql://') || v.startsWith('postgres://'), {
       message: 'must be a postgresql:// connection string',
     }),
+
+  /**
+   * Exact origin allowed to call this API from a browser. Never '*': once auth
+   * cookies exist (Phase 1) a wildcard is both illegal and a way to let any page
+   * on the LAN read patient data using the logged-in user's session.
+   * In production the web app is served from the same origin, so this mostly
+   * matters for local dev.
+   */
+  CORS_ORIGIN: z.string().min(1).default('http://localhost:5173'),
 });
 
 export type Env = z.infer<typeof envSchema>;

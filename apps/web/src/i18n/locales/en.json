@@ -5,6 +5,12 @@
   "shell": {
     "subtitle": "Blank shell. Phase 0, task 0.6."
   },
+  "api": {
+    "label": "API",
+    "checking": "Checking…",
+    "up": "Connected",
+    "down": "Unreachable"
+  },
   "language": {
     "label": "Language",
     "chooseTitle": "Choose your language",

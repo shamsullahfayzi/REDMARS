@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from 'react-router'
 import { FirstRunLanguagePicker } from '@/components/FirstRunLanguagePicker'
 import { getStoredLanguage } from '@/i18n/languages'
 import { useDocumentLanguage } from '@/i18n/useDocumentLanguage'
+import { queryClient } from '@/lib/queryClient'
 import { router } from '@/router'
 
 export function AppRoot() {
@@ -15,5 +17,9 @@ export function AppRoot() {
     return <FirstRunLanguagePicker onChosen={() => setHasChosen(true)} />
   }
 
-  return <RouterProvider router={router} />
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  )
 }

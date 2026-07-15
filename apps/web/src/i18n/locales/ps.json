@@ -5,6 +5,12 @@
   "shell": {
     "subtitle": "خالي پوښ. پړاو 0، دنده 0.6."
   },
+  "api": {
+    "label": "API",
+    "checking": "په کتنه کې…",
+    "up": "وصل شو",
+    "down": "لاسرسی نشته"
+  },
   "language": {
     "label": "ژبه",
     "chooseTitle": "خپله ژبه غوره کړئ",

@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
+import { ApiStatus } from '@/components/ApiStatus'
 import { Button } from '@/components/ui/button'
 import { formatNumber } from '@/lib/format'
 
 /**
  * Placeholder home. Real content arrives with the role-based nav in 1.6.
- * For now it proves Tailwind + shadcn render and the language flip works.
  */
 export function HomePage() {
   const { t } = useTranslation()
@@ -17,6 +17,8 @@ export function HomePage() {
       {/* Sanity check for the numeral rule: this must read 1,234.5 in Dari and
           Pashto too, never ۱٬۲۳۴٫۵ */}
       <p className="text-sm text-muted-foreground">{formatNumber(1234.5)}</p>
+
+      <ApiStatus />
 
       <Button>{t('language.label')}</Button>
     </div>

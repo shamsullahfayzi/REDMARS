@@ -1,5 +1,8 @@
-// @redmars/shared — types + zod schemas shared between apps/api and apps/web.
-// Kept intentionally tiny for now; the real front↔back type sharing lands in task 0.7.
+// @redmars/shared — the wire contract between apps/api and apps/web.
+//
+// Everything here is a zod schema plus its inferred type. The schema is the
+// single source: the API types its responses against it at compile time, the
+// web client parses against it at runtime. Change a field here and both halves
+// fail to build — which is the entire point of this package existing.
 
-/** Placeholder export so the workspace package resolves. Replace in 0.7. */
-export const SHARED_PACKAGE = '@redmars/shared' as const;
+export * from './health'
