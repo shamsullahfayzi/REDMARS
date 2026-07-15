@@ -1,0 +1,10 @@
+{
+  // ts-node runs the seed as a plain script, outside the nest build. The app's
+  // nodenext module setting expects an ESM-aware loader; plain commonjs is what
+  // ts-node wants here.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node"
+  }
+}
