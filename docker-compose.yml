@@ -30,6 +30,38 @@ services:
       postgres:
         condition: service_healthy
 
+  # Nightly pg_dump. Same image as the server on purpose: pg_dump's major
+  # version must match the server it dumps.
+  backup:
+    image: postgres:16-alpine
+    container_name: redmars-backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Standard libpq vars — pg_dump reads these, no credentials on the CLI.
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      # So BACKUP_SCHEDULE below means local hospital time, not UTC.
+      TZ: ${TZ:-Asia/Kabul}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    # Invoked via `sh` rather than relying on the exec bit — bind mounts from
+    # Windows hosts do not carry file modes.
+    command:
+      - /bin/sh
+      - -c
+      - |
+        echo "${BACKUP_SCHEDULE:-0 2 * * *} sh /usr/local/bin/backup.sh >> /backups/backup.log 2>&1" > /etc/crontabs/root
+        echo "backup sidecar ready; schedule: ${BACKUP_SCHEDULE:-0 2 * * *} ($(date))"
+        exec crond -f -l 8
+
 volumes:
   redmars_pgdata:
     driver: local
