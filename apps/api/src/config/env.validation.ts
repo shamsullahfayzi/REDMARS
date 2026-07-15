@@ -27,6 +27,34 @@ const envSchema = z.object({
    * matters for local dev.
    */
   CORS_ORIGIN: z.string().min(1).default('http://localhost:5173'),
+
+  /**
+   * Signing key for access tokens. No default, on purpose.
+   *
+   * A default here would ship to every hospital, which means anyone holding this
+   * source can forge an admin token against any deployment. Each install
+   * generates its own. 32 chars is the floor because HS256 truncates nothing —
+   * a short secret is simply a brute-forceable one.
+   */
+  JWT_SECRET: z
+    .string()
+    .min(32, 'must be at least 32 chars — generate with: openssl rand -base64 48'),
+
+  /**
+   * Access tokens are not revocable (that is the trade for not hitting the DB on
+   * every request), so their lifetime IS the revocation window. 900s keeps a
+   * disabled account's stolen token useful for at most 15 minutes.
+   *
+   * Seconds rather than a '15m' string so the value we sign and the value we
+   * report to the client are the same number, with no parser in between.
+   */
+  JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),
+
+  /**
+   * Refresh lifetime. Revocable, so this can be generous. 7d means a doctor
+   * logs in once a week, not once a shift.
+   */
+  JWT_REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(7),
 });
 
 export type Env = z.infer<typeof envSchema>;

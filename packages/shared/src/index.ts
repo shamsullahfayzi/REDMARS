@@ -5,4 +5,5 @@
 // web client parses against it at runtime. Change a field here and both halves
 // fail to build — which is the entire point of this package existing.
 
+export * from './auth'
 export * from './health'

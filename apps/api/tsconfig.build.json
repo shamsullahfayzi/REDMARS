@@ -1,4 +1,14 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "compilerOptions": {
+    // Pinned, not inferred. tsc derives rootDir from the common ancestor of
+    // every included file, so the moment anything outside src/ got compiled
+    // (prisma/seed.ts did, at 0.8) the whole build silently shifted down into
+    // dist/src/ and `start:prod` — node dist/main — stopped pointing at a file.
+    "rootDir": "./src"
+  },
+  // prisma/ excluded because seed.ts is a developer tool: it runs through
+  // ts-node with its own tsconfig.seed.json and has no business in a production
+  // image. It was also what dragged rootDir upward.
+  "exclude": ["node_modules", "test", "dist", "prisma", "**/*spec.ts"]
 }

@@ -6,10 +6,9 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      
-      "types": "./src/index.ts",
-      "require": "./src/index.ts",
-      "default": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "files": [

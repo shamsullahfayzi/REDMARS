@@ -28,3 +28,6 @@ Thumbs.db
 
 # test coverage
 coverage/
+
+# TypeScript incremental build cache. Machine-local, never shared.
+*.tsbuildinfo
