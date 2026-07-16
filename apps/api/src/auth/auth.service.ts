@@ -3,9 +3,10 @@ import { Injectable, Logger, OnModuleInit, UnauthorizedException } from '@nestjs
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { hash, verify } from '@node-rs/argon2';
-import type { LoginRequest, LoginResponse } from '@redmars/shared';
+import type { LoginRequest, LoginResponse, MeResponse } from '@redmars/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Env } from '../config/env.validation';
+import type { AuthContext } from './auth-context';
 
 /** Where the request came from. Recorded on the Session so 1.8 can show a user their sessions. */
 export interface LoginContext {
@@ -124,6 +125,31 @@ export class AuthService implements OnModuleInit {
         facilityId: user.facilityId,
       },
     };
+  }
+
+  /**
+   * GET /auth/me — the identity behind the token the caller presented.
+   *
+   * Roles come straight from the AuthContext the JwtAuthGuard already built (a
+   * fresh DB read per request), so they cannot be staler than this request. The
+   * user's own fields need one small read: AuthContext deliberately does not carry
+   * fullName — it is on the hot path of every request, and this is the only place
+   * that wants the name, called once per app load. Paying a read here keeps every
+   * other request lean.
+   */
+  async me(auth: AuthContext): Promise<MeResponse> {
+    const user = await this.prisma.db.appUser.findUnique({
+      where: { id: auth.userId },
+      select: { id: true, username: true, fullName: true, facilityId: true },
+    });
+
+    if (!user) {
+      // The guard validated this user microseconds ago, so a miss means they were
+      // deleted mid-request. Report it as the token no longer being good.
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    return { user, roles: auth.roles };
   }
 
   /**

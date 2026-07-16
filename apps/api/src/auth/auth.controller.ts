@@ -1,8 +1,18 @@
-import { BadRequestException, Body, Controller, HttpCode, Post, Req } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { Request } from 'express';
-import { loginRequestSchema, type LoginResponse } from '@redmars/shared';
+import { loginRequestSchema, type LoginResponse, type MeResponse } from '@redmars/shared';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
+import { RequirePermission } from './decorators/require-permission.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -45,5 +55,27 @@ export class AuthController {
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
     });
+  }
+
+  /**
+   * GET /auth/me
+   *
+   * Not @Public: it answers "who am I", which is meaningless without a token. It
+   * carries auth.me — a permission every role holds — so it satisfies the rule
+   * that every route names a permission, without being an escape hatch. What it
+   * returns (roles) is for rendering a menu, never for access; the server still
+   * gates every other endpoint on its own permission.
+   */
+  @RequirePermission('auth.me')
+  @Get('me')
+  me(@Req() req: Request): Promise<MeResponse> {
+    const auth = req.auth;
+    if (!auth) {
+      // Unreachable: JwtAuthGuard populates req.auth before this runs, or rejects.
+      // Guarded anyway rather than asserting non-null — a wrong assumption here is
+      // an identity bug, the worst kind to paper over.
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+    return this.auth.me(auth);
   }
 }

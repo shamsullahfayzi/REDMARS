@@ -20,5 +20,30 @@
     "title": "Page not found",
     "body": "That page does not exist.",
     "back": "Back to start"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "username": "Username",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "invalidCredentials": "Invalid username or password.",
+      "genericError": "Something went wrong. Please try again."
+    },
+    "logout": "Sign out",
+    "signedInAs": "Signed in as {{name}}"
+  },
+  "nav": {
+    "queue": "Queue",
+    "patients": "Patients",
+    "consultations": "Consultations",
+    "lab": "Lab",
+    "pharmacy": "Pharmacy",
+    "users": "Users",
+    "reports": "Reports"
+  },
+  "placeholder": {
+    "comingSoon": "This section arrives in a later phase."
   }
 }

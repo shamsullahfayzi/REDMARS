@@ -65,3 +65,24 @@ export const loginResponseSchema = z.object({
 })
 
 export type LoginResponse = z.infer<typeof loginResponseSchema>
+
+/**
+ * GET /auth/me — "who am I", answered from the token the caller is holding.
+ *
+ * The web app calls this on every load: after a refresh it has a token in storage
+ * but no idea whose it is, and this rehydrates the session without a fresh login.
+ *
+ * `roles` appears HERE and nowhere else the browser can reach. It is absent from
+ * the login response and from the JWT, both on purpose, so that the only way the
+ * UI learns a user's roles is a live, authenticated call the server answers from
+ * the database — never a stale claim baked into a token. And it is for ONE thing:
+ * deciding which menu items to render. It is not, and must never become, an access
+ * decision; the server re-checks every endpoint regardless of what menu was shown.
+ * Role codes ('doctor', 'nurse'), not permissions — the nav keys off roles.
+ */
+export const meResponseSchema = z.object({
+  user: authUserSchema,
+  roles: z.array(z.string()),
+})
+
+export type MeResponse = z.infer<typeof meResponseSchema>

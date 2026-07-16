@@ -101,6 +101,24 @@ export const PERMISSION_MATRIX = {
     pharmacist: YES,
     management: YES,
   },
+  /**
+   * "Who am I" — GET /auth/me. Every authenticated user reads their own identity
+   * and role list so the web app can render the right menu (task 1.6). Granted to
+   * all 7 roles for the same reason as auth.login: it is a thing every logged-in
+   * user does, and modelling it as a permission keeps the invariant that every
+   * route names one — rather than an escape hatch that lets a route skip the check.
+   * It gates nothing sensitive; roles returned here are for nav, never for access,
+   * which the server still decides per endpoint.
+   */
+  'auth.me': {
+    admin: YES,
+    receptionist: YES,
+    nurse: YES,
+    doctor: YES,
+    lab_tech: YES,
+    pharmacist: YES,
+    management: YES,
+  },
   'user.create': { admin: YES },
   'user.edit': { admin: YES },
   'user.deactivate': { admin: YES },
