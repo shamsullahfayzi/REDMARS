@@ -196,4 +196,53 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       },
     });
   }
+
+  /**
+   * Task 1.5 — Rule R1. Records that a clinical record was READ.
+   *
+   * Called by the AuditInterceptor when a route is marked @AuditRead, not by the
+   * query extension: a read has no before/after and never mutates, so the HTTP
+   * layer already knows everything the row needs — the actor (from the ALS scope),
+   * the entity (from the decorator), the id. before and after are always DbNull;
+   * a read changed nothing.
+   *
+   * Written through the BASE client (`this.auditLog`), same as the write-path rows,
+   * so the audit of a read is not itself audited.
+   *
+   * Best-effort: R1 says a clinical read is NEVER blocked, so a failure to log it
+   * must not fail the read. We swallow and log loud instead — a doctor opening a
+   * chart cannot be stopped by an audit-table problem. Loud, because a read that
+   * silently isn't logged is the exact hole R1 exists to close.
+   */
+  async recordRead(entity: string, entityId: string | null): Promise<void> {
+    const ctx = requestContext.getStore();
+
+    // A clinical read is always made by a logged-in clinician, so the actor's
+    // facility is the tenant. No context means this was called outside a request —
+    // there is nothing to attribute, and nothing a user did to record.
+    if (!ctx?.facilityId) {
+      this.logger.warn(`Skipped read audit for ${entity}: no request context to attribute it to`);
+      return;
+    }
+
+    try {
+      await this.auditLog.create({
+        data: {
+          facilityId: ctx.facilityId,
+          userId: ctx.userId ?? null,
+          action: AuditAction.read,
+          entity,
+          entityId,
+          before: Prisma.DbNull,
+          after: Prisma.DbNull,
+          ipAddress: ctx.ipAddress ?? null,
+        },
+      });
+    } catch (err) {
+      this.logger.error(
+        `Read audit FAILED for ${entity} ${entityId ?? '(no id)'} — the read succeeded but left no audit row`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+  }
 }
