@@ -120,6 +120,8 @@ export const PERMISSION_MATRIX = {
     management: YES,
   },
   'user.create': { admin: YES },
+  /** List and view staff accounts — the admin user-management screens (task 1.7). */
+  'user.read': { admin: YES },
   'user.edit': { admin: YES },
   'user.deactivate': { admin: YES },
   'user.reset_password': { admin: YES },

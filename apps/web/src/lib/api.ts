@@ -84,6 +84,27 @@ export async function apiPost<TSchema extends z.ZodType>(
   return parseResponse(path, response, schema)
 }
 
+/** PATCH with a JSON body — a partial update. Same contract as apiPost. */
+export async function apiPatch<TSchema extends z.ZodType>(
+  path: string,
+  body: unknown,
+  schema: TSchema,
+): Promise<z.infer<TSchema>> {
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'PATCH',
+      headers: buildHeaders(true),
+      body: JSON.stringify(body),
+    })
+  } catch (cause) {
+    throw new ApiError(`Cannot reach the API at ${API_BASE_URL}`, 0, { cause })
+  }
+
+  return parseResponse(path, response, schema)
+}
+
 /**
  * The shared tail of every request: reject non-2xx by status (the caller decides
  * what a 401 or 400 means), then parse the body against the agreed schema so a

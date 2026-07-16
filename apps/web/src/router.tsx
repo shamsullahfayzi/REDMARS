@@ -5,6 +5,7 @@ import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
+import { UsersPage } from '@/pages/UsersPage'
 
 /**
  * /login is the only route outside the gate. Everything else sits under
@@ -29,7 +30,7 @@ export const router = createBrowserRouter([
           { path: 'consultations', element: <PlaceholderPage sectionKey="consultations" /> },
           { path: 'lab', element: <PlaceholderPage sectionKey="lab" /> },
           { path: 'pharmacy', element: <PlaceholderPage sectionKey="pharmacy" /> },
-          { path: 'users', element: <PlaceholderPage sectionKey="users" /> },
+          { path: 'users', element: <UsersPage /> },
           { path: 'reports', element: <PlaceholderPage sectionKey="reports" /> },
           { path: '*', element: <NotFoundPage /> },
         ],

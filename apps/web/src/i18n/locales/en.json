@@ -45,5 +45,38 @@
   },
   "placeholder": {
     "comingSoon": "This section arrives in a later phase."
+  },
+  "roles": {
+    "admin": "Administrator",
+    "receptionist": "Receptionist",
+    "nurse": "Nurse",
+    "doctor": "Doctor",
+    "lab_tech": "Lab technician",
+    "pharmacist": "Pharmacist",
+    "management": "Management"
+  },
+  "users": {
+    "create": {
+      "title": "Create a user",
+      "fullName": "Full name",
+      "roles": "Roles",
+      "passwordHint": "At least 8 characters. The user cannot change it yet.",
+      "submit": "Create user",
+      "submitting": "Creating…",
+      "invalid": "Please check the form.",
+      "duplicate": "That username is already taken.",
+      "failed": "Could not create the user. Please try again."
+    },
+    "list": {
+      "title": "Staff accounts",
+      "loading": "Loading…",
+      "error": "Could not load users.",
+      "status": "Status",
+      "actions": "Actions",
+      "active": "Active",
+      "inactive": "Inactive",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate"
+    }
   }
 }
