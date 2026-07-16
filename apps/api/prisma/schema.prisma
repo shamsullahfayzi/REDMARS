@@ -183,18 +183,23 @@ enum SessionRevokeReason {
 
 /// 1
 model Facility {
-  id        String   @id @default(uuid())
-  code      String   @unique
-  name      String
-  nameLocal String?  @map("name_local") // Dari
-  address   String?
-  phone     String?
-  logoPath  String?  @map("logo_path")
-  timezone  String   @default("Asia/Kabul")
-  currency  String   @default("AFN")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name         String
+  // Two local names, not one: Farhat's region reads Dari (prs) and Pashto (ps),
+  // and a single column forces a choice the hospital should not have to make.
+  // Both optional — fill what you have. Column suffixes match the app's i18n
+  // locale codes (prs/ps) so the wire, the DB, and the UI all speak one vocabulary.
+  nameLocalPrs String?  @map("name_local_prs")
+  nameLocalPs  String?  @map("name_local_ps")
+  address      String?
+  phone        String?
+  logoPath     String?  @map("logo_path")
+  timezone     String   @default("Asia/Kabul")
+  currency     String   @default("AFN")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   departments     Department[]
   rooms           Room[]
@@ -221,17 +226,19 @@ model Facility {
 
 /// 2 — ONE department table with a type enum.
 model Department {
-  id         String         @id @default(uuid())
-  facilityId String         @map("facility_id")
-  code       String
-  name       String
-  nameLocal  String?        @map("name_local")
-  type       DepartmentType
-  isActive   Boolean        @default(true) @map("is_active")
-  createdAt  DateTime       @default(now()) @map("created_at")
-  updatedAt  DateTime       @updatedAt @map("updated_at")
+  id           String         @id @default(uuid())
+  facilityId   String         @map("facility_id")
+  code         String
+  name         String
+  // Dari (prs) and Pashto (ps) local names — see Facility. Both optional.
+  nameLocalPrs String?        @map("name_local_prs")
+  nameLocalPs  String?        @map("name_local_ps")
+  type         DepartmentType
+  isActive     Boolean        @default(true) @map("is_active")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
 
-  facility     Facility               @relation(fields: [facilityId], references: [id])
+  facility     Facility                 @relation(fields: [facilityId], references: [id])
   rooms        Room[]
   services     Service[]
   visits       Visit[]
@@ -430,9 +437,9 @@ model Practitioner {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
 
-  facility      Facility                @relation(fields: [facilityId], references: [id])
-  user          AppUser?                @relation(fields: [userId], references: [id])
-  speciality    Speciality?             @relation(fields: [specialityId], references: [id])
+  facility      Facility                 @relation(fields: [facilityId], references: [id])
+  user          AppUser?                 @relation(fields: [userId], references: [id])
+  speciality    Speciality?              @relation(fields: [specialityId], references: [id])
   departments   PractitionerDepartment[]
   visits        Visit[]
   appointments  Appointment[]
@@ -480,25 +487,25 @@ model Patient {
   estimatedAgeDays   Int?      @map("estimated_age_days")
   ageRecordedAt      DateTime? @map("age_recorded_at") @db.Date // anchor for the estimate
 
-  gender          Gender
-  guardianName    String?           @map("guardian_name")
+  gender           Gender
+  guardianName     String?           @map("guardian_name")
   guardianRelation GuardianRelation? @map("guardian_relation") // S/o, D/o, W/o
-  phone           String?
-  altPhone        String?           @map("alt_phone")
-  address         String?
-  district        String?
-  province        String?
-  nationalId      String?           @map("national_id") // tazkira
-  passportNo      String?           @map("passport_no")
-  occupation      String?
-  nationality     String?
-  bloodGroup      String?           @map("blood_group")
-  isDeceased      Boolean           @default(false) @map("is_deceased")
-  deceasedDate    DateTime?         @map("deceased_date")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
-  deletedAt       DateTime?         @map("deleted_at")
-  createdBy       String?           @map("created_by")
+  phone            String?
+  altPhone         String?           @map("alt_phone")
+  address          String?
+  district         String?
+  province         String?
+  nationalId       String?           @map("national_id") // tazkira
+  passportNo       String?           @map("passport_no")
+  occupation       String?
+  nationality      String?
+  bloodGroup       String?           @map("blood_group")
+  isDeceased       Boolean           @default(false) @map("is_deceased")
+  deceasedDate     DateTime?         @map("deceased_date")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  deletedAt        DateTime?         @map("deleted_at")
+  createdBy        String?           @map("created_by")
 
   facility     Facility            @relation(fields: [facilityId], references: [id])
   identifiers  PatientIdentifier[]
@@ -871,17 +878,19 @@ model PrescriptionItem {
 
 /// 30 — the CATALOG. The master list of tests you offer. LOINC-coded.
 model LabTest {
-  id         String   @id @default(uuid())
-  facilityId String   @map("facility_id")
-  code       String
-  name       String
-  nameLocal  String?  @map("name_local")
-  loincCode  String?  @map("loinc_code")
-  specimen   String? // blood | urine | csf
-  unit       String? // mg/dL | %
-  price      Decimal? @db.Decimal(12, 2)
-  isActive   Boolean  @default(true) @map("is_active")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id           String   @id @default(uuid())
+  facilityId   String   @map("facility_id")
+  code         String
+  name         String
+  // Dari (prs) and Pashto (ps) local names — see Facility. Both optional.
+  nameLocalPrs String?  @map("name_local_prs")
+  nameLocalPs  String?  @map("name_local_ps")
+  loincCode    String?  @map("loinc_code")
+  specimen     String? // blood | urine | csf
+  unit         String? // mg/dL | %
+  price        Decimal? @db.Decimal(12, 2)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   facility        Facility         @relation(fields: [facilityId], references: [id])
   panelTests      LabPanelTest[]
@@ -1004,13 +1013,13 @@ model LabResult {
 
 /// 37 — consultation fees, card registration fee, procedures. Priced per department.
 model Service {
-  id           String   @id @default(uuid())
-  facilityId   String   @map("facility_id")
-  departmentId String   @map("department_id")
+  id           String  @id @default(uuid())
+  facilityId   String  @map("facility_id")
+  departmentId String  @map("department_id")
   code         String
   name         String
-  fee          Decimal  @db.Decimal(12, 2)
-  isActive     Boolean  @default(true) @map("is_active")
+  fee          Decimal @db.Decimal(12, 2)
+  isActive     Boolean @default(true) @map("is_active")
 
   facility   Facility   @relation(fields: [facilityId], references: [id])
   department Department @relation(fields: [departmentId], references: [id])
@@ -1023,15 +1032,15 @@ model Service {
 /// An employer or NGO pays instead of the patient.
 /// ASK DR. HAFIZULLAH whether Farhat actually has panels before you build the UI.
 model Panel {
-  id             String   @id @default(uuid())
-  facilityId     String   @map("facility_id")
-  code           String
-  name           String
-  contactPerson  String?  @map("contact_person")
-  phone          String?
-  discountPct    Decimal? @map("discount_pct") @db.Decimal(5, 2)
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
+  id            String   @id @default(uuid())
+  facilityId    String   @map("facility_id")
+  code          String
+  name          String
+  contactPerson String?  @map("contact_person")
+  phone         String?
+  discountPct   Decimal? @map("discount_pct") @db.Decimal(5, 2)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
 
   facility Facility  @relation(fields: [facilityId], references: [id])
   invoices Invoice[]
@@ -1161,21 +1170,21 @@ model Setting {
 
 /// 44 — one per facility. The signed agreement + the paid-through date.
 model License {
-  id                 String        @id @default(uuid())
-  facilityId         String        @unique @map("facility_id")
-  plan               String // e.g. "opd", "opd_lab", "full"
-  status             LicenseStatus @default(active)
+  id                  String        @id @default(uuid())
+  facilityId          String        @unique @map("facility_id")
+  plan                String // e.g. "opd", "opd_lab", "full"
+  status              LicenseStatus @default(active)
   /// The paid-through date. You flip this forward when cash is received. Manual — fine.
-  paidThroughDate    DateTime      @map("paid_through_date") @db.Date
+  paidThroughDate     DateTime      @map("paid_through_date") @db.Date
   /// Signed token (JWT-style, your private key). Server verifies locally, offline.
-  signedToken        String?       @map("signed_token") @db.Text
+  signedToken         String?       @map("signed_token") @db.Text
   /// Hardware fingerprint the token is bound to (MAC/disk/CPU hash). Optional.
-  hardwareFingerprint String?      @map("hardware_fingerprint")
-  monthlyFee         Decimal?      @map("monthly_fee") @db.Decimal(12, 2)
-  currency           String        @default("AFN")
-  notes              String?
-  createdAt          DateTime      @default(now()) @map("created_at")
-  updatedAt          DateTime      @updatedAt @map("updated_at")
+  hardwareFingerprint String?       @map("hardware_fingerprint")
+  monthlyFee          Decimal?      @map("monthly_fee") @db.Decimal(12, 2)
+  currency            String        @default("AFN")
+  notes               String?
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
 
   facility Facility @relation(fields: [facilityId], references: [id])
 

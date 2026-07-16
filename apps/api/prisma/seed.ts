@@ -35,26 +35,48 @@ const prisma = new PrismaClient();
 const FACILITY = {
   code: 'FARHAT',
   name: 'Farhat Hospital',
-  nameLocal: 'شفاخانه فرحت',
+  nameLocalPrs: 'شفاخانه فرحت',
+  nameLocalPs: 'د فرحت روغتون',
   timezone: 'Asia/Kabul',
   currency: 'AFN',
 };
 
-// nameLocal is Dari only — the schema has a single local-name column, which
-// does not survive contact with Dari + Pashto. Flagged for the 2.1 rework.
+// Local names in both regional languages (2.1 rework — was a single Dari column).
+// The Pashto strings are best-effort and want a native check, same as the UI
+// locale files.
 const DEPARTMENTS: Array<{
   code: string;
   name: string;
-  nameLocal: string;
+  nameLocalPrs: string;
+  nameLocalPs: string;
   type: DepartmentType;
 }> = [
-  { code: 'OPD', name: 'Outpatient Department', nameLocal: 'بخش سراپا', type: DepartmentType.opd },
-  { code: 'LAB', name: 'Laboratory', nameLocal: 'لابراتوار', type: DepartmentType.laboratory },
-  { code: 'PHARM', name: 'Pharmacy', nameLocal: 'دواخانه', type: DepartmentType.pharmacy },
+  {
+    code: 'OPD',
+    name: 'Outpatient Department',
+    nameLocalPrs: 'بخش سراپا',
+    nameLocalPs: 'د سرپایي څانګه',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'LAB',
+    name: 'Laboratory',
+    nameLocalPrs: 'لابراتوار',
+    nameLocalPs: 'لابراتوار',
+    type: DepartmentType.laboratory,
+  },
+  {
+    code: 'PHARM',
+    name: 'Pharmacy',
+    nameLocalPrs: 'دواخانه',
+    nameLocalPs: 'درملتون',
+    type: DepartmentType.pharmacy,
+  },
   {
     code: 'ADMIN',
     name: 'Administration',
-    nameLocal: 'اداره',
+    nameLocalPrs: 'اداره',
+    nameLocalPs: 'اداره',
     type: DepartmentType.administration,
   },
 ];
