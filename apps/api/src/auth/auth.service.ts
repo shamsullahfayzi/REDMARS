@@ -3,10 +3,26 @@ import { Injectable, Logger, OnModuleInit, UnauthorizedException } from '@nestjs
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { hash, verify } from '@node-rs/argon2';
-import type { LoginRequest, LoginResponse, MeResponse } from '@redmars/shared';
+import { AuditAction } from '@prisma/client';
+import type {
+  LoginRequest,
+  LoginResponse,
+  MeResponse,
+  RefreshResponse,
+  SessionEndedReason,
+} from '@redmars/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Env } from '../config/env.validation';
 import type { AuthContext } from './auth-context';
+
+/**
+ * A 401 whose body carries WHY the session ended, so the web app can show the
+ * right message instead of a blank "signed out". The AllExceptionsFilter spreads
+ * this object into the response, so `reason` reaches the client alongside the 401.
+ */
+function sessionEndedException(reason: SessionEndedReason): UnauthorizedException {
+  return new UnauthorizedException({ message: 'Session ended', reason });
+}
 
 /** Where the request came from. Recorded on the Session so 1.8 can show a user their sessions. */
 export interface LoginContext {
@@ -95,11 +111,21 @@ export class AuthService implements OnModuleInit {
     const refreshTtlDays = this.config.get('JWT_REFRESH_TTL_DAYS', { infer: true });
     const expiresAt = new Date(Date.now() + refreshTtlDays * 24 * 60 * 60 * 1000);
 
-    // One transaction: a Session that exists without its lastLoginAt is a
-    // cosmetic lie, but a lastLoginAt recorded for a session that failed to
-    // persist is an audit trail claiming a login that never happened.
-    await this.prisma.db.$transaction([
-      this.prisma.db.session.create({
+    // One transaction, three steps in order (task 1.8):
+    //  1. Revoke this user's other live sessions — single-session policy. Their
+    //     next refresh fails with 'superseded', which is what "signed in elsewhere"
+    //     means. Done FIRST and scoped to revokedAt: null so it cannot touch the
+    //     session created in step 2.
+    //  2. Create the new session.
+    //  3. Stamp lastLoginAt.
+    // Atomic because a half-applied login — old sessions killed but the new one
+    // not persisted — would lock the user out of the account they just signed into.
+    await this.prisma.db.$transaction(async (tx) => {
+      await tx.session.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date(), revokedReason: 'superseded' },
+      });
+      await tx.session.create({
         data: {
           userId: user.id,
           refreshTokenHash,
@@ -107,12 +133,20 @@ export class AuthService implements OnModuleInit {
           ipAddress: ctx.ipAddress,
           userAgent: ctx.userAgent,
         },
-      }),
-      this.prisma.db.appUser.update({
+      });
+      await tx.appUser.update({
         where: { id: user.id },
         data: { lastLoginAt: new Date() },
-      }),
-    ]);
+      });
+    });
+
+    // The dedicated login audit action (deferred here from 1.4). Best-effort — a
+    // failed audit write must not fail a successful login.
+    await this.prisma.recordAuthEvent(AuditAction.login, {
+      userId: user.id,
+      facilityId: user.facilityId,
+      ipAddress: ctx.ipAddress,
+    });
 
     return {
       accessToken,
@@ -125,6 +159,84 @@ export class AuthService implements OnModuleInit {
         facilityId: user.facilityId,
       },
     };
+  }
+
+  /**
+   * POST /auth/refresh — spend a refresh token for a new access token (task 1.8).
+   *
+   * Standing is read from the database, not from the token: the session must exist,
+   * be unrevoked, be unexpired, and its user still active. Any of those failing
+   * throws with a reason the web app turns into a message ("signed in elsewhere",
+   * "expired", …). No rotation — the refresh token is unchanged and only a fresh
+   * access token comes back.
+   */
+  async refresh(refreshToken: string): Promise<RefreshResponse> {
+    const session = await this.prisma.db.session.findUnique({
+      where: { refreshTokenHash: hashRefreshToken(refreshToken) },
+      select: {
+        revokedAt: true,
+        revokedReason: true,
+        expiresAt: true,
+        user: {
+          select: { id: true, facilityId: true, username: true, isActive: true, deletedAt: true },
+        },
+      },
+    });
+
+    if (!session) {
+      throw sessionEndedException('invalid');
+    }
+    if (session.revokedAt !== null) {
+      // A superseded session is the "signed in elsewhere" case; anything else
+      // revoked (logout) is just gone.
+      throw sessionEndedException(
+        session.revokedReason === 'superseded' ? 'superseded' : 'invalid',
+      );
+    }
+    if (session.expiresAt.getTime() < Date.now()) {
+      throw sessionEndedException('expired');
+    }
+    if (!session.user.isActive || session.user.deletedAt !== null) {
+      throw sessionEndedException('deactivated');
+    }
+
+    const accessToken = this.issueAccessToken(
+      session.user.id,
+      session.user.facilityId,
+      session.user.username,
+    );
+    return {
+      accessToken,
+      expiresIn: this.config.get('JWT_ACCESS_TTL_SECONDS', { infer: true }),
+    };
+  }
+
+  /**
+   * POST /auth/logout — revoke the caller's own session (task 1.8). Idempotent: an
+   * already-revoked or unknown token is a no-op returning success, never an error,
+   * because "make this session not work" is satisfied either way and a logout that
+   * can fail is one users learn to distrust.
+   */
+  async logout(refreshToken: string, ipAddress?: string): Promise<void> {
+    const session = await this.prisma.db.session.findUnique({
+      where: { refreshTokenHash: hashRefreshToken(refreshToken) },
+      select: { id: true, revokedAt: true, user: { select: { id: true, facilityId: true } } },
+    });
+
+    if (!session || session.revokedAt !== null) {
+      return;
+    }
+
+    await this.prisma.db.session.update({
+      where: { id: session.id },
+      data: { revokedAt: new Date(), revokedReason: 'logout' },
+    });
+
+    await this.prisma.recordAuthEvent(AuditAction.logout, {
+      userId: session.user.id,
+      facilityId: session.user.facilityId,
+      ipAddress,
+    });
   }
 
   /**

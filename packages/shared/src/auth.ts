@@ -86,3 +86,62 @@ export const meResponseSchema = z.object({
 })
 
 export type MeResponse = z.infer<typeof meResponseSchema>
+
+/**
+ * POST /auth/refresh — spend a refresh token for a fresh access token (task 1.8).
+ *
+ * Public: the whole reason to call it is that the access token has expired, so it
+ * cannot be the thing that authenticates the call. The refresh token does — the
+ * server hashes it, finds the Session, and checks it is live. No rotation: the
+ * same refresh token stays valid for its 7-day life, so only a new accessToken
+ * comes back. Revocation still works — logout and a new login elsewhere kill the
+ * Session, and then this fails.
+ */
+export const refreshRequestSchema = z.object({
+  refreshToken: z.string().min(1),
+})
+
+export type RefreshRequest = z.infer<typeof refreshRequestSchema>
+
+export const refreshResponseSchema = z.object({
+  accessToken: z.string().min(1),
+  expiresIn: z.number().int().positive(),
+})
+
+export type RefreshResponse = z.infer<typeof refreshResponseSchema>
+
+/**
+ * The reason a session ended, sent in the 401 body when a refresh is refused, so
+ * the ended device can say WHY rather than a blank "signed out":
+ *  - superseded: you signed in on another device (single-session policy).
+ *  - deactivated: an admin disabled the account.
+ *  - expired: the refresh token's 7 days ran out.
+ *  - invalid: no such live session — a logged-out or unknown token.
+ */
+export const sessionEndedReasonSchema = z.enum([
+  'superseded',
+  'deactivated',
+  'expired',
+  'invalid',
+])
+
+export type SessionEndedReason = z.infer<typeof sessionEndedReasonSchema>
+
+/**
+ * POST /auth/logout — revoke the caller's own session. Public for the same reason
+ * as refresh (the access token may already be expired when someone signs out); the
+ * refresh token names the session to kill. Idempotent — revoking an already-dead
+ * session is a no-op, never an error.
+ */
+export const logoutRequestSchema = z.object({
+  refreshToken: z.string().min(1),
+})
+
+export type LogoutRequest = z.infer<typeof logoutRequestSchema>
+
+/** A bare acknowledgement — logout has nothing to return but "done". */
+export const logoutResponseSchema = z.object({
+  success: z.literal(true),
+})
+
+export type LogoutResponse = z.infer<typeof logoutResponseSchema>

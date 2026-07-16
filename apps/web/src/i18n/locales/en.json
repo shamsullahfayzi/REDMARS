@@ -32,7 +32,13 @@
       "genericError": "Something went wrong. Please try again."
     },
     "logout": "Sign out",
-    "signedInAs": "Signed in as {{name}}"
+    "signedInAs": "Signed in as {{name}}",
+    "sessionEnded": {
+      "superseded": "You were signed in on another device, so this session ended.",
+      "deactivated": "Your account has been disabled. Contact an administrator.",
+      "expired": "Your session expired. Please sign in again.",
+      "invalid": "Your session ended. Please sign in again."
+    }
   },
   "nav": {
     "queue": "Queue",

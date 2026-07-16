@@ -1,5 +1,6 @@
 import type { z } from 'zod'
-import { getAccessToken } from './authTokens'
+import { refreshResponseSchema, sessionEndedReasonSchema, type SessionEndedReason } from '@redmars/shared'
+import { clearTokens, getAccessToken, getRefreshToken, setAccessToken } from './authTokens'
 
 /**
  * The one place the browser talks to the API.
@@ -10,23 +11,16 @@ import { getAccessToken } from './authTokens'
  * server, a proxy, or a half-deployed build can put anything on the wire. Parsing
  * here means a contract violation surfaces as a loud error at the edge, rather
  * than as `undefined` rendering into a dose field three components deep.
+ *
+ * It is also where the access token is silently refreshed (task 1.8): a 401 on an
+ * ordinary call triggers one refresh and one retry, so a 15-minute token expiring
+ * mid-consult is invisible to the user rather than a bounce to the login screen.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-/**
- * Attaches the access token to every request that has one. A request made before
- * login (the login POST itself) simply has no token and goes out bare — the
- * endpoint it targets is @Public. Once a token exists, it rides on every call, and
- * the server decides per endpoint whether it is enough.
- */
-function buildHeaders(hasJsonBody: boolean): Record<string, string> {
-  const headers: Record<string, string> = {}
-  if (hasJsonBody) headers['Content-Type'] = 'application/json'
-  const token = getAccessToken()
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  return headers
-}
+/** The auth endpoints never auto-refresh: login/logout have no live session to renew, and refresh renewing itself is an infinite loop. */
+const NO_REFRESH_PATHS = new Set(['/auth/login', '/auth/refresh', '/auth/logout'])
 
 export class ApiError extends Error {
   /** 0 means the request never reached the server. */
@@ -42,67 +36,149 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiGet<TSchema extends z.ZodType>(
-  path: string,
-  schema: TSchema,
-): Promise<z.infer<TSchema>> {
-  let response: Response
+/**
+ * Called when a refresh is refused — the session is truly over (signed in
+ * elsewhere, deactivated, expired). AuthProvider registers this to drop to the
+ * login screen with the reason. Kept as a bare callback rather than an import so
+ * the api layer does not depend on React.
+ */
+let onSessionEnded: ((reason: SessionEndedReason) => void) | null = null
 
+export function setOnSessionEnded(callback: (reason: SessionEndedReason) => void): void {
+  onSessionEnded = callback
+}
+
+/**
+ * Attaches the access token to every request that has one. A request made before
+ * login (the login POST itself) simply has no token and goes out bare — the
+ * endpoint it targets is @Public. Once a token exists, it rides on every call.
+ */
+function buildHeaders(hasJsonBody: boolean): Record<string, string> {
+  const headers: Record<string, string> = {}
+  if (hasJsonBody) headers['Content-Type'] = 'application/json'
+  const token = getAccessToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
+
+async function rawFetch(method: string, path: string, body?: unknown): Promise<Response> {
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, { headers: buildHeaders(false) })
+    return await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers: buildHeaders(body !== undefined),
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
   } catch (cause) {
     // fetch only rejects on network failure — server unreachable, DNS, CORS.
     throw new ApiError(`Cannot reach the API at ${API_BASE_URL}`, 0, { cause })
   }
-
-  return parseResponse(path, response, schema)
 }
 
-/**
- * POST with a JSON body, same parse-at-the-boundary contract as apiGet. Used by
- * login (public, no token yet) and every future write. The body is typed unknown
- * on purpose: this function does not know or care what it is sending, only that
- * the response must match the schema before a component sees it.
- */
-export async function apiPost<TSchema extends z.ZodType>(
-  path: string,
-  body: unknown,
-  schema: TSchema,
-): Promise<z.infer<TSchema>> {
-  let response: Response
+// Single-flight: if ten queries 401 at the same instant when a token expires, they
+// must share ONE refresh, not fire ten. The first starts it; the rest await it.
+let refreshInFlight: Promise<boolean> | null = null
 
+function ensureFreshToken(): Promise<boolean> {
+  refreshInFlight ??= doRefresh().finally(() => {
+    refreshInFlight = null
+  })
+  return refreshInFlight
+}
+
+async function doRefresh(): Promise<boolean> {
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) {
+    endSession('invalid')
+    return false
+  }
+
+  let response: Response
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
-      headers: buildHeaders(true),
-      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
     })
-  } catch (cause) {
-    throw new ApiError(`Cannot reach the API at ${API_BASE_URL}`, 0, { cause })
+  } catch {
+    // A network blip during refresh is not proof the session is dead — do not log
+    // the user out over it. The original call will surface its own error.
+    return false
+  }
+
+  if (response.ok) {
+    const json: unknown = await response.json()
+    const parsed = refreshResponseSchema.safeParse(json)
+    if (parsed.success) {
+      setAccessToken(parsed.data.accessToken)
+      return true
+    }
+    return false
+  }
+
+  // Refresh refused: the session is over. Read WHY from the body so the login
+  // screen can say "signed in elsewhere" rather than a blank "signed out".
+  let reason: SessionEndedReason = 'invalid'
+  try {
+    const body: unknown = await response.json()
+    const candidate = (body as { reason?: unknown }).reason
+    const parsed = sessionEndedReasonSchema.safeParse(candidate)
+    if (parsed.success) reason = parsed.data
+  } catch {
+    // No or non-JSON body — keep the generic 'invalid'.
+  }
+  endSession(reason)
+  return false
+}
+
+function endSession(reason: SessionEndedReason): void {
+  clearTokens()
+  onSessionEnded?.(reason)
+}
+
+async function request<TSchema extends z.ZodType>(
+  method: string,
+  path: string,
+  schema: TSchema,
+  body?: unknown,
+): Promise<z.infer<TSchema>> {
+  let response = await rawFetch(method, path, body)
+
+  // Expired access token: refresh once and replay the request. Only for ordinary
+  // calls that carry a token — never the auth endpoints, and never without a
+  // refresh token to spend.
+  if (response.status === 401 && !NO_REFRESH_PATHS.has(path) && getRefreshToken()) {
+    const refreshed = await ensureFreshToken()
+    if (refreshed) {
+      response = await rawFetch(method, path, body)
+    }
+    // If not refreshed, endSession has already fired; the original 401 falls
+    // through and surfaces as an error to the caller.
   }
 
   return parseResponse(path, response, schema)
 }
 
-/** PATCH with a JSON body — a partial update. Same contract as apiPost. */
-export async function apiPatch<TSchema extends z.ZodType>(
+export function apiGet<TSchema extends z.ZodType>(
+  path: string,
+  schema: TSchema,
+): Promise<z.infer<TSchema>> {
+  return request('GET', path, schema)
+}
+
+export function apiPost<TSchema extends z.ZodType>(
   path: string,
   body: unknown,
   schema: TSchema,
 ): Promise<z.infer<TSchema>> {
-  let response: Response
+  return request('POST', path, schema, body)
+}
 
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      method: 'PATCH',
-      headers: buildHeaders(true),
-      body: JSON.stringify(body),
-    })
-  } catch (cause) {
-    throw new ApiError(`Cannot reach the API at ${API_BASE_URL}`, 0, { cause })
-  }
-
-  return parseResponse(path, response, schema)
+export function apiPatch<TSchema extends z.ZodType>(
+  path: string,
+  body: unknown,
+  schema: TSchema,
+): Promise<z.infer<TSchema>> {
+  return request('PATCH', path, schema, body)
 }
 
 /**

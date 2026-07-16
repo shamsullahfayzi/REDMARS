@@ -44,6 +44,20 @@ export function setTokens(tokens: { accessToken: string; refreshToken: string })
   }
 }
 
+/**
+ * Replace only the access token, on a silent refresh. The refresh token does not
+ * rotate (task 1.8), so it is left exactly as it was — touching it here would be
+ * the bug that logs everyone out on renewal.
+ */
+export function setAccessToken(accessToken: string): void {
+  try {
+    localStorage.setItem(ACCESS_KEY, accessToken);
+  } catch {
+    // Same as above: a non-persistable store degrades refresh across reloads but
+    // does not break the current page.
+  }
+}
+
 export function clearTokens(): void {
   try {
     localStorage.removeItem(ACCESS_KEY);

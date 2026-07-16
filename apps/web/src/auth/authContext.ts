@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { AuthUser } from '@redmars/shared'
+import type { AuthUser, SessionEndedReason } from '@redmars/shared'
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
@@ -15,6 +15,8 @@ export interface AuthContextValue {
   status: AuthStatus
   user: AuthUser | null
   roles: string[]
+  /** Why the last session ended, if it ended on its own (expired, or signed in elsewhere). The login screen shows it; null after a clean sign-out or a fresh login. */
+  sessionEndedReason: SessionEndedReason | null
   login: (username: string, password: string) => Promise<void>
   logout: () => void
 }

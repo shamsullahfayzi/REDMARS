@@ -1,7 +1,13 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { loginResponseSchema, meResponseSchema, type AuthUser } from '@redmars/shared'
-import { apiGet, apiPost } from '@/lib/api'
-import { clearTokens, getAccessToken, setTokens } from '@/lib/authTokens'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  loginResponseSchema,
+  logoutResponseSchema,
+  meResponseSchema,
+  type AuthUser,
+  type SessionEndedReason,
+} from '@redmars/shared'
+import { apiGet, apiPost, setOnSessionEnded } from '@/lib/api'
+import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '@/lib/authTokens'
 import { queryClient } from '@/lib/queryClient'
 import { AuthContext, type AuthStatus } from './authContext'
 
@@ -9,9 +15,15 @@ interface State {
   status: AuthStatus
   user: AuthUser | null
   roles: string[]
+  sessionEndedReason: SessionEndedReason | null
 }
 
-const UNAUTHENTICATED: State = { status: 'unauthenticated', user: null, roles: [] }
+const UNAUTHENTICATED: State = {
+  status: 'unauthenticated',
+  user: null,
+  roles: [],
+  sessionEndedReason: null,
+}
 
 /**
  * Owns the session. Everything below it reads identity through useAuth.
@@ -20,19 +32,40 @@ const UNAUTHENTICATED: State = { status: 'unauthenticated', user: null, roles: [
  * token itself: roles live only in that live call, so the menu can never be driven
  * by a stale claim baked into a token. login() and the on-mount rehydrate both end
  * in the same loadMe(), so there is one code path that defines "signed in".
+ *
+ * The api layer refreshes the access token silently on a 401; only when a refresh
+ * is REFUSED (signed in elsewhere, deactivated, expired) does it call back here,
+ * and we drop to unauthenticated with the reason so the login screen can explain.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<State>({ status: 'loading', user: null, roles: [] })
+  const [state, setState] = useState<State>({
+    status: 'loading',
+    user: null,
+    roles: [],
+    sessionEndedReason: null,
+  })
 
   const loadMe = useCallback(async () => {
     const me = await apiGet('/auth/me', meResponseSchema)
-    setState({ status: 'authenticated', user: me.user, roles: me.roles })
+    setState({ status: 'authenticated', user: me.user, roles: me.roles, sessionEndedReason: null })
+  }, [])
+
+  // Register the "session ended" handler once, and drop the query cache too — the
+  // ended session's data must not linger for whoever logs in next.
+  useEffect(() => {
+    setOnSessionEnded((reason) => {
+      queryClient.clear()
+      setState({ ...UNAUTHENTICATED, sessionEndedReason: reason })
+    })
   }, [])
 
   // On mount: a token in storage is a claim to a session, not proof of one — the
   // server decides. So ask /auth/me. Success rehydrates; anything else (expired
   // token, deactivated account) clears the token and lands on unauthenticated.
+  const bootstrapped = useRef(false)
   useEffect(() => {
+    if (bootstrapped.current) return
+    bootstrapped.current = true
     if (!getAccessToken()) {
       setState(UNAUTHENTICATED)
       return
@@ -61,9 +94,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(() => {
-    // Client-side only for now; 1.8 adds the server call that revokes the Session.
-    // queryClient.clear() drops every cached response: on a shared workstation the
-    // next user must never see the last one's patient data served from cache.
+    // Tell the server to revoke the session so its refresh token is dead, then
+    // clear locally. Best-effort: a failed call (offline) must still sign the user
+    // out on this device, so we clear regardless of what the server says.
+    const refreshToken = getRefreshToken()
+    if (refreshToken) {
+      void apiPost('/auth/logout', { refreshToken }, logoutResponseSchema).catch(() => {
+        // Nothing to do — local sign-out below is what the user asked for.
+      })
+    }
     clearTokens()
     queryClient.clear()
     setState(UNAUTHENTICATED)

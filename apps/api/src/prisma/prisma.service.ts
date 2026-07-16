@@ -245,4 +245,40 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       );
     }
   }
+
+  /**
+   * Task 1.8 — the dedicated auth-event actions (login, logout) that task 1.4
+   * deferred to here. These are NOT database writes the query extension can see —
+   * a login is a fact about a person, not a row-mutation with a before/after — so
+   * the caller states the actor explicitly rather than the extension inferring it.
+   *
+   * Written through the BASE client so the event is not itself audited. Best-effort
+   * and loud on failure, same standard as every other audit path: a missing auth
+   * row is a hole worth an error line, but must never fail the login or logout it
+   * describes. entity is 'AppUser' keyed to the person the event is about.
+   */
+  async recordAuthEvent(
+    action: AuditAction,
+    actor: { userId: string | null; facilityId: string; ipAddress?: string },
+  ): Promise<void> {
+    try {
+      await this.auditLog.create({
+        data: {
+          facilityId: actor.facilityId,
+          userId: actor.userId,
+          action,
+          entity: 'AppUser',
+          entityId: actor.userId,
+          before: Prisma.DbNull,
+          after: Prisma.DbNull,
+          ipAddress: actor.ipAddress ?? null,
+        },
+      });
+    } catch (err) {
+      this.logger.error(
+        `Auth-event audit FAILED for ${action} — the action succeeded but left no audit row`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+  }
 }

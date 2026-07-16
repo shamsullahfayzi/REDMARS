@@ -9,7 +9,15 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { loginRequestSchema, type LoginResponse, type MeResponse } from '@redmars/shared';
+import {
+  loginRequestSchema,
+  logoutRequestSchema,
+  refreshRequestSchema,
+  type LoginResponse,
+  type LogoutResponse,
+  type MeResponse,
+  type RefreshResponse,
+} from '@redmars/shared';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { RequirePermission } from './decorators/require-permission.decorator';
@@ -77,5 +85,48 @@ export class AuthController {
       throw new UnauthorizedException('Invalid or expired token');
     }
     return this.auth.me(auth);
+  }
+
+  /**
+   * POST /auth/refresh
+   *
+   * Public: the access token is expired when this is called, so it cannot be what
+   * authenticates the call — the refresh token in the body is, validated against
+   * the Session table. 200, not 201: no resource is created, a token is exchanged.
+   */
+  @Public()
+  @Post('refresh')
+  @HttpCode(200)
+  refresh(@Body() body: unknown): Promise<RefreshResponse> {
+    const parsed = refreshRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid refresh request',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    return this.auth.refresh(parsed.data.refreshToken);
+  }
+
+  /**
+   * POST /auth/logout
+   *
+   * Public for the same reason as refresh: a user signing out may already hold an
+   * expired access token, and should still be able to kill the session. The
+   * refresh token names which session to revoke. Always 200 — logout is idempotent.
+   */
+  @Public()
+  @Post('logout')
+  @HttpCode(200)
+  async logout(@Body() body: unknown, @Req() req: Request): Promise<LogoutResponse> {
+    const parsed = logoutRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid logout request',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    await this.auth.logout(parsed.data.refreshToken, req.ip);
+    return { success: true };
   }
 }

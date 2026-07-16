@@ -12,7 +12,7 @@ import { ApiError } from '@/lib/api'
  */
 export function LoginPage() {
   const { t } = useTranslation()
-  const { status, login } = useAuth()
+  const { status, sessionEndedReason, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -61,6 +61,14 @@ export function LoginPage() {
         className="w-full max-w-sm space-y-4 rounded-xl border border-border p-6"
       >
         <h1 className="text-xl font-semibold text-foreground">{t('auth.login.title')}</h1>
+
+        {/* Why the last session ended, shown only if it ended on its own — not
+            after a clean sign-out (which clears the reason). */}
+        {sessionEndedReason && !error && (
+          <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+            {t(`auth.sessionEnded.${sessionEndedReason}`)}
+          </p>
+        )}
 
         <div className="space-y-1.5">
           <label htmlFor="username" className="text-sm font-medium text-foreground">
