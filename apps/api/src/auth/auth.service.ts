@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { hash, verify } from '@node-rs/argon2';
 import type { LoginRequest, LoginResponse } from '@redmars/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Env } from '../config/env.validation';
 
 /** Where the request came from. Recorded on the Session so 1.8 can show a user their sessions. */
 export interface LoginContext {
@@ -33,7 +34,12 @@ export class AuthService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
-    private readonly config: ConfigService,
+    // Typed <Env, true>: the generic gives get() the real key→type map from the
+    // zod schema (so 'JWT_REFRESH_TTL_DAYS' is a number, not `any`), and the
+    // `true` (WasValidated) says every key is present — validateEnv guarantees
+    // it at boot — so get() returns T, never T | undefined. That is what kills
+    // the two no-unsafe-assignment errors AND the `!` we used to paper over them.
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -51,7 +57,7 @@ export class AuthService implements OnModuleInit {
     // unique within it. If two facilities ever share a database, this silently
     // picks one of them, which is a cross-tenant login. That day, login needs a
     // facility discriminator; it is not something to paper over here.
-    const user = await this.prisma.appUser.findFirst({
+    const user = await this.prisma.db.appUser.findFirst({
       where: { username: input.username, deletedAt: null },
     });
 
@@ -85,14 +91,14 @@ export class AuthService implements OnModuleInit {
     const accessToken = this.issueAccessToken(user.id, user.facilityId, user.username);
     const { token: refreshToken, hash: refreshTokenHash } = this.issueRefreshToken();
 
-    const refreshTtlDays = this.config.get<number>('JWT_REFRESH_TTL_DAYS', { infer: true })!;
+    const refreshTtlDays = this.config.get('JWT_REFRESH_TTL_DAYS', { infer: true });
     const expiresAt = new Date(Date.now() + refreshTtlDays * 24 * 60 * 60 * 1000);
 
     // One transaction: a Session that exists without its lastLoginAt is a
     // cosmetic lie, but a lastLoginAt recorded for a session that failed to
     // persist is an audit trail claiming a login that never happened.
-    await this.prisma.$transaction([
-      this.prisma.session.create({
+    await this.prisma.db.$transaction([
+      this.prisma.db.session.create({
         data: {
           userId: user.id,
           refreshTokenHash,
@@ -101,7 +107,7 @@ export class AuthService implements OnModuleInit {
           userAgent: ctx.userAgent,
         },
       }),
-      this.prisma.appUser.update({
+      this.prisma.db.appUser.update({
         where: { id: user.id },
         data: { lastLoginAt: new Date() },
       }),
@@ -110,7 +116,7 @@ export class AuthService implements OnModuleInit {
     return {
       accessToken,
       refreshToken,
-      expiresIn: this.config.get<number>('JWT_ACCESS_TTL_SECONDS', { infer: true })!,
+      expiresIn: this.config.get('JWT_ACCESS_TTL_SECONDS', { infer: true }),
       user: {
         id: user.id,
         username: user.username,

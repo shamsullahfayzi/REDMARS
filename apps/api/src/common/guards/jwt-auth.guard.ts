@@ -65,7 +65,7 @@ export class JwtAuthGuard implements CanActivate {
     // since. This read is what makes "deactivate this user" mean now instead of
     // "within 15 minutes" — the roles have to be fetched anyway, so the
     // freshness costs nothing beyond the columns.
-    const user = await this.prisma.appUser.findUnique({
+    const user = await this.prisma.db.appUser.findUnique({
       where: { id: payload.sub },
       select: {
         id: true,

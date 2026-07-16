@@ -35,7 +35,7 @@ export class HealthController {
   @Get()
   async check(): Promise<HealthResponse> {
     try {
-      await this.prisma.$queryRaw`SELECT 1`;
+      await this.prisma.db.$queryRaw`SELECT 1`;
     } catch (error) {
       this.logger.error(
         'Health check failed: database unreachable',
