@@ -51,6 +51,7 @@
     "users": "Users",
     "departments": "Departments",
     "practitioners": "Practitioners",
+    "services": "Services",
     "reports": "Reports",
     "groups": {
       "clinical": "Clinical",
@@ -210,6 +211,48 @@
       "toggle": "Edit departments",
       "save": "Save",
       "saving": "Saving…",
+      "failed": "Could not save. Please try again."
+    }
+  },
+  "services": {
+    "subtitle": "Billable services and their fees.",
+    "currency": "AFN",
+    "create": {
+      "title": "Add a service",
+      "department": "Department",
+      "departmentPlaceholder": "Select a department…",
+      "code": "Code",
+      "name": "Name",
+      "fee": "Fee",
+      "submit": "Add service",
+      "submitting": "Saving…",
+      "invalid": "Please check the form.",
+      "duplicate": "That code is already in use.",
+      "failed": "Could not save the service. Please try again."
+    },
+    "list": {
+      "title": "Services",
+      "loading": "Loading…",
+      "error": "Could not load services.",
+      "empty": "No services yet.",
+      "code": "Code",
+      "name": "Name",
+      "department": "Department",
+      "fee": "Fee",
+      "status": "Status",
+      "actions": "Actions",
+      "active": "Active",
+      "inactive": "Inactive",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate"
+    },
+    "edit": {
+      "toggle": "Edit service",
+      "name": "Name",
+      "fee": "Fee",
+      "save": "Save",
+      "saving": "Saving…",
+      "invalid": "Please check the form.",
       "failed": "Could not save. Please try again."
     }
   }

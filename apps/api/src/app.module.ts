@@ -11,6 +11,7 @@ import { DepartmentModule } from './modules/department/department.module';
 import { RoomModule } from './modules/room/room.module';
 import { SpecialityModule } from './modules/speciality/speciality.module';
 import { PractitionerModule } from './modules/practitioner/practitioner.module';
+import { ServiceModule } from './modules/service/service.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PractitionerModule } from './modules/practitioner/practitioner.module';
     RoomModule,
     SpecialityModule,
     PractitionerModule,
+    ServiceModule,
   ],
   providers: [
     // Global. Runs after the guards on every route, so request.auth is already

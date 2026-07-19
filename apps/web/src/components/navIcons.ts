@@ -5,6 +5,7 @@ import {
   FlaskConical,
   LayoutDashboard,
   Pill,
+  Receipt,
   Stethoscope,
   Users,
   UserCog,
@@ -23,5 +24,6 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   users: UserCog,
   departments: Building2,
   practitioners: Users,
+  services: Receipt,
   reports: BarChart3,
 }
