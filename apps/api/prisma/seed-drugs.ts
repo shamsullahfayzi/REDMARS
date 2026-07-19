@@ -14,6 +14,13 @@ import { parseCsv } from '../src/modules/drug/csv';
  * generic names, strengths and especially the isControlled flags are the things to
  * check. Extend or correct the CSV; this script just loads whatever is in it.
  *
+ * The default route/freq/duration columns (task 2.6) are prescribing STARTERS that
+ * autofill the consultation form and are always editable at the point of care. They
+ * are populated only for the once-daily oral SSRI/SNRI antidepressants, where
+ * oral/OD/1-month is a sound default. Drugs whose timing is genuinely per-patient —
+ * TCAs (nocte), antipsychotics (often BD), lithium (levels), and everything
+ * controlled or acute — are left blank on purpose rather than guessed at.
+ *
  * Bootstrap data, so it writes with the bare client (no audit actor) and upserts
  * on (facility, code) — re-running is safe and updates in place, exactly like the
  * facility/department seed. Run: pnpm --filter api db:seed:drugs
@@ -46,6 +53,9 @@ async function main() {
     genericName: col('genericname'),
     strength: col('strength'),
     form: col('form'),
+    defaultRoute: col('defaultroute'),
+    defaultFreq: col('defaultfreq'),
+    defaultDuration: col('defaultduration'),
     isControlled: col('iscontrolled'),
   };
   if (idx.code < 0 || idx.genericName < 0) {
@@ -63,6 +73,9 @@ async function main() {
       genericName: at(cells, idx.genericName),
       strength: at(cells, idx.strength),
       form: at(cells, idx.form),
+      defaultRoute: at(cells, idx.defaultRoute),
+      defaultFreq: at(cells, idx.defaultFreq),
+      defaultDuration: at(cells, idx.defaultDuration),
       isControlled: TRUE_VALUES.has(at(cells, idx.isControlled).toLowerCase()),
     });
 
@@ -72,13 +85,27 @@ async function main() {
       continue;
     }
 
-    const { code, genericName, brandName, atcCode, strength, form, isControlled } = parsed.data;
+    const {
+      code,
+      genericName,
+      brandName,
+      atcCode,
+      strength,
+      form,
+      defaultRoute,
+      defaultFreq,
+      defaultDuration,
+      isControlled,
+    } = parsed.data;
     const fields = {
       genericName,
       brandName: brandName ?? null,
       atcCode: atcCode ?? null,
       strength: strength ?? null,
       form: form ?? null,
+      defaultRoute: defaultRoute ?? null,
+      defaultFreq: defaultFreq ?? null,
+      defaultDuration: defaultDuration ?? null,
       isControlled,
     };
     await prisma.drug.upsert({

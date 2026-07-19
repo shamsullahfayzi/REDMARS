@@ -20,6 +20,9 @@ const DRUG_SELECT = {
   atcCode: true,
   strength: true,
   form: true,
+  defaultRoute: true,
+  defaultFreq: true,
+  defaultDuration: true,
   isControlled: true,
   isActive: true,
 } as const;
@@ -32,6 +35,9 @@ type DrugRow = {
   atcCode: string | null;
   strength: string | null;
   form: string | null;
+  defaultRoute: string | null;
+  defaultFreq: string | null;
+  defaultDuration: string | null;
   isControlled: boolean;
   isActive: boolean;
 };
@@ -45,6 +51,9 @@ function toSummary(d: DrugRow): DrugSummary {
     atcCode: d.atcCode,
     strength: d.strength,
     form: d.form,
+    defaultRoute: d.defaultRoute,
+    defaultFreq: d.defaultFreq,
+    defaultDuration: d.defaultDuration,
     isControlled: d.isControlled,
     isActive: d.isActive,
   };
@@ -61,6 +70,12 @@ const HEADER_ALIASES: Record<string, keyof CreateDrugRequest> = {
   atc_code: 'atcCode',
   strength: 'strength',
   form: 'form',
+  defaultroute: 'defaultRoute',
+  default_route: 'defaultRoute',
+  defaultfreq: 'defaultFreq',
+  default_freq: 'defaultFreq',
+  defaultduration: 'defaultDuration',
+  default_duration: 'defaultDuration',
   iscontrolled: 'isControlled',
   is_controlled: 'isControlled',
   controlled: 'isControlled',
@@ -183,6 +198,9 @@ export class DrugService {
         atcCode: cell('atcCode'),
         strength: cell('strength'),
         form: cell('form'),
+        defaultRoute: cell('defaultRoute'),
+        defaultFreq: cell('defaultFreq'),
+        defaultDuration: cell('defaultDuration'),
         isControlled: TRUE_VALUES.has(cell('isControlled').toLowerCase()),
       });
 
@@ -243,6 +261,9 @@ function toFields(input: CreateDrugRequest | UpdateDrugRequest) {
     atcCode: input.atcCode ?? null,
     strength: input.strength ?? null,
     form: input.form ?? null,
+    defaultRoute: input.defaultRoute ?? null,
+    defaultFreq: input.defaultFreq ?? null,
+    defaultDuration: input.defaultDuration ?? null,
     isControlled: input.isControlled,
   };
 }

@@ -182,6 +182,52 @@ describe('Drug formulary (e2e)', () => {
       .expect(409);
   });
 
+  it('captures prescribing defaults (2.6): create carries route/freq/duration, edit changes them', async () => {
+    const created = await request(server)
+      .post('/drugs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        code: `${PREFIX}DEFAULTS`,
+        genericName: 'Duloxetine',
+        defaultRoute: 'oral',
+        defaultFreq: 'OD',
+        defaultDuration: '1 month',
+      })
+      .expect(201);
+    const drug = created.body as DrugSummary;
+    expect(drug.defaultRoute).toBe('oral');
+    expect(drug.defaultFreq).toBe('OD');
+    expect(drug.defaultDuration).toBe('1 month');
+
+    // Editable — a prescriber-facing default is never locked.
+    const edited = await request(server)
+      .patch(`/drugs/${drug.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ genericName: 'Duloxetine', defaultFreq: 'BD', defaultDuration: '2 weeks' })
+      .expect(200);
+    const after = edited.body as DrugSummary;
+    expect(after.defaultRoute).toBeNull(); // omitted on edit -> cleared
+    expect(after.defaultFreq).toBe('BD');
+    expect(after.defaultDuration).toBe('2 weeks');
+  });
+
+  it('CSV import carries prescribing defaults (2.6)', async () => {
+    const csv = [
+      'code,genericName,defaultRoute,defaultFreq,defaultDuration',
+      `${PREFIX}IMPDEF,Sertraline,oral,OD,1 month`,
+    ].join('\n');
+    await request(server)
+      .post('/drugs/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ csv })
+      .expect(200);
+
+    const row = await prisma.drug.findFirstOrThrow({ where: { code: `${PREFIX}IMPDEF` } });
+    expect(row.defaultRoute).toBe('oral');
+    expect(row.defaultFreq).toBe('OD');
+    expect(row.defaultDuration).toBe('1 month');
+  });
+
   it('rejects a bad body (missing generic name) with 400', () =>
     request(server)
       .post('/drugs')

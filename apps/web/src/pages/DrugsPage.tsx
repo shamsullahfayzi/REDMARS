@@ -171,6 +171,9 @@ function CreateDrugForm() {
   const [atcCode, setAtcCode] = useState('')
   const [strength, setStrength] = useState('')
   const [form, setForm] = useState('')
+  const [defaultRoute, setDefaultRoute] = useState('')
+  const [defaultFreq, setDefaultFreq] = useState('')
+  const [defaultDuration, setDefaultDuration] = useState('')
   const [isControlled, setIsControlled] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -181,6 +184,9 @@ function CreateDrugForm() {
     setAtcCode('')
     setStrength('')
     setForm('')
+    setDefaultRoute('')
+    setDefaultFreq('')
+    setDefaultDuration('')
     setIsControlled(false)
   }
 
@@ -195,6 +201,9 @@ function CreateDrugForm() {
       atcCode,
       strength,
       form,
+      defaultRoute,
+      defaultFreq,
+      defaultDuration,
       isControlled,
     })
     if (!parsed.success) {
@@ -265,6 +274,39 @@ function CreateDrugForm() {
                 onChange={(e) => setForm(e.target.value)}
                 placeholder="tablet"
               />
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-border p-3">
+            <p className="text-xs text-muted-foreground">{t('drugs.create.defaultsHint')}</p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="d-route">{t('drugs.create.defaultRoute')}</Label>
+                <Input
+                  id="d-route"
+                  value={defaultRoute}
+                  onChange={(e) => setDefaultRoute(e.target.value)}
+                  placeholder="oral"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="d-freq">{t('drugs.create.defaultFreq')}</Label>
+                <Input
+                  id="d-freq"
+                  value={defaultFreq}
+                  onChange={(e) => setDefaultFreq(e.target.value)}
+                  placeholder="OD"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="d-duration">{t('drugs.create.defaultDuration')}</Label>
+                <Input
+                  id="d-duration"
+                  value={defaultDuration}
+                  onChange={(e) => setDefaultDuration(e.target.value)}
+                  placeholder="1 month"
+                />
+              </div>
             </div>
           </div>
 
@@ -365,6 +407,9 @@ function DrugEditor({ drug, onDone }: { drug: DrugSummary; onDone: () => void })
   const [atcCode, setAtcCode] = useState(drug.atcCode ?? '')
   const [strength, setStrength] = useState(drug.strength ?? '')
   const [form, setForm] = useState(drug.form ?? '')
+  const [defaultRoute, setDefaultRoute] = useState(drug.defaultRoute ?? '')
+  const [defaultFreq, setDefaultFreq] = useState(drug.defaultFreq ?? '')
+  const [defaultDuration, setDefaultDuration] = useState(drug.defaultDuration ?? '')
   const [isControlled, setIsControlled] = useState(drug.isControlled)
   const [error, setError] = useState<string | null>(null)
 
@@ -378,6 +423,9 @@ function DrugEditor({ drug, onDone }: { drug: DrugSummary; onDone: () => void })
       atcCode,
       strength,
       form,
+      defaultRoute,
+      defaultFreq,
+      defaultDuration,
       isControlled,
     })
     if (!parsed.success) {
@@ -435,6 +483,36 @@ function DrugEditor({ drug, onDone }: { drug: DrugSummary; onDone: () => void })
             {t('drugs.create.form')}
           </Label>
           <Input id={`d-form-${drug.id}`} value={form} onChange={(e) => setForm(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`d-route-${drug.id}`} className="text-xs text-muted-foreground">
+            {t('drugs.create.defaultRoute')}
+          </Label>
+          <Input
+            id={`d-route-${drug.id}`}
+            value={defaultRoute}
+            onChange={(e) => setDefaultRoute(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`d-freq-${drug.id}`} className="text-xs text-muted-foreground">
+            {t('drugs.create.defaultFreq')}
+          </Label>
+          <Input
+            id={`d-freq-${drug.id}`}
+            value={defaultFreq}
+            onChange={(e) => setDefaultFreq(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`d-duration-${drug.id}`} className="text-xs text-muted-foreground">
+            {t('drugs.create.defaultDuration')}
+          </Label>
+          <Input
+            id={`d-duration-${drug.id}`}
+            value={defaultDuration}
+            onChange={(e) => setDefaultDuration(e.target.value)}
+          />
         </div>
         <label className="flex items-center gap-2 self-end pb-2 text-sm text-foreground">
           <input

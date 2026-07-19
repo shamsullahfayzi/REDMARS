@@ -4,9 +4,9 @@ import { z } from 'zod'
  * Drug formulary contract (task 2.4). A per-facility catalogue of medicines, keyed
  * by a unique code and searchable by generic/brand name.
  *
- * The default route/frequency/duration columns exist on the model but are NOT here
- * yet — they arrive in task 2.6, which owns the "duloxetine autofills OD/oral/1
- * month" behaviour. 2.4 is the catalogue and its CSV import.
+ * The default route/frequency/duration columns (task 2.6) autofill a prescription
+ * on the consultation screen (Phase 4) — "duloxetine → oral / OD / 1 month". They
+ * are optional starters a prescriber can always override; captured and editable here.
  */
 
 const optionalText = (max: number) =>
@@ -25,6 +25,9 @@ export const drugSummarySchema = z.object({
   atcCode: z.string().nullable(),
   strength: z.string().nullable(),
   form: z.string().nullable(),
+  defaultRoute: z.string().nullable(),
+  defaultFreq: z.string().nullable(),
+  defaultDuration: z.string().nullable(),
   isControlled: z.boolean(),
   isActive: z.boolean(),
 })
@@ -45,6 +48,9 @@ export const drugFieldsSchema = z.object({
   atcCode: optionalText(16),
   strength: optionalText(40),
   form: optionalText(40),
+  defaultRoute: optionalText(40),
+  defaultFreq: optionalText(40),
+  defaultDuration: optionalText(40),
   isControlled: z.boolean().default(false),
 })
 export type DrugFields = z.infer<typeof drugFieldsSchema>

@@ -26,6 +26,9 @@ function loadRows() {
     genericName: header.indexOf('genericname'),
     strength: header.indexOf('strength'),
     form: header.indexOf('form'),
+    defaultRoute: header.indexOf('defaultroute'),
+    defaultFreq: header.indexOf('defaultfreq'),
+    defaultDuration: header.indexOf('defaultduration'),
     isControlled: header.indexOf('iscontrolled'),
   };
   const at = (cells: string[], i: number) => (i >= 0 ? (cells[i] ?? '').trim() : '');
@@ -35,6 +38,9 @@ function loadRows() {
     genericName: at(cells, idx.genericName),
     strength: at(cells, idx.strength),
     form: at(cells, idx.form),
+    defaultRoute: at(cells, idx.defaultRoute),
+    defaultFreq: at(cells, idx.defaultFreq),
+    defaultDuration: at(cells, idx.defaultDuration),
     isControlled: TRUE_VALUES.has(at(cells, idx.isControlled).toLowerCase()),
   }));
   return { header, data };
@@ -93,5 +99,19 @@ describe('Essential medicines seed data (2.5)', () => {
     const paracetamol = data.find((r) => r.genericName.toLowerCase() === 'paracetamol');
     expect(diazepam?.isControlled).toBe(true);
     expect(paracetamol?.isControlled).toBe(false);
+  });
+
+  it('the done-when (2.6): duloxetine carries prescribing defaults, a benzo does not', () => {
+    // The named example: duloxetine autofills oral / OD / 1 month.
+    const duloxetine = data.find((r) => r.code === 'DULOX30');
+    expect(duloxetine?.defaultRoute).toBe('oral');
+    expect(duloxetine?.defaultFreq).toBe('OD');
+    expect(duloxetine?.defaultDuration).toBe('1 month');
+
+    // Controlled / acute drugs are left blank on purpose — no guessed benzo regimen.
+    const diazepam = data.find((r) => r.code === 'DIAZ5');
+    expect(diazepam?.defaultRoute).toBe('');
+    expect(diazepam?.defaultFreq).toBe('');
+    expect(diazepam?.defaultDuration).toBe('');
   });
 });

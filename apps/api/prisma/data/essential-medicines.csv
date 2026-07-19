@@ -1,18 +1,18 @@
-code,genericName,strength,form,isControlled
+code,genericName,strength,form,isControlled,defaultRoute,defaultFreq,defaultDuration
 AMITRIP25,Amitriptyline,25mg,tablet,false
 NORTRIP25,Nortriptyline,25mg,tablet,false
 IMIPRAM25,Imipramine,25mg,tablet,false
 CLOMIP25,Clomipramine,25mg,tablet,false
-FLUOX20,Fluoxetine,20mg,capsule,false
-SERT50,Sertraline,50mg,tablet,false
-SERT100,Sertraline,100mg,tablet,false
-PAROX20,Paroxetine,20mg,tablet,false
-CITAL20,Citalopram,20mg,tablet,false
-ESCIT10,Escitalopram,10mg,tablet,false
-FLUVOX50,Fluvoxamine,50mg,tablet,false
-DULOX30,Duloxetine,30mg,capsule,false
-DULOX60,Duloxetine,60mg,capsule,false
-VENLA75,Venlafaxine,75mg,tablet,false
+FLUOX20,Fluoxetine,20mg,capsule,false,oral,OD,1 month
+SERT50,Sertraline,50mg,tablet,false,oral,OD,1 month
+SERT100,Sertraline,100mg,tablet,false,oral,OD,1 month
+PAROX20,Paroxetine,20mg,tablet,false,oral,OD,1 month
+CITAL20,Citalopram,20mg,tablet,false,oral,OD,1 month
+ESCIT10,Escitalopram,10mg,tablet,false,oral,OD,1 month
+FLUVOX50,Fluvoxamine,50mg,tablet,false,oral,OD,1 month
+DULOX30,Duloxetine,30mg,capsule,false,oral,OD,1 month
+DULOX60,Duloxetine,60mg,capsule,false,oral,OD,1 month
+VENLA75,Venlafaxine,75mg,tablet,false,oral,OD,1 month
 MIRTAZ30,Mirtazapine,30mg,tablet,false
 BUPROP150,Bupropion,150mg,tablet,false
 HALOP5,Haloperidol,5mg,tablet,false
