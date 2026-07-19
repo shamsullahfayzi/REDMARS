@@ -110,14 +110,16 @@ describe('Drug formulary (e2e)', () => {
     expect(result.skipped).toBe(0);
     expect(result.errors).toHaveLength(0);
 
-    // Search finds duloxetine by a partial generic name.
+    // Search finds duloxetine by a partial generic name. Scoped to this test's own
+    // code rather than asserting a global count — a real seeded formulary may hold
+    // its own Duloxetine, and this test must not assume an empty table.
     const search = await request(server)
       .get('/drugs?q=dulox')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
-    const found = (search.body as DrugListResponse).drugs;
-    expect(found).toHaveLength(1);
-    expect(found[0].genericName).toBe('Duloxetine');
+    const mine = (search.body as DrugListResponse).drugs.filter((d) => d.code === `${PREFIX}DULOX`);
+    expect(mine).toHaveLength(1);
+    expect(mine[0].genericName).toBe('Duloxetine');
 
     // The comma inside the quoted field was preserved, not split.
     const coamox = await prisma.drug.findFirstOrThrow({ where: { code: `${PREFIX}COAMOX` } });
