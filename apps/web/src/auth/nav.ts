@@ -27,6 +27,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'lab', to: '/lab', roles: ['lab_tech'] },
   { key: 'pharmacy', to: '/pharmacy', roles: ['pharmacist'] },
   { key: 'users', to: '/users', roles: ['admin'] },
+  { key: 'departments', to: '/departments', roles: ['admin'] },
   { key: 'reports', to: '/reports', roles: ['admin', 'management'] },
 ]
 

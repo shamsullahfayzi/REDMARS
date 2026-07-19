@@ -47,6 +47,7 @@
     "lab": "Lab",
     "pharmacy": "Pharmacy",
     "users": "Users",
+    "departments": "Departments",
     "reports": "Reports"
   },
   "placeholder": {
@@ -77,6 +78,48 @@
       "title": "Staff accounts",
       "loading": "Loading…",
       "error": "Could not load users.",
+      "status": "Status",
+      "actions": "Actions",
+      "active": "Active",
+      "inactive": "Inactive",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate"
+    }
+  },
+  "departments": {
+    "subtitle": "Wards and units in this hospital.",
+    "types": {
+      "opd": "Outpatient",
+      "ipd": "Inpatient",
+      "emergency": "Emergency",
+      "laboratory": "Laboratory",
+      "radiology": "Radiology",
+      "pharmacy": "Pharmacy",
+      "administration": "Administration"
+    },
+    "create": {
+      "title": "Add a department",
+      "code": "Code",
+      "codePlaceholder": "e.g. OPD-2",
+      "name": "Name",
+      "type": "Type",
+      "typePlaceholder": "Select a type…",
+      "nameLocalPrs": "Local name (Dari)",
+      "nameLocalPs": "Local name (Pashto)",
+      "submit": "Add department",
+      "submitting": "Saving…",
+      "invalid": "Please check the form.",
+      "duplicate": "That code is already in use.",
+      "failed": "Could not save the department. Please try again."
+    },
+    "list": {
+      "title": "Departments",
+      "loading": "Loading…",
+      "error": "Could not load departments.",
+      "empty": "No departments yet.",
+      "code": "Code",
+      "name": "Name",
+      "type": "Type",
       "status": "Status",
       "actions": "Actions",
       "active": "Active",

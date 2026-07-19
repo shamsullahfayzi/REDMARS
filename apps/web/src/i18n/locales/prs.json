@@ -47,6 +47,7 @@
     "lab": "لابراتوار",
     "pharmacy": "دواخانه",
     "users": "کاربران",
+    "departments": "بخش‌ها",
     "reports": "گزارش‌ها"
   },
   "placeholder": {
@@ -77,6 +78,48 @@
       "title": "حساب‌های کارمندان",
       "loading": "در حال بارگذاری…",
       "error": "بارگذاری کاربران ناکام شد.",
+      "status": "وضعیت",
+      "actions": "اقدامات",
+      "active": "فعال",
+      "inactive": "غیرفعال",
+      "deactivate": "غیرفعال‌سازی",
+      "reactivate": "فعال‌سازی مجدد"
+    }
+  },
+  "departments": {
+    "subtitle": "بخش‌ها و واحدهای این شفاخانه.",
+    "types": {
+      "opd": "سراپا",
+      "ipd": "بستر",
+      "emergency": "عاجل",
+      "laboratory": "لابراتوار",
+      "radiology": "رادیولوژی",
+      "pharmacy": "دواخانه",
+      "administration": "اداره"
+    },
+    "create": {
+      "title": "افزودن بخش",
+      "code": "کود",
+      "codePlaceholder": "مثلاً OPD-2",
+      "name": "نام",
+      "type": "نوع",
+      "typePlaceholder": "یک نوع را انتخاب کنید…",
+      "nameLocalPrs": "نام محلی (دری)",
+      "nameLocalPs": "نام محلی (پشتو)",
+      "submit": "افزودن بخش",
+      "submitting": "در حال ذخیره…",
+      "invalid": "لطفاً فورم را بررسی کنید.",
+      "duplicate": "این کود قبلاً استفاده شده است.",
+      "failed": "ذخیرهٔ بخش ناکام شد. لطفاً دوباره تلاش کنید."
+    },
+    "list": {
+      "title": "بخش‌ها",
+      "loading": "در حال بارگذاری…",
+      "error": "بارگذاری بخش‌ها ناکام شد.",
+      "empty": "هنوز بخشی وجود ندارد.",
+      "code": "کود",
+      "name": "نام",
+      "type": "نوع",
       "status": "وضعیت",
       "actions": "اقدامات",
       "active": "فعال",

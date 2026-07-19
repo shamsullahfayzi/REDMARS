@@ -47,6 +47,7 @@
     "lab": "لابراتوار",
     "pharmacy": "درملتون",
     "users": "کاروونکي",
+    "departments": "څانګې",
     "reports": "راپورونه"
   },
   "placeholder": {
@@ -77,6 +78,48 @@
       "title": "د کارمندانو حسابونه",
       "loading": "په پورته کولو کې…",
       "error": "کاروونکي پورته نشول.",
+      "status": "حالت",
+      "actions": "کړنې",
+      "active": "فعال",
+      "inactive": "غیرفعال",
+      "deactivate": "غیرفعالول",
+      "reactivate": "بیا فعالول"
+    }
+  },
+  "departments": {
+    "subtitle": "د دې روغتون څانګې او واحدونه.",
+    "types": {
+      "opd": "سرپایي",
+      "ipd": "بستر",
+      "emergency": "بیړني",
+      "laboratory": "لابراتوار",
+      "radiology": "رادیولوژي",
+      "pharmacy": "درملتون",
+      "administration": "اداره"
+    },
+    "create": {
+      "title": "څانګه زیاتول",
+      "code": "کوډ",
+      "codePlaceholder": "لکه OPD-2",
+      "name": "نوم",
+      "type": "ډول",
+      "typePlaceholder": "یو ډول وټاکئ…",
+      "nameLocalPrs": "محلي نوم (دري)",
+      "nameLocalPs": "محلي نوم (پښتو)",
+      "submit": "څانګه زیاته کړئ",
+      "submitting": "په خوندي کولو کې…",
+      "invalid": "مهرباني وکړئ فورمه وګورئ.",
+      "duplicate": "دا کوډ دمخه کارول شوی دی.",
+      "failed": "څانګه خوندي نشوه. مهرباني وکړئ بیا هڅه وکړئ."
+    },
+    "list": {
+      "title": "څانګې",
+      "loading": "په پورته کولو کې…",
+      "error": "څانګې پورته نشوې.",
+      "empty": "تر اوسه هیڅ څانګه نشته.",
+      "code": "کوډ",
+      "name": "نوم",
+      "type": "ډول",
       "status": "حالت",
       "actions": "کړنې",
       "active": "فعال",
