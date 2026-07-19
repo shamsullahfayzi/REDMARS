@@ -1,69 +1,62 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet } from 'react-router'
+import { Outlet } from 'react-router'
+import { Menu } from 'lucide-react'
 import { useAuth } from '@/auth/authContext'
-import { navItemsForRoles } from '@/auth/nav'
 import { LanguageToggle } from '@/components/LanguageToggle'
+import { Sidebar } from '@/components/Sidebar'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 
 /**
- * App shell for signed-in users.
+ * App shell for signed-in users: a fixed sidebar and a top bar over the routed
+ * content.
  *
- * Every spacing/alignment class here is logical (ps-/pe-, ms-/me-, text-start),
- * never physical (pl-/pr-, text-left). That is what lets dir="rtl" mirror this
+ * Every spacing/alignment class here is logical (ps-/pe-, ms-/me-, border-e,
+ * text-start), never physical — that is what lets dir="rtl" mirror the whole shell
  * without a second stylesheet. See useDocumentLanguage.
- *
- * The nav renders only the items the user's roles allow (task 1.6). That filtering
- * is courtesy — every route it exposes is still authorized server-side — so a bug
- * here shows the wrong menu, never grants the wrong access.
  */
 export function RootLayout() {
   const { t } = useTranslation()
   const { user, roles, logout } = useAuth()
-  const items = navItemsForRoles(roles)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-svh bg-background text-foreground">
-      <header className="border-b border-border">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
-          <span className="font-semibold">{t('app.name')}</span>
+    <div className="flex min-h-svh bg-background text-foreground">
+      <Sidebar roles={roles} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-          <nav className="flex items-center gap-1">
-            {items.map((item) => (
-              <NavLink
-                key={item.key}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    'rounded-lg px-2.5 py-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground',
-                    isActive && 'bg-muted text-foreground',
-                  )
-                }
-              >
-                {t(`nav.${item.key}`)}
-              </NavLink>
-            ))}
-          </nav>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setSidebarOpen(true)}
+            aria-label={t('nav.open')}
+          >
+            <Menu />
+          </Button>
 
-          {/* ms-auto, not ml-auto: pushes to the inline end, so it lands on the
-              right in LTR and the left in RTL. */}
-          <div className="ms-auto flex items-center gap-3">
+          <div className="ms-auto flex items-center gap-2">
             {user && (
-              <span className="text-sm text-muted-foreground">
+              <span className="hidden text-sm text-muted-foreground sm:inline">
                 {t('auth.signedInAs', { name: user.fullName })}
               </span>
             )}
             <LanguageToggle />
+            <ThemeToggle />
             <Button variant="outline" size="sm" onClick={logout}>
               {t('auth.logout')}
             </Button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="mx-auto max-w-6xl p-4">
-        <Outlet />
-      </main>
+        <main className="flex-1 p-4 sm:p-6">
+          <div className="mx-auto max-w-6xl">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

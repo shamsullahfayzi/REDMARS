@@ -41,6 +41,8 @@
     }
   },
   "nav": {
+    "open": "باز کردن منو",
+    "dashboard": "داشبورد",
     "queue": "نوبت",
     "patients": "بیماران",
     "consultations": "معاینات",
@@ -49,7 +51,19 @@
     "users": "کاربران",
     "departments": "بخش‌ها",
     "practitioners": "داکتران",
-    "reports": "گزارش‌ها"
+    "reports": "گزارش‌ها",
+    "groups": {
+      "clinical": "کلینیکی",
+      "administration": "اداری"
+    }
+  },
+  "theme": {
+    "toLight": "حالت روشن",
+    "toDark": "حالت تاریک"
+  },
+  "home": {
+    "welcome": "خوش آمدید، {{name}}",
+    "subtitle": "به یک بخش بروید."
   },
   "placeholder": {
     "comingSoon": "این بخش در مرحله‌ای بعدی اضافه می‌شود."

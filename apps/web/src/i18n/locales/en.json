@@ -41,6 +41,8 @@
     }
   },
   "nav": {
+    "open": "Open menu",
+    "dashboard": "Dashboard",
     "queue": "Queue",
     "patients": "Patients",
     "consultations": "Consultations",
@@ -49,7 +51,19 @@
     "users": "Users",
     "departments": "Departments",
     "practitioners": "Practitioners",
-    "reports": "Reports"
+    "reports": "Reports",
+    "groups": {
+      "clinical": "Clinical",
+      "administration": "Administration"
+    }
+  },
+  "theme": {
+    "toLight": "Switch to light mode",
+    "toDark": "Switch to dark mode"
+  },
+  "home": {
+    "welcome": "Welcome, {{name}}",
+    "subtitle": "Jump to a section."
   },
   "placeholder": {
     "comingSoon": "This section arrives in a later phase."

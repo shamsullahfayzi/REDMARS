@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ChevronRight } from 'lucide-react'
 import {
   DEPARTMENT_TYPES,
   createDepartmentRequestSchema,
@@ -8,10 +9,17 @@ import {
   type DepartmentType,
   type RoomSummary,
 } from '@redmars/shared'
+import { PageHeader } from '@/components/PageHeader'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 import { useCreateDepartment, useDepartments, useSetDepartmentActive } from '@/hooks/useDepartments'
 import { useCreateRoom, useRooms, useSetRoomActive } from '@/hooks/useRooms'
 import { ApiError } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 /**
  * Admin-only department master data (task 2.1), with rooms nested inline. The nav
@@ -19,19 +27,9 @@ import { ApiError } from '@/lib/api'
  * here to anyone else.
  *
  * All spacing is logical (ps-/pe-, text-start) so the table and forms mirror under
- * dir="rtl" for Dari and Pashto. The two local-name inputs are forced dir="rtl"
- * regardless of the UI language, because their content is always Dari/Pashto.
+ * dir="rtl". The two local-name inputs are forced dir="rtl" regardless of the UI
+ * language, because their content is always Dari/Pashto.
  */
-
-const fieldClass =
-  'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
-
-function statusPillClass(isActive: boolean): string {
-  return isActive
-    ? 'inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'
-    : 'inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'
-}
-
 export function DepartmentPage() {
   const { t } = useTranslation()
   const departmentsQuery = useDepartments()
@@ -84,102 +82,85 @@ export function DepartmentPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">{t('nav.departments')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t('departments.subtitle')}</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader title={t('nav.departments')} description={t('departments.subtitle')} />
 
       {/* Create */}
-      <form onSubmit={onSubmit} className="max-w-2xl space-y-4 rounded-xl border border-border p-5">
-        <h2 className="font-medium text-foreground">{t('departments.create.title')}</h2>
+      <Card className="max-w-2xl">
+        <CardHeader>
+          <CardTitle>{t('departments.create.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="code">{t('departments.create.code')}</Label>
+                <Input
+                  id="code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder={t('departments.create.codePlaceholder')}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="type">{t('departments.create.type')}</Label>
+                <Select
+                  id="type"
+                  value={type}
+                  onChange={(e) => setType(e.target.value as DepartmentType | '')}
+                >
+                  <option value="" disabled>
+                    {t('departments.create.typePlaceholder')}
+                  </option>
+                  {DEPARTMENT_TYPES.map((value) => (
+                    <option key={value} value={value}>
+                      {t(`departments.types.${value}`)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label htmlFor="code" className="text-sm font-medium text-foreground">
-              {t('departments.create.code')}
-            </label>
-            <input
-              id="code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder={t('departments.create.codePlaceholder')}
-              className={fieldClass}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="type" className="text-sm font-medium text-foreground">
-              {t('departments.create.type')}
-            </label>
-            <select
-              id="type"
-              value={type}
-              onChange={(e) => setType(e.target.value as DepartmentType | '')}
-              className={fieldClass}
-            >
-              <option value="" disabled>
-                {t('departments.create.typePlaceholder')}
-              </option>
-              {DEPARTMENT_TYPES.map((value) => (
-                <option key={value} value={value}>
-                  {t(`departments.types.${value}`)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="name">{t('departments.create.name')}</Label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
 
-        <div className="space-y-1.5">
-          <label htmlFor="name" className="text-sm font-medium text-foreground">
-            {t('departments.create.name')}
-          </label>
-          <input
-            id="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={fieldClass}
-          />
-        </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="nameLocalPrs">{t('departments.create.nameLocalPrs')}</Label>
+                <Input
+                  id="nameLocalPrs"
+                  dir="rtl"
+                  value={nameLocalPrs}
+                  onChange={(e) => setNameLocalPrs(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="nameLocalPs">{t('departments.create.nameLocalPs')}</Label>
+                <Input
+                  id="nameLocalPs"
+                  dir="rtl"
+                  value={nameLocalPs}
+                  onChange={(e) => setNameLocalPs(e.target.value)}
+                />
+              </div>
+            </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label htmlFor="nameLocalPrs" className="text-sm font-medium text-foreground">
-              {t('departments.create.nameLocalPrs')}
-            </label>
-            <input
-              id="nameLocalPrs"
-              dir="rtl"
-              value={nameLocalPrs}
-              onChange={(e) => setNameLocalPrs(e.target.value)}
-              className={fieldClass}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="nameLocalPs" className="text-sm font-medium text-foreground">
-              {t('departments.create.nameLocalPs')}
-            </label>
-            <input
-              id="nameLocalPs"
-              dir="rtl"
-              value={nameLocalPs}
-              onChange={(e) => setNameLocalPs(e.target.value)}
-              className={fieldClass}
-            />
-          </div>
-        </div>
+            {formError && (
+              <p role="alert" className="text-sm text-destructive">
+                {formError}
+              </p>
+            )}
 
-        {formError && (
-          <p role="alert" className="text-sm text-destructive">
-            {formError}
-          </p>
-        )}
-
-        <Button type="submit" disabled={createDepartment.isPending}>
-          {createDepartment.isPending
-            ? t('departments.create.submitting')
-            : t('departments.create.submit')}
-        </Button>
-      </form>
+            <Button type="submit" disabled={createDepartment.isPending}>
+              {createDepartment.isPending
+                ? t('departments.create.submitting')
+                : t('departments.create.submit')}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* List */}
       <section className="space-y-3">
@@ -196,7 +177,7 @@ export function DepartmentPage() {
           (departmentsQuery.data.departments.length === 0 ? (
             <p className="text-muted-foreground">{t('departments.list.empty')}</p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-border">
+            <Card className="overflow-x-auto p-0">
               <table className="w-full text-sm">
                 <thead className="border-b border-border text-muted-foreground">
                   <tr>
@@ -229,7 +210,7 @@ export function DepartmentPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </Card>
           ))}
       </section>
     </div>
@@ -267,11 +248,11 @@ function DepartmentRow({
             onClick={onToggle}
             aria-expanded={isExpanded}
             aria-label={t('departments.rooms.toggle')}
-            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted"
+            className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <span className={isExpanded ? 'rotate-90 transition-transform' : 'transition-transform'}>
-              ▸
-            </span>
+            <ChevronRight
+              className={cn('size-4 transition-transform rtl:rotate-180', isExpanded && 'rotate-90 rtl:rotate-90')}
+            />
           </button>
         </td>
         <td className="p-3 font-mono text-foreground">{dep.code}</td>
@@ -285,9 +266,9 @@ function DepartmentRow({
         </td>
         <td className="p-3 text-muted-foreground">{t(`departments.types.${dep.type}`)}</td>
         <td className="p-3">
-          <span className={statusPillClass(dep.isActive)}>
+          <Badge variant={dep.isActive ? 'active' : 'muted'}>
             {dep.isActive ? t('departments.list.active') : t('departments.list.inactive')}
-          </span>
+          </Badge>
         </td>
         <td className="p-3 text-end">
           <Button
@@ -303,7 +284,7 @@ function DepartmentRow({
       {isExpanded && (
         <tr className="border-b border-border last:border-0 bg-muted/30">
           <td />
-          <td colSpan={5} className="p-3 pe-3 ps-3">
+          <td colSpan={5} className="p-3">
             <DepartmentRooms
               departmentId={dep.id}
               rooms={rooms}
@@ -362,7 +343,9 @@ function DepartmentRooms({ departmentId, rooms, isPending, isError }: Department
     <div className="space-y-3">
       <h3 className="text-sm font-medium text-foreground">{t('departments.rooms.title')}</h3>
 
-      {isPending && <p className="text-sm text-muted-foreground">{t('departments.rooms.loading')}</p>}
+      {isPending && (
+        <p className="text-sm text-muted-foreground">{t('departments.rooms.loading')}</p>
+      )}
       {isError && <p className="text-sm text-destructive">{t('departments.rooms.error')}</p>}
 
       {!isPending && !isError && rooms.length === 0 && (
@@ -378,9 +361,9 @@ function DepartmentRooms({ departmentId, rooms, isPending, isError }: Department
             >
               <span className="font-mono text-foreground">{room.code}</span>
               <span className="text-foreground">{room.name}</span>
-              <span className={statusPillClass(room.isActive)}>
+              <Badge variant={room.isActive ? 'active' : 'muted'}>
                 {room.isActive ? t('departments.list.active') : t('departments.list.inactive')}
-              </span>
+              </Badge>
               <div className="ms-auto">
                 <Button
                   variant={room.isActive ? 'destructive' : 'outline'}
@@ -400,31 +383,25 @@ function DepartmentRooms({ departmentId, rooms, isPending, isError }: Department
 
       <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
-          <label
-            htmlFor={`room-code-${departmentId}`}
-            className="text-xs font-medium text-muted-foreground"
-          >
+          <Label htmlFor={`room-code-${departmentId}`} className="text-xs text-muted-foreground">
             {t('departments.rooms.code')}
-          </label>
-          <input
+          </Label>
+          <Input
             id={`room-code-${departmentId}`}
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className={`${fieldClass} w-28`}
+            className="w-28"
           />
         </div>
         <div className="space-y-1">
-          <label
-            htmlFor={`room-name-${departmentId}`}
-            className="text-xs font-medium text-muted-foreground"
-          >
+          <Label htmlFor={`room-name-${departmentId}`} className="text-xs text-muted-foreground">
             {t('departments.rooms.name')}
-          </label>
-          <input
+          </Label>
+          <Input
             id={`room-name-${departmentId}`}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className={`${fieldClass} w-48`}
+            className="w-48"
           />
         </div>
         <Button type="submit" size="sm" disabled={createRoom.isPending}>

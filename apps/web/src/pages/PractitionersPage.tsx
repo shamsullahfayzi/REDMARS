@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ChevronRight } from 'lucide-react'
 import {
   createPractitionerRequestSchema,
   createSpecialityRequestSchema,
@@ -7,7 +8,13 @@ import {
   type PractitionerSummary,
   type SpecialitySummary,
 } from '@redmars/shared'
+import { PageHeader } from '@/components/PageHeader'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 import { useDepartments } from '@/hooks/useDepartments'
 import {
   useCreatePractitioner,
@@ -18,24 +25,13 @@ import {
 import { useCreateSpeciality, useSpecialities } from '@/hooks/useSpecialities'
 import { useUsers } from '@/hooks/useUsers'
 import { ApiError } from '@/lib/api'
+import { cn } from '@/lib/utils'
 
 /**
  * Admin-only practitioner master data (task 2.2): specialities (a small global
  * lookup), practitioners, and the many-to-many that lets one doctor work several
  * departments. The nav shows this only to an admin; the API enforces it.
  */
-
-const fieldClass =
-  'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
-
-const pillClass = 'inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground'
-
-function statusPillClass(isActive: boolean): string {
-  return isActive
-    ? 'inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'
-    : 'inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground'
-}
-
 export function PractitionersPage() {
   const { t } = useTranslation()
   const practitionersQuery = usePractitioners()
@@ -44,11 +40,8 @@ export function PractitionersPage() {
   const activeDepartments = departmentsQuery.data?.departments.filter((d) => d.isActive) ?? []
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">{t('nav.practitioners')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t('practitioners.subtitle')}</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader title={t('nav.practitioners')} description={t('practitioners.subtitle')} />
 
       <SpecialitiesSection />
 
@@ -69,7 +62,7 @@ export function PractitionersPage() {
           (practitionersQuery.data.practitioners.length === 0 ? (
             <p className="text-muted-foreground">{t('practitioners.list.empty')}</p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-border">
+            <Card className="overflow-x-auto p-0">
               <table className="w-full text-sm">
                 <thead className="border-b border-border text-muted-foreground">
                   <tr>
@@ -88,15 +81,11 @@ export function PractitionersPage() {
                 </thead>
                 <tbody>
                   {practitionersQuery.data.practitioners.map((p) => (
-                    <PractitionerRow
-                      key={p.id}
-                      practitioner={p}
-                      departments={activeDepartments}
-                    />
+                    <PractitionerRow key={p.id} practitioner={p} departments={activeDepartments} />
                   ))}
                 </tbody>
               </table>
-            </div>
+            </Card>
           ))}
       </section>
     </div>
@@ -140,57 +129,58 @@ function SpecialitiesSection() {
   }
 
   return (
-    <section className="space-y-3 rounded-xl border border-border p-5">
-      <h2 className="font-medium text-foreground">{t('practitioners.specialities.title')}</h2>
-
-      {specialitiesQuery.data && specialitiesQuery.data.specialities.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {specialitiesQuery.data.specialities.map((s: SpecialitySummary) => (
-            <span key={s.id} className={pillClass}>
-              {s.name}
-            </span>
-          ))}
-        </div>
-      )}
-      {specialitiesQuery.data && specialitiesQuery.data.specialities.length === 0 && (
-        <p className="text-sm text-muted-foreground">{t('practitioners.specialities.empty')}</p>
-      )}
-
-      <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-2">
-        <div className="space-y-1">
-          <label htmlFor="spec-code" className="text-xs font-medium text-muted-foreground">
-            {t('practitioners.specialities.code')}
-          </label>
-          <input
-            id="spec-code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            className={`${fieldClass} w-28`}
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="spec-name" className="text-xs font-medium text-muted-foreground">
-            {t('practitioners.specialities.name')}
-          </label>
-          <input
-            id="spec-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={`${fieldClass} w-56`}
-          />
-        </div>
-        <Button type="submit" size="sm" disabled={createSpeciality.isPending}>
-          {createSpeciality.isPending
-            ? t('practitioners.specialities.adding')
-            : t('practitioners.specialities.add')}
-        </Button>
-        {error && (
-          <p role="alert" className="w-full text-sm text-destructive">
-            {error}
-          </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('practitioners.specialities.title')}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {specialitiesQuery.data && specialitiesQuery.data.specialities.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {specialitiesQuery.data.specialities.map((s: SpecialitySummary) => (
+              <Badge key={s.id}>{s.name}</Badge>
+            ))}
+          </div>
         )}
-      </form>
-    </section>
+        {specialitiesQuery.data && specialitiesQuery.data.specialities.length === 0 && (
+          <p className="text-sm text-muted-foreground">{t('practitioners.specialities.empty')}</p>
+        )}
+
+        <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1">
+            <Label htmlFor="spec-code" className="text-xs text-muted-foreground">
+              {t('practitioners.specialities.code')}
+            </Label>
+            <Input
+              id="spec-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="w-28"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="spec-name" className="text-xs text-muted-foreground">
+              {t('practitioners.specialities.name')}
+            </Label>
+            <Input
+              id="spec-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-56"
+            />
+          </div>
+          <Button type="submit" size="sm" disabled={createSpeciality.isPending}>
+            {createSpeciality.isPending
+              ? t('practitioners.specialities.adding')
+              : t('practitioners.specialities.add')}
+          </Button>
+          {error && (
+            <p role="alert" className="w-full text-sm text-destructive">
+              {error}
+            </p>
+          )}
+        </form>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -261,125 +251,100 @@ function CreatePractitionerForm({ departments }: { departments: DepartmentSummar
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-2xl space-y-4 rounded-xl border border-border p-5">
-      <h2 className="font-medium text-foreground">{t('practitioners.create.title')}</h2>
+    <Card className="max-w-2xl">
+      <CardHeader>
+        <CardTitle>{t('practitioners.create.title')}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="p-code">{t('practitioners.create.code')}</Label>
+              <Input id="p-code" value={code} onChange={(e) => setCode(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="p-speciality">{t('practitioners.create.speciality')}</Label>
+              <Select
+                id="p-speciality"
+                value={specialityId}
+                onChange={(e) => setSpecialityId(e.target.value)}
+              >
+                <option value="">{t('practitioners.create.specialityNone')}</option>
+                {specialitiesQuery.data?.specialities.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label htmlFor="p-code" className="text-sm font-medium text-foreground">
-            {t('practitioners.create.code')}
-          </label>
-          <input id="p-code" value={code} onChange={(e) => setCode(e.target.value)} className={fieldClass} />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="p-speciality" className="text-sm font-medium text-foreground">
-            {t('practitioners.create.speciality')}
-          </label>
-          <select
-            id="p-speciality"
-            value={specialityId}
-            onChange={(e) => setSpecialityId(e.target.value)}
-            className={fieldClass}
-          >
-            <option value="">{t('practitioners.create.specialityNone')}</option>
-            {specialitiesQuery.data?.specialities.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="p-first">{t('practitioners.create.firstName')}</Label>
+              <Input id="p-first" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="p-last">{t('practitioners.create.lastName')}</Label>
+              <Input id="p-last" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            </div>
+          </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label htmlFor="p-first" className="text-sm font-medium text-foreground">
-            {t('practitioners.create.firstName')}
-          </label>
-          <input
-            id="p-first"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            className={fieldClass}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="p-last" className="text-sm font-medium text-foreground">
-            {t('practitioners.create.lastName')}
-          </label>
-          <input
-            id="p-last"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            className={fieldClass}
-          />
-        </div>
-      </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="p-license">{t('practitioners.create.licenseNo')}</Label>
+              <Input id="p-license" value={licenseNo} onChange={(e) => setLicenseNo(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="p-phone">{t('practitioners.create.phone')}</Label>
+              <Input id="p-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+          </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label htmlFor="p-license" className="text-sm font-medium text-foreground">
-            {t('practitioners.create.licenseNo')}
-          </label>
-          <input
-            id="p-license"
-            value={licenseNo}
-            onChange={(e) => setLicenseNo(e.target.value)}
-            className={fieldClass}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="p-phone" className="text-sm font-medium text-foreground">
-            {t('practitioners.create.phone')}
-          </label>
-          <input id="p-phone" value={phone} onChange={(e) => setPhone(e.target.value)} className={fieldClass} />
-        </div>
-      </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="p-user">{t('practitioners.create.user')}</Label>
+            <Select id="p-user" value={userId} onChange={(e) => setUserId(e.target.value)}>
+              <option value="">{t('practitioners.create.userNone')}</option>
+              {usersQuery.data?.users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.fullName} ({u.username})
+                </option>
+              ))}
+            </Select>
+          </div>
 
-      <div className="space-y-1.5">
-        <label htmlFor="p-user" className="text-sm font-medium text-foreground">
-          {t('practitioners.create.user')}
-        </label>
-        <select id="p-user" value={userId} onChange={(e) => setUserId(e.target.value)} className={fieldClass}>
-          <option value="">{t('practitioners.create.userNone')}</option>
-          {usersQuery.data?.users.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.fullName} ({u.username})
-            </option>
-          ))}
-        </select>
-      </div>
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-foreground">
+              {t('practitioners.create.departments')}
+            </legend>
+            <div className="flex flex-wrap gap-3">
+              {departments.map((d) => (
+                <label key={d.id} className="flex items-center gap-1.5 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={departmentIds.includes(d.id)}
+                    onChange={() => toggleDepartment(d.id)}
+                  />
+                  {d.name}
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-foreground">
-          {t('practitioners.create.departments')}
-        </legend>
-        <div className="flex flex-wrap gap-3">
-          {departments.map((d) => (
-            <label key={d.id} className="flex items-center gap-1.5 text-sm text-foreground">
-              <input
-                type="checkbox"
-                checked={departmentIds.includes(d.id)}
-                onChange={() => toggleDepartment(d.id)}
-              />
-              {d.name}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
 
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-
-      <Button type="submit" disabled={createPractitioner.isPending}>
-        {createPractitioner.isPending
-          ? t('practitioners.create.submitting')
-          : t('practitioners.create.submit')}
-      </Button>
-    </form>
+          <Button type="submit" disabled={createPractitioner.isPending}>
+            {createPractitioner.isPending
+              ? t('practitioners.create.submitting')
+              : t('practitioners.create.submit')}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -407,11 +372,11 @@ function PractitionerRow({
             onClick={() => setIsEditing((v) => !v)}
             aria-expanded={isEditing}
             aria-label={t('practitioners.edit.toggle')}
-            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted"
+            className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <span className={isEditing ? 'rotate-90 transition-transform' : 'transition-transform'}>
-              ▸
-            </span>
+            <ChevronRight
+              className={cn('size-4 transition-transform rtl:rotate-180', isEditing && 'rotate-90 rtl:rotate-90')}
+            />
           </button>
         </td>
         <td className="p-3 text-foreground">
@@ -425,17 +390,15 @@ function PractitionerRow({
           ) : (
             <div className="flex flex-wrap gap-1">
               {p.departmentIds.map((id) => (
-                <span key={id} className={pillClass}>
-                  {departmentName(id)}
-                </span>
+                <Badge key={id}>{departmentName(id)}</Badge>
               ))}
             </div>
           )}
         </td>
         <td className="p-3">
-          <span className={statusPillClass(p.isActive)}>
+          <Badge variant={p.isActive ? 'active' : 'muted'}>
             {p.isActive ? t('practitioners.list.active') : t('practitioners.list.inactive')}
-          </span>
+          </Badge>
         </td>
         <td className="p-3 text-end">
           <Button

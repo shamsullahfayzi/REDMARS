@@ -41,6 +41,8 @@
     }
   },
   "nav": {
+    "open": "مینو خلاصول",
+    "dashboard": "ډشبورډ",
     "queue": "نوبت",
     "patients": "ناروغان",
     "consultations": "معاینې",
@@ -49,7 +51,19 @@
     "users": "کاروونکي",
     "departments": "څانګې",
     "practitioners": "ډاکټران",
-    "reports": "راپورونه"
+    "reports": "راپورونه",
+    "groups": {
+      "clinical": "کلینیکي",
+      "administration": "اداري"
+    }
+  },
+  "theme": {
+    "toLight": "روښانه حالت",
+    "toDark": "تیاره حالت"
+  },
+  "home": {
+    "welcome": "ښه راغلاست، {{name}}",
+    "subtitle": "یوې برخې ته لاړ شئ."
   },
   "placeholder": {
     "comingSoon": "دا برخه په راتلونکي پړاو کې اضافه کیږي."

@@ -10,26 +10,50 @@
  * The destinations are placeholders until their phases land — the point of 1.6 is
  * that the RIGHT set renders per role, not that the screens behind them exist yet.
  */
+/** The sidebar sections, in render order. Every NavItem names one. */
+export const NAV_GROUPS = ['main', 'clinical', 'administration'] as const
+export type NavGroup = (typeof NAV_GROUPS)[number]
+
 export interface NavItem {
   key: string
   to: string
+  group: NavGroup
   roles: readonly string[]
 }
 
+// Roles that can see everything role-gated open to all — kept here so "visible to
+// everyone" (like the dashboard) is spelled once.
+const ALL_ROLES = [
+  'admin',
+  'receptionist',
+  'nurse',
+  'doctor',
+  'lab_tech',
+  'pharmacist',
+  'management',
+] as const
+
 export const NAV_ITEMS: readonly NavItem[] = [
-  { key: 'queue', to: '/queue', roles: ['admin', 'receptionist', 'nurse', 'doctor', 'management'] },
+  { key: 'dashboard', to: '/', group: 'main', roles: ALL_ROLES },
+  {
+    key: 'queue',
+    to: '/queue',
+    group: 'clinical',
+    roles: ['admin', 'receptionist', 'nurse', 'doctor', 'management'],
+  },
   {
     key: 'patients',
     to: '/patients',
+    group: 'clinical',
     roles: ['admin', 'receptionist', 'nurse', 'doctor', 'lab_tech', 'pharmacist'],
   },
-  { key: 'consultations', to: '/consultations', roles: ['doctor'] },
-  { key: 'lab', to: '/lab', roles: ['lab_tech'] },
-  { key: 'pharmacy', to: '/pharmacy', roles: ['pharmacist'] },
-  { key: 'users', to: '/users', roles: ['admin'] },
-  { key: 'departments', to: '/departments', roles: ['admin'] },
-  { key: 'practitioners', to: '/practitioners', roles: ['admin'] },
-  { key: 'reports', to: '/reports', roles: ['admin', 'management'] },
+  { key: 'consultations', to: '/consultations', group: 'clinical', roles: ['doctor'] },
+  { key: 'lab', to: '/lab', group: 'clinical', roles: ['lab_tech'] },
+  { key: 'pharmacy', to: '/pharmacy', group: 'clinical', roles: ['pharmacist'] },
+  { key: 'users', to: '/users', group: 'administration', roles: ['admin'] },
+  { key: 'departments', to: '/departments', group: 'administration', roles: ['admin'] },
+  { key: 'practitioners', to: '/practitioners', group: 'administration', roles: ['admin'] },
+  { key: 'reports', to: '/reports', group: 'administration', roles: ['admin', 'management'] },
 ]
 
 /** The items a user holding these roles should see — the union of every role's menu. */
