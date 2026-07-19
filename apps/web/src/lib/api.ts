@@ -181,6 +181,14 @@ export function apiPatch<TSchema extends z.ZodType>(
   return request('PATCH', path, schema, body)
 }
 
+export function apiPut<TSchema extends z.ZodType>(
+  path: string,
+  body: unknown,
+  schema: TSchema,
+): Promise<z.infer<TSchema>> {
+  return request('PUT', path, schema, body)
+}
+
 /**
  * The shared tail of every request: reject non-2xx by status (the caller decides
  * what a 401 or 400 means), then parse the body against the agreed schema so a

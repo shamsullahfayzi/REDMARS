@@ -48,6 +48,7 @@
     "pharmacy": "Pharmacy",
     "users": "Users",
     "departments": "Departments",
+    "practitioners": "Practitioners",
     "reports": "Reports"
   },
   "placeholder": {
@@ -140,6 +141,62 @@
       "invalid": "Please check the form.",
       "duplicate": "That code is already in use.",
       "failed": "Could not save the room. Please try again."
+    }
+  },
+  "practitioners": {
+    "subtitle": "Doctors and clinicians, and the departments they work in.",
+    "specialities": {
+      "title": "Specialities",
+      "code": "Code",
+      "name": "Name",
+      "add": "Add speciality",
+      "adding": "Saving…",
+      "empty": "No specialities yet.",
+      "invalid": "Please check the form.",
+      "duplicate": "That code is already in use.",
+      "failed": "Could not save the speciality. Please try again."
+    },
+    "create": {
+      "title": "Add a practitioner",
+      "code": "Code",
+      "speciality": "Speciality",
+      "specialityNone": "None",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "licenseNo": "License number",
+      "phone": "Phone",
+      "user": "Login account",
+      "userNone": "No login account",
+      "departments": "Departments",
+      "submit": "Add practitioner",
+      "submitting": "Saving…",
+      "invalid": "Please check the form.",
+      "duplicate": "That code is already in use.",
+      "failed": "Could not save the practitioner. Please try again."
+    },
+    "list": {
+      "title": "Practitioners",
+      "loading": "Loading…",
+      "error": "Could not load practitioners.",
+      "empty": "No practitioners yet.",
+      "name": "Name",
+      "code": "Code",
+      "speciality": "Speciality",
+      "departments": "Departments",
+      "status": "Status",
+      "actions": "Actions",
+      "active": "Active",
+      "inactive": "Inactive",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "noDepartments": "None"
+    },
+    "edit": {
+      "title": "Departments",
+      "toggle": "Edit departments",
+      "save": "Save",
+      "saving": "Saving…",
+      "failed": "Could not save. Please try again."
     }
   }
 }

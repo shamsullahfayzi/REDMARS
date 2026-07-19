@@ -6,6 +6,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { DepartmentPage } from '@/pages/DepartmentsPage'
+import { PractitionersPage } from '@/pages/PractitionersPage'
 import { UsersPage } from '@/pages/UsersPage'
 
 /**
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
           { path: 'pharmacy', element: <PlaceholderPage sectionKey="pharmacy" /> },
           { path: 'users', element: <UsersPage /> },
           { path: 'departments', element: <DepartmentPage /> },
+          { path: 'practitioners', element: <PractitionersPage /> },
           { path: 'reports', element: <PlaceholderPage sectionKey="reports" /> },
           { path: '*', element: <NotFoundPage /> },
         ],
