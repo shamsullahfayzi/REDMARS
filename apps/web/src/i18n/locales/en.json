@@ -126,6 +126,20 @@
       "inactive": "Inactive",
       "deactivate": "Deactivate",
       "reactivate": "Reactivate"
+    },
+    "rooms": {
+      "title": "Rooms",
+      "toggle": "Show rooms",
+      "loading": "Loading…",
+      "error": "Could not load rooms.",
+      "empty": "No rooms yet.",
+      "code": "Code",
+      "name": "Name",
+      "add": "Add room",
+      "adding": "Saving…",
+      "invalid": "Please check the form.",
+      "duplicate": "That code is already in use.",
+      "failed": "Could not save the room. Please try again."
     }
   }
 }

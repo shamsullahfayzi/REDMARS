@@ -8,6 +8,7 @@ import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 import { DepartmentModule } from './modules/department/department.module';
+import { RoomModule } from './modules/room/room.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { DepartmentModule } from './modules/department/department.module';
     AuthModule,
     UsersModule,
     DepartmentModule,
+    RoomModule,
   ],
   providers: [
     // Global. Runs after the guards on every route, so request.auth is already
