@@ -14,7 +14,7 @@ import {
 import type { Request } from 'express';
 import {
   createPractitionerRequestSchema,
-  setPractitionerActiveRequestSchema,
+  setActiveRequestSchema,
   setPractitionerDepartmentsRequestSchema,
   type PractitionerListResponse,
   type PractitionerSummary,
@@ -58,7 +58,7 @@ export class PractitionerController {
     @Param('id') id: string,
     @Body() body: unknown,
   ): Promise<PractitionerSummary> {
-    const parsed = setPractitionerActiveRequestSchema.safeParse(body);
+    const parsed = setActiveRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException({
         message: 'Invalid request',

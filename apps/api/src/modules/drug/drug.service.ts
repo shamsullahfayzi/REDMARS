@@ -6,7 +6,7 @@ import {
   type DrugSummary,
   type ImportDrugsResponse,
   type ImportError,
-  type SetDrugActiveRequest,
+  type SetActiveRequest,
   type UpdateDrugRequest,
 } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -123,11 +123,7 @@ export class DrugService {
     return toSummary(updated);
   }
 
-  async setActive(
-    facilityId: string,
-    id: string,
-    input: SetDrugActiveRequest,
-  ): Promise<DrugSummary> {
+  async setActive(facilityId: string, id: string, input: SetActiveRequest): Promise<DrugSummary> {
     await this.assertDrugInFacility(facilityId, id);
     const updated = await this.prisma.db.drug.update({
       where: { id },

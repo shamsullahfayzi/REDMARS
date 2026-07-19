@@ -13,7 +13,7 @@ import {
 import type { Request } from 'express';
 import {
   createDepartmentRequestSchema,
-  setDepartmentActiveRequestSchema,
+  setActiveRequestSchema,
   type DepartmentListResponse,
   type DepartmentSummary,
 } from '@redmars/shared';
@@ -58,7 +58,7 @@ export class DepartmentController {
     @Param('id') id: string,
     @Body() body: unknown,
   ): Promise<DepartmentSummary> {
-    const parsed = setDepartmentActiveRequestSchema.safeParse(body);
+    const parsed = setActiveRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException({
         message: 'Invalid request',

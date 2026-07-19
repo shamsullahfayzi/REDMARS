@@ -8,7 +8,7 @@ import type {
   CreatePractitionerRequest,
   PractitionerListResponse,
   PractitionerSummary,
-  SetPractitionerActiveRequest,
+  SetActiveRequest,
   SetPractitionerDepartmentsRequest,
 } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -113,7 +113,7 @@ export class PractitionerService {
   async setActive(
     facilityId: string,
     id: string,
-    input: SetPractitionerActiveRequest,
+    input: SetActiveRequest,
   ): Promise<PractitionerSummary> {
     await this.assertPractitionerInFacility(facilityId, id);
     await this.prisma.db.practitioner.update({

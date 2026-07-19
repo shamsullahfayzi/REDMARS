@@ -11,6 +11,7 @@
 // resolve. Both build halves need this spelling.
 
 export * from './auth.js'
+export * from './global.js'
 export * from './health.js'
 export * from './user.js'
 export * from './department.js'

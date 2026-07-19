@@ -4,7 +4,7 @@ import type {
   DepartmentListResponse,
   DepartmentSummary,
   DepartmentType,
-  SetDepartmentActiveRequest,
+  SetActiveRequest,
 } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -95,7 +95,7 @@ export class DepartmentService {
   async setActive(
     facilityId: string,
     id: string,
-    input: SetDepartmentActiveRequest,
+    input: SetActiveRequest,
   ): Promise<DepartmentSummary> {
     // Scoped to the caller's facility: an id from another tenant reads as "not
     // found", never reachable.

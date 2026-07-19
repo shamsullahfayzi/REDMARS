@@ -3,7 +3,7 @@ import type {
   CreateRoomRequest,
   RoomListResponse,
   RoomSummary,
-  SetRoomActiveRequest,
+  SetActiveRequest,
 } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -92,11 +92,7 @@ export class RoomService {
     return toSummary(created);
   }
 
-  async setActive(
-    facilityId: string,
-    id: string,
-    input: SetRoomActiveRequest,
-  ): Promise<RoomSummary> {
+  async setActive(facilityId: string, id: string, input: SetActiveRequest): Promise<RoomSummary> {
     const room = await this.prisma.db.room.findFirst({
       where: { id, facilityId },
       select: { id: true },

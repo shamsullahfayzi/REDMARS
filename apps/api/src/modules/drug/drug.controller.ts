@@ -15,7 +15,7 @@ import type { Request } from 'express';
 import {
   createDrugRequestSchema,
   importDrugsRequestSchema,
-  setDrugActiveRequestSchema,
+  setActiveRequestSchema,
   updateDrugRequestSchema,
   type DrugListResponse,
   type DrugSummary,
@@ -91,7 +91,7 @@ export class DrugController {
     @Param('id') id: string,
     @Body() body: unknown,
   ): Promise<DrugSummary> {
-    const parsed = setDrugActiveRequestSchema.safeParse(body);
+    const parsed = setActiveRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException({
         message: 'Invalid request',

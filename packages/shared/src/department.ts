@@ -61,8 +61,3 @@ export const createDepartmentRequestSchema = z.object({
     .transform((v) => (v ? v : undefined)),
 })
 export type CreateDepartmentRequest = z.infer<typeof createDepartmentRequestSchema>
-
-export const setDepartmentActiveRequestSchema = z.object({
-  isActive: z.boolean(),
-})
-export type SetDepartmentActiveRequest = z.infer<typeof setDepartmentActiveRequestSchema>

@@ -13,7 +13,7 @@ import {
 import type { Request } from 'express';
 import {
   createRoomRequestSchema,
-  setRoomActiveRequestSchema,
+  setActiveRequestSchema,
   type RoomListResponse,
   type RoomSummary,
 } from '@redmars/shared';
@@ -56,7 +56,7 @@ export class RoomController {
     @Param('id') id: string,
     @Body() body: unknown,
   ): Promise<RoomSummary> {
-    const parsed = setRoomActiveRequestSchema.safeParse(body);
+    const parsed = setActiveRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException({
         message: 'Invalid request',

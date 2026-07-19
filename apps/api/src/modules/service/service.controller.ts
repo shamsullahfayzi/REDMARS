@@ -13,7 +13,7 @@ import {
 import type { Request } from 'express';
 import {
   createServiceRequestSchema,
-  setServiceActiveRequestSchema,
+  setActiveRequestSchema,
   updateServiceRequestSchema,
   type ServiceListResponse,
   type ServiceSummary,
@@ -78,7 +78,7 @@ export class ServiceController {
     @Param('id') id: string,
     @Body() body: unknown,
   ): Promise<ServiceSummary> {
-    const parsed = setServiceActiveRequestSchema.safeParse(body);
+    const parsed = setActiveRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException({
         message: 'Invalid request',

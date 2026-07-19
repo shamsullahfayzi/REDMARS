@@ -29,8 +29,3 @@ export const createRoomRequestSchema = z.object({
   name: z.string().trim().min(2, 'Room name is required').max(80),
 })
 export type CreateRoomRequest = z.infer<typeof createRoomRequestSchema>
-
-export const setRoomActiveRequestSchema = z.object({
-  isActive: z.boolean(),
-})
-export type SetRoomActiveRequest = z.infer<typeof setRoomActiveRequestSchema>

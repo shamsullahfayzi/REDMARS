@@ -56,11 +56,6 @@ export type CreateDrugRequest = z.infer<typeof createDrugRequestSchema>
 export const updateDrugRequestSchema = drugFieldsSchema.omit({ code: true })
 export type UpdateDrugRequest = z.infer<typeof updateDrugRequestSchema>
 
-export const setDrugActiveRequestSchema = z.object({
-  isActive: z.boolean(),
-})
-export type SetDrugActiveRequest = z.infer<typeof setDrugActiveRequestSchema>
-
 export const importDrugsRequestSchema = z.object({
   // The pasted CSV text. Parsed and validated row by row on the server.
   csv: z.string().min(1, 'Paste some CSV first'),

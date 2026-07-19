@@ -60,11 +60,6 @@ export const createPractitionerRequestSchema = z.object({
 })
 export type CreatePractitionerRequest = z.infer<typeof createPractitionerRequestSchema>
 
-export const setPractitionerActiveRequestSchema = z.object({
-  isActive: z.boolean(),
-})
-export type SetPractitionerActiveRequest = z.infer<typeof setPractitionerActiveRequestSchema>
-
 // Replaces the whole department set for a practitioner (the edit-memberships
 // action). Sending [opd, ipd] makes exactly those two the practitioner's
 // departments; sending [] removes them all.

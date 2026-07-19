@@ -4,7 +4,7 @@ import type {
   CreateServiceRequest,
   ServiceListResponse,
   ServiceSummary,
-  SetServiceActiveRequest,
+  SetActiveRequest,
   UpdateServiceRequest,
 } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -100,7 +100,7 @@ export class ServiceCatalogService {
   async setActive(
     facilityId: string,
     id: string,
-    input: SetServiceActiveRequest,
+    input: SetActiveRequest,
   ): Promise<ServiceSummary> {
     await this.assertServiceInFacility(facilityId, id);
     const updated = await this.prisma.db.service.update({

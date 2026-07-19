@@ -48,8 +48,3 @@ export const updateServiceRequestSchema = z.object({
   fee: serviceFeeSchema,
 })
 export type UpdateServiceRequest = z.infer<typeof updateServiceRequestSchema>
-
-export const setServiceActiveRequestSchema = z.object({
-  isActive: z.boolean(),
-})
-export type SetServiceActiveRequest = z.infer<typeof setServiceActiveRequestSchema>
