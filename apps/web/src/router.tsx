@@ -6,6 +6,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { DepartmentPage } from '@/pages/DepartmentsPage'
+import { DrugsPage } from '@/pages/DrugsPage'
 import { PractitionersPage } from '@/pages/PractitionersPage'
 import { ServicesPage } from '@/pages/ServicesPage'
 import { UsersPage } from '@/pages/UsersPage'
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
           { path: 'departments', element: <DepartmentPage /> },
           { path: 'practitioners', element: <PractitionersPage /> },
           { path: 'services', element: <ServicesPage /> },
+          { path: 'drugs', element: <DrugsPage /> },
           { path: 'reports', element: <PlaceholderPage sectionKey="reports" /> },
           { path: '*', element: <NotFoundPage /> },
         ],

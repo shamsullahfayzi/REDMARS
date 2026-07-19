@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Pill,
   Receipt,
+  Tablets,
   Stethoscope,
   Users,
   UserCog,
@@ -25,5 +26,6 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   departments: Building2,
   practitioners: Users,
   services: Receipt,
+  drugs: Tablets,
   reports: BarChart3,
 }

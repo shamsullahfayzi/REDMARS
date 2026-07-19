@@ -54,6 +54,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'departments', to: '/departments', group: 'administration', roles: ['admin'] },
   { key: 'practitioners', to: '/practitioners', group: 'administration', roles: ['admin'] },
   { key: 'services', to: '/services', group: 'administration', roles: ['admin'] },
+  { key: 'drugs', to: '/drugs', group: 'administration', roles: ['admin', 'pharmacist'] },
   { key: 'reports', to: '/reports', group: 'administration', roles: ['admin', 'management'] },
 ]
 

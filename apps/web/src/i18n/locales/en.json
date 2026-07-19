@@ -52,6 +52,7 @@
     "departments": "Departments",
     "practitioners": "Practitioners",
     "services": "Services",
+    "drugs": "Drugs",
     "reports": "Reports",
     "groups": {
       "clinical": "Clinical",
@@ -250,6 +251,60 @@
       "toggle": "Edit service",
       "name": "Name",
       "fee": "Fee",
+      "save": "Save",
+      "saving": "Saving…",
+      "invalid": "Please check the form.",
+      "failed": "Could not save. Please try again."
+    }
+  },
+  "drugs": {
+    "subtitle": "The medicine formulary for this hospital.",
+    "import": {
+      "title": "Import from CSV",
+      "hint": "Paste rows with a header line. Columns: code and genericName are required; brandName, atcCode, strength, form, isControlled are optional. Re-importing the same code updates it.",
+      "submit": "Import",
+      "importing": "Importing…",
+      "failed": "Import failed. Please try again.",
+      "result": "Imported {{imported}}, skipped {{skipped}}.",
+      "errorLine": "Line {{line}}"
+    },
+    "create": {
+      "title": "Add a drug",
+      "code": "Code",
+      "genericName": "Generic name",
+      "brandName": "Brand name",
+      "atcCode": "ATC code",
+      "strength": "Strength",
+      "form": "Form",
+      "isControlled": "Controlled substance",
+      "submit": "Add drug",
+      "submitting": "Saving…",
+      "invalid": "Please check the form.",
+      "duplicate": "That code is already in use.",
+      "failed": "Could not save the drug. Please try again."
+    },
+    "list": {
+      "title": "Formulary",
+      "search": "Search code, generic or brand…",
+      "loading": "Loading…",
+      "error": "Could not load drugs.",
+      "empty": "No drugs yet.",
+      "noMatches": "No drugs match your search.",
+      "count": "{{count}} shown",
+      "code": "Code",
+      "genericName": "Generic name",
+      "strength": "Strength",
+      "form": "Form",
+      "controlled": "Controlled",
+      "status": "Status",
+      "actions": "Actions",
+      "active": "Active",
+      "inactive": "Inactive",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate"
+    },
+    "edit": {
+      "toggle": "Edit drug",
       "save": "Save",
       "saving": "Saving…",
       "invalid": "Please check the form.",

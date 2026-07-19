@@ -52,6 +52,7 @@
     "departments": "څانګې",
     "practitioners": "ډاکټران",
     "services": "خدمات",
+    "drugs": "درمل",
     "reports": "راپورونه",
     "groups": {
       "clinical": "کلینیکي",
@@ -250,6 +251,60 @@
       "toggle": "د خدمت سمول",
       "name": "نوم",
       "fee": "فیس",
+      "save": "خوندي کول",
+      "saving": "په خوندي کولو کې…",
+      "invalid": "مهرباني وکړئ فورمه وګورئ.",
+      "failed": "خوندي نشو. مهرباني وکړئ بیا هڅه وکړئ."
+    }
+  },
+  "drugs": {
+    "subtitle": "د دې روغتون د درملو فهرست.",
+    "import": {
+      "title": "له CSV څخه واردول",
+      "hint": "کرښې د سرلیک کرښې سره ننوباسئ. code او genericName اړین دي؛ brandName، atcCode، strength، form، isControlled اختیاري دي. د ورته کوډ بیا واردول یې تازه کوي.",
+      "submit": "واردول",
+      "importing": "په واردولو کې…",
+      "failed": "واردول ناکام شو. مهرباني وکړئ بیا هڅه وکړئ.",
+      "result": "{{imported}} وارد شو، {{skipped}} پرېښودل شو.",
+      "errorLine": "کرښه {{line}}"
+    },
+    "create": {
+      "title": "درمل زیاتول",
+      "code": "کوډ",
+      "genericName": "جنریک نوم",
+      "brandName": "سوداګريز نوم",
+      "atcCode": "د ATC کوډ",
+      "strength": "قوت",
+      "form": "شکل",
+      "isControlled": "کنټرول شوی ماده",
+      "submit": "درمل زیاتول",
+      "submitting": "په خوندي کولو کې…",
+      "invalid": "مهرباني وکړئ فورمه وګورئ.",
+      "duplicate": "دا کوډ دمخه کارول شوی دی.",
+      "failed": "درمل خوندي نشو. مهرباني وکړئ بیا هڅه وکړئ."
+    },
+    "list": {
+      "title": "د درملو فهرست",
+      "search": "د کوډ، جنریک یا سوداګریز نوم لټون…",
+      "loading": "په پورته کولو کې…",
+      "error": "درمل پورته نشول.",
+      "empty": "تر اوسه هیڅ درمل نشته.",
+      "noMatches": "ستاسو د لټون سره هیڅ درمل سمون نلري.",
+      "count": "{{count}} ښکاره شو",
+      "code": "کوډ",
+      "genericName": "جنریک نوم",
+      "strength": "قوت",
+      "form": "شکل",
+      "controlled": "کنټرول شوی",
+      "status": "حالت",
+      "actions": "کړنې",
+      "active": "فعال",
+      "inactive": "غیرفعال",
+      "deactivate": "غیرفعالول",
+      "reactivate": "بیا فعالول"
+    },
+    "edit": {
+      "toggle": "د درمل سمول",
       "save": "خوندي کول",
       "saving": "په خوندي کولو کې…",
       "invalid": "مهرباني وکړئ فورمه وګورئ.",
