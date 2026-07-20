@@ -12,7 +12,8 @@ export function ApiStatus() {
   const { t } = useTranslation()
   const { data, isPending, isError, error } = useHealth()
 
-  const tone = isPending ? 'bg-muted' : isError ? 'bg-destructive' : 'bg-primary'
+  // Online is a status, not the brand — so it reads success-green, not primary teal.
+  const tone = isPending ? 'bg-muted-foreground/40' : isError ? 'bg-destructive' : 'bg-success'
 
   return (
     <div className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">

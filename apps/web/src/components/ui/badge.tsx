@@ -13,6 +13,13 @@ const badgeVariants = cva(
         // An off/inactive state — deliberately muted so it recedes.
         muted: 'bg-muted text-muted-foreground',
         outline: 'border border-border text-muted-foreground',
+        // Clinical status. Soft tinted fill + the text-safe solid token, so a lab
+        // flag (normal/low/high) or an interaction warning carries meaning, not
+        // just colour. success = normal, warning = low/caution, danger = high.
+        success: 'bg-success/12 text-success',
+        warning: 'bg-warning/12 text-warning',
+        danger: 'bg-destructive/12 text-destructive',
+        info: 'bg-info/12 text-info',
       },
     },
     defaultVariants: { variant: 'default' },
