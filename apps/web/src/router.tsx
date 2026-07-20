@@ -8,6 +8,7 @@ import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { DepartmentPage } from '@/pages/DepartmentsPage'
 import { DrugsPage } from '@/pages/DrugsPage'
 import { IcdLookupPage } from '@/pages/IcdLookupPage'
+import { InteractionCheckerPage } from '@/pages/InteractionCheckerPage'
 import { LabPanelsPage } from '@/pages/LabPanelsPage'
 import { LabTestsPage } from '@/pages/LabTestsPage'
 import { PractitionersPage } from '@/pages/PractitionersPage'
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
           { path: 'patients', element: <PlaceholderPage sectionKey="patients" /> },
           { path: 'consultations', element: <PlaceholderPage sectionKey="consultations" /> },
           { path: 'icd', element: <IcdLookupPage /> },
+          { path: 'interactions', element: <InteractionCheckerPage /> },
           { path: 'lab', element: <PlaceholderPage sectionKey="lab" /> },
           { path: 'pharmacy', element: <PlaceholderPage sectionKey="pharmacy" /> },
           { path: 'users', element: <UsersPage /> },

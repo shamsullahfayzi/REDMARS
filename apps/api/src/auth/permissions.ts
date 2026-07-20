@@ -234,6 +234,16 @@ export const PERMISSION_MATRIX = {
   'prescription.read': { admin: 'R2', nurse: 'R7', doctor: YES, pharmacist: YES },
   'prescription.print': { receptionist: YES, doctor: YES, pharmacist: YES },
   'prescription.cancel': { doctor: 'R5' },
+  /**
+   * Drug interaction check (task 2.11). A prescribing-safety read: given the drugs
+   * on (or headed for) a prescription, return the seeded dangerous pairs among them.
+   * The doctor PRESCRIBES and the pharmacist DISPENSES — both must see the warning,
+   * so both hold it unconditionally, alongside admin. It is not on drug.manage: that
+   * is formulary editing (admin + pharmacist) and would wrongly 403 the doctor, the
+   * one person the check exists to warn. It reveals no patient data — only that two
+   * catalog drugs interact — so no clinical-confidentiality rule gates it.
+   */
+  'interaction.check': { admin: YES, doctor: YES, pharmacist: YES },
 
   // ---- 7. Laboratory -------------------------------------------------------
   'lab_order.create': { doctor: YES },

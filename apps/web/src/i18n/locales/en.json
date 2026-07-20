@@ -47,6 +47,7 @@
     "patients": "Patients",
     "consultations": "Consultations",
     "icd": "Diagnosis codes",
+    "interactions": "Interactions",
     "lab": "Lab",
     "pharmacy": "Pharmacy",
     "users": "Users",
@@ -441,5 +442,27 @@
     "billable": "Billable",
     "billableYes": "Billable",
     "billableNo": "Category"
+  },
+  "interactions": {
+    "subtitle": "Check the drug formulary for known dangerous combinations.",
+    "disclaimerTitle": "A warning aid, not a safety net",
+    "disclaimerBody": "This checks only a small, curated list of the most dangerous psychiatric interactions. An empty result does not mean the combination is safe — it means no seeded pair matched. Always use your own clinical judgement.",
+    "pickTitle": "Select drugs to check",
+    "searchPlaceholder": "Search the formulary…",
+    "loadingDrugs": "Loading formulary…",
+    "noDrugs": "No drugs match your search.",
+    "controlled": "Controlled",
+    "remove": "Remove",
+    "resultsTitle": "Interactions found",
+    "pickAtLeastTwo": "Select at least two drugs to check for interactions.",
+    "noneTitle": "No interactions found among the selected drugs.",
+    "noneBody": "Remember: this is not a complete check. A clear result is not clearance.",
+    "error": "Could not check interactions.",
+    "severity": {
+      "minor": "Minor",
+      "moderate": "Moderate",
+      "major": "Major",
+      "contraindicated": "Contraindicated"
+    }
   }
 }

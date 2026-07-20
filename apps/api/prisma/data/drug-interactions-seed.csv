@@ -1,0 +1,56 @@
+genericA,genericB,severity,description
+Fluoxetine,Phenelzine,contraindicated,Serotonin syndrome. Never combine an SSRI with an MAOI; separate by 14 days (5 weeks after fluoxetine).
+Sertraline,Phenelzine,contraindicated,Serotonin syndrome. SSRI plus MAOI is contraindicated; wash out 14 days between them.
+Paroxetine,Phenelzine,contraindicated,Serotonin syndrome. SSRI plus MAOI is contraindicated.
+Citalopram,Tranylcypromine,contraindicated,Serotonin syndrome. SSRI plus MAOI is contraindicated.
+Escitalopram,Moclobemide,contraindicated,Serotonin syndrome risk with SSRI plus reversible MAOI; avoid.
+Amitriptyline,Phenelzine,contraindicated,TCA plus MAOI risks hypertensive crisis and serotonin syndrome; contraindicated.
+Clomipramine,Tranylcypromine,contraindicated,TCA plus MAOI is contraindicated; serotonin syndrome and hyperpyrexia.
+Venlafaxine,Phenelzine,contraindicated,SNRI plus MAOI is contraindicated; serotonin syndrome.
+Duloxetine,Tranylcypromine,contraindicated,SNRI plus MAOI is contraindicated; serotonin syndrome.
+Mirtazapine,Phenelzine,major,Serotonin syndrome risk; avoid mirtazapine with an MAOI.
+Tramadol,Phenelzine,contraindicated,Serotonin syndrome and seizures; do not combine tramadol with an MAOI.
+Sertraline,Linezolid,contraindicated,Linezolid is a weak MAOI; serotonin syndrome with an SSRI. Avoid.
+Fluoxetine,Linezolid,contraindicated,Linezolid is a weak MAOI; serotonin syndrome with an SSRI. Avoid.
+Fluoxetine,Duloxetine,major,Additive serotonergic effect; serotonin syndrome risk. Avoid overlapping an SSRI and SNRI.
+Sertraline,Venlafaxine,major,Additive serotonergic effect; serotonin syndrome risk with SSRI plus SNRI.
+Fluoxetine,Venlafaxine,major,Additive serotonergic effect; serotonin syndrome risk.
+Duloxetine,Venlafaxine,major,Two SNRIs; additive serotonergic and noradrenergic toxicity. Avoid.
+Fluoxetine,Clomipramine,major,SSRI raises TCA levels and adds serotonergic load; serotonin syndrome risk.
+Sertraline,Clomipramine,major,SSRI raises TCA levels and adds serotonergic load; serotonin syndrome risk.
+Paroxetine,Amitriptyline,moderate,Paroxetine inhibits CYP2D6 and raises TCA levels; monitor for toxicity.
+Fluvoxamine,Clomipramine,major,Fluvoxamine markedly raises TCA levels via CYP; serotonin syndrome risk.
+Sertraline,Tramadol,major,Additive serotonergic effect plus lowered seizure threshold; serotonin syndrome risk.
+Fluoxetine,Tramadol,major,Additive serotonergic effect plus lowered seizure threshold; serotonin syndrome risk.
+Duloxetine,Tramadol,major,Additive serotonergic effect; serotonin syndrome risk.
+Sumatriptan,Sertraline,moderate,Additive serotonergic effect; watch for serotonin syndrome.
+Lithium carbonate,Venlafaxine,moderate,Additive serotonergic effect; monitor for serotonin syndrome.
+Lithium carbonate,Fluoxetine,moderate,Serotonergic effect plus possible rise in lithium level; monitor.
+Fluvoxamine,Clozapine,major,Fluvoxamine inhibits CYP1A2 and sharply raises clozapine levels; toxicity and seizures.
+Clozapine,Carbamazepine,contraindicated,Both suppress bone marrow; additive agranulocytosis risk. Do not combine.
+Clozapine,Olanzapine,moderate,Additive marrow suppression and metabolic burden; monitor counts.
+Clozapine,Sodium valproate,moderate,Valproate alters clozapine levels and adds marrow and hepatic risk; monitor.
+Clozapine,Haloperidol,major,Additive cardiotoxicity and lowered seizure threshold; avoid.
+Haloperidol,Citalopram,major,Additive QT prolongation; risk of torsades. Avoid or monitor ECG.
+Haloperidol,Escitalopram,major,Additive QT prolongation; risk of torsades.
+Haloperidol,Quetiapine,moderate,Additive QT prolongation and sedation; monitor.
+Citalopram,Escitalopram,moderate,Duplicate therapy plus additive QT prolongation; do not co-prescribe.
+Amitriptyline,Haloperidol,moderate,Additive QT prolongation and anticholinergic load; monitor.
+Amitriptyline,Quetiapine,moderate,Additive sedation QT and anticholinergic effect; monitor.
+Sodium valproate,Lamotrigine,major,Valproate doubles lamotrigine levels; serious rash and Stevens-Johnson risk. Halve the dose and titrate slowly.
+Carbamazepine,Lamotrigine,moderate,Carbamazepine lowers lamotrigine levels and may reduce efficacy; adjust dose.
+Carbamazepine,Quetiapine,moderate,Carbamazepine induces CYP3A4 and lowers quetiapine levels; efficacy may fall.
+Carbamazepine,Risperidone,moderate,Carbamazepine induction lowers risperidone levels; monitor efficacy.
+Carbamazepine,Olanzapine,moderate,Carbamazepine induction lowers olanzapine levels; monitor efficacy.
+Carbamazepine,Haloperidol,moderate,Carbamazepine induction lowers haloperidol levels; monitor efficacy.
+Lithium carbonate,Ibuprofen,major,NSAIDs reduce lithium clearance and raise levels; lithium toxicity.
+Lithium carbonate,Aspirin,moderate,High-dose aspirin can raise lithium levels; monitor. Low-dose cardiac aspirin is lower risk.
+Lithium carbonate,Carbamazepine,moderate,Additive neurotoxicity reported even at therapeutic levels; monitor.
+Lithium carbonate,Haloperidol,major,Rare severe neurotoxicity and extrapyramidal reactions; monitor closely.
+Lithium carbonate,Sodium valproate,moderate,Additive tremor and sedation; monitor levels and side effects.
+Sertraline,Warfarin,major,SSRIs raise bleeding risk and can potentiate warfarin; monitor INR and for bleeding.
+Fluoxetine,Warfarin,major,SSRIs raise bleeding risk and can potentiate warfarin; monitor INR.
+Sertraline,Aspirin,moderate,SSRI plus antiplatelet raises gastrointestinal bleeding risk; consider gastroprotection.
+Fluoxetine,Aspirin,moderate,SSRI plus antiplatelet raises gastrointestinal bleeding risk.
+Duloxetine,Aspirin,moderate,SNRI plus antiplatelet raises gastrointestinal bleeding risk.
+Diazepam,Clozapine,moderate,Additive sedation and respiratory depression reported; caution with high doses.
