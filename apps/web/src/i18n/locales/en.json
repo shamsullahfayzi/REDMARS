@@ -51,6 +51,7 @@
     "lab": "Lab",
     "pharmacy": "Pharmacy",
     "users": "Users",
+    "modules": "Modules",
     "departments": "Departments",
     "practitioners": "Practitioners",
     "services": "Services",
@@ -463,6 +464,25 @@
       "moderate": "Moderate",
       "major": "Major",
       "contraindicated": "Contraindicated"
+    }
+  },
+  "modules": {
+    "subtitle": "Turn optional modules on or off for this hospital.",
+    "on": "On",
+    "off": "Off",
+    "alwaysOn": "Always on",
+    "opdNote": "The core of the system. Always on and cannot be turned off.",
+    "loadError": "Could not load modules.",
+    "error": "Could not update the module.",
+    "names": {
+      "opd": "Outpatient (OPD)",
+      "lab": "Laboratory",
+      "pharmacy": "Pharmacy",
+      "ipd": "Inpatient (IPD)",
+      "emergency": "Emergency",
+      "radiology": "Radiology",
+      "billing": "Billing",
+      "reports": "Reports"
     }
   }
 }

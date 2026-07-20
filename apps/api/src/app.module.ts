@@ -18,6 +18,7 @@ import { LabPanelModule } from './modules/lab-panel/lab-panel.module';
 import { ReferenceRangeModule } from './modules/reference-range/reference-range.module';
 import { IcdModule } from './modules/icd/icd.module';
 import { DrugInteractionModule } from './modules/drug-interaction/drug-interaction.module';
+import { FacilityModuleModule } from './modules/facility-module/facility-module.module';
 import { NumberSequenceModule } from './services/number-sequence.module';
 
 @Module({
@@ -43,6 +44,7 @@ import { NumberSequenceModule } from './services/number-sequence.module';
     ReferenceRangeModule,
     IcdModule,
     DrugInteractionModule,
+    FacilityModuleModule,
     NumberSequenceModule,
   ],
   providers: [

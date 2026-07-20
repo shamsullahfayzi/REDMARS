@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { hash } from '@node-rs/argon2';
-import { DepartmentType, PrismaClient } from '@prisma/client';
+import { DepartmentType, ModuleKey, PrismaClient } from '@prisma/client';
 import {
   PERMISSION_MATRIX,
   ROLES,
@@ -90,6 +90,32 @@ async function seedFacility() {
 
   console.log(`facility: ${facility.code} (${facility.name})`);
   return facility;
+}
+
+// Which optional modules a fresh Farhat install has on. OPD is not here — it is the
+// core and is never toggleable (see the ModuleKey enum). Farhat runs a lab and a
+// pharmacy alongside its OPD, so those two ship on; the rest are off until licensed
+// and an admin flips them (task 2.12). Enabling here is only the recorded flag — the
+// ModuleGuard (2.13) is what turns a disabled module into a 403.
+const ENABLED_MODULES = new Set<ModuleKey>([ModuleKey.lab, ModuleKey.pharmacy]);
+
+async function seedModules(facilityId: string) {
+  // Upsert every toggleable module so the admin screen always shows the full set of
+  // switches. Idempotent, and it never overwrites `enabled`: once an admin has
+  // toggled a module, a re-seed must not silently flip it back.
+  for (const module of Object.values(ModuleKey)) {
+    const enabled = ENABLED_MODULES.has(module);
+    await prisma.facilityModule.upsert({
+      where: { facilityId_module: { facilityId, module } },
+      update: {},
+      create: { facilityId, module, enabled, enabledAt: enabled ? new Date() : null },
+    });
+  }
+
+  console.log(
+    `modules: ${Object.values(ModuleKey).length} seeded ` +
+      `(${[...ENABLED_MODULES].join(', ')} on)`,
+  );
 }
 
 async function seedDepartments(facilityId: string) {
@@ -298,6 +324,7 @@ async function seedRbac() {
 async function main() {
   const facility = await seedFacility();
   await seedDepartments(facility.id);
+  await seedModules(facility.id);
   await seedRbac();
   await seedAdminUser(facility.id);
   console.log('seed complete');
