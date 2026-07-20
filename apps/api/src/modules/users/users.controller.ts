@@ -17,8 +17,8 @@ import {
   type UserListResponse,
   type UserSummary,
 } from '@redmars/shared';
-import type { AuthContext } from '../auth/auth-context';
-import { RequirePermission } from '../auth/decorators/require-permission.decorator';
+import type { AuthContext } from '../../auth/auth-context';
+import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { UsersService } from './users.service';
 
 /**

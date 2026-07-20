@@ -6,7 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { UsersModule } from './users/users.module';
+import { UsersModule } from './modules/users/users.module';
 import { DepartmentModule } from './modules/department/department.module';
 import { RoomModule } from './modules/room/room.module';
 import { SpecialityModule } from './modules/speciality/speciality.module';
@@ -17,6 +17,7 @@ import { LabTestModule } from './modules/lab-test/lab-test.module';
 import { LabPanelModule } from './modules/lab-panel/lab-panel.module';
 import { ReferenceRangeModule } from './modules/reference-range/reference-range.module';
 import { IcdModule } from './modules/icd/icd.module';
+import { NumberSequenceModule } from './services/number-sequence.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { IcdModule } from './modules/icd/icd.module';
     LabPanelModule,
     ReferenceRangeModule,
     IcdModule,
+    NumberSequenceModule,
   ],
   providers: [
     // Global. Runs after the guards on every route, so request.auth is already

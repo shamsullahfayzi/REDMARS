@@ -11,7 +11,7 @@ import type {
   UserListResponse,
   UserSummary,
 } from '@redmars/shared';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * The shape every user response is built from. One place, so the list and the
