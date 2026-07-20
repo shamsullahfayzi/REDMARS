@@ -46,6 +46,7 @@
     "queue": "Queue",
     "patients": "Patients",
     "consultations": "Consultations",
+    "icd": "Diagnosis codes",
     "lab": "Lab",
     "pharmacy": "Pharmacy",
     "users": "Users",
@@ -427,5 +428,18 @@
     "delete": "Remove range",
     "invalid": "Please check the range.",
     "failed": "Could not save the range. Please try again."
+  },
+  "icd": {
+    "subtitle": "Look up an ICD-10 diagnosis code. Type a code or part of a description.",
+    "searchPlaceholder": "e.g. depress, anxiety, F32…",
+    "tooShort": "Type at least two characters.",
+    "empty": "No codes match your search.",
+    "error": "Could not search diagnosis codes.",
+    "code": "Code",
+    "title": "Description",
+    "chapter": "Chapter",
+    "billable": "Billable",
+    "billableYes": "Billable",
+    "billableNo": "Category"
   }
 }

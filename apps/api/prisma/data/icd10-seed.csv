@@ -1,0 +1,131 @@
+code,title,titleLocal,chapter,isBillable
+F00,Dementia in Alzheimer's disease,,Mental and behavioural,false
+F00.0,Dementia in Alzheimer's disease with early onset,,Mental and behavioural,true
+F00.1,Dementia in Alzheimer's disease with late onset,,Mental and behavioural,true
+F00.9,Dementia in Alzheimer's disease unspecified,,Mental and behavioural,true
+F01,Vascular dementia,,Mental and behavioural,false
+F01.9,Vascular dementia unspecified,,Mental and behavioural,true
+F03,Unspecified dementia,,Mental and behavioural,true
+F05,Delirium not induced by alcohol and other psychoactive substances,,Mental and behavioural,false
+F05.9,Delirium unspecified,,Mental and behavioural,true
+F06,Other mental disorders due to brain damage and dysfunction,,Mental and behavioural,false
+F06.2,Organic delusional (schizophrenia-like) disorder,,Mental and behavioural,true
+F06.3,Organic mood (affective) disorders,,Mental and behavioural,true
+F07,Personality and behavioural disorders due to brain disease,,Mental and behavioural,false
+F09,Unspecified organic or symptomatic mental disorder,,Mental and behavioural,true
+F10,Mental and behavioural disorders due to use of alcohol,,Mental and behavioural,false
+F10.1,"Mental and behavioural disorders due to alcohol, harmful use",,Mental and behavioural,true
+F10.2,"Mental and behavioural disorders due to alcohol, dependence syndrome",,Mental and behavioural,true
+F10.3,"Mental and behavioural disorders due to alcohol, withdrawal state",,Mental and behavioural,true
+F11,Mental and behavioural disorders due to use of opioids,,Mental and behavioural,false
+F11.1,"Mental and behavioural disorders due to opioids, harmful use",,Mental and behavioural,true
+F11.2,"Mental and behavioural disorders due to opioids, dependence syndrome",,Mental and behavioural,true
+F11.3,"Mental and behavioural disorders due to opioids, withdrawal state",,Mental and behavioural,true
+F12,Mental and behavioural disorders due to use of cannabinoids,,Mental and behavioural,false
+F12.2,"Mental and behavioural disorders due to cannabinoids, dependence syndrome",,Mental and behavioural,true
+F13,Mental and behavioural disorders due to use of sedatives or hypnotics,,Mental and behavioural,false
+F13.2,"Mental and behavioural disorders due to sedatives, dependence syndrome",,Mental and behavioural,true
+F14,Mental and behavioural disorders due to use of cocaine,,Mental and behavioural,false
+F15,Mental and behavioural disorders due to use of other stimulants,,Mental and behavioural,false
+F17,Mental and behavioural disorders due to use of tobacco,,Mental and behavioural,false
+F17.2,"Mental and behavioural disorders due to tobacco, dependence syndrome",,Mental and behavioural,true
+F19,Mental and behavioural disorders due to multiple drug use,,Mental and behavioural,false
+F20,Schizophrenia,,Mental and behavioural,false
+F20.0,Paranoid schizophrenia,,Mental and behavioural,true
+F20.1,Hebephrenic schizophrenia,,Mental and behavioural,true
+F20.3,Undifferentiated schizophrenia,,Mental and behavioural,true
+F20.5,Residual schizophrenia,,Mental and behavioural,true
+F20.9,Schizophrenia unspecified,,Mental and behavioural,true
+F21,Schizotypal disorder,,Mental and behavioural,true
+F22,Persistent delusional disorders,,Mental and behavioural,false
+F22.0,Delusional disorder,,Mental and behavioural,true
+F23,Acute and transient psychotic disorders,,Mental and behavioural,false
+F23.9,Acute and transient psychotic disorder unspecified,,Mental and behavioural,true
+F25,Schizoaffective disorders,,Mental and behavioural,false
+F25.9,Schizoaffective disorder unspecified,,Mental and behavioural,true
+F29,Unspecified nonorganic psychosis,,Mental and behavioural,true
+F30,Manic episode,,Mental and behavioural,false
+F30.1,Mania without psychotic symptoms,,Mental and behavioural,true
+F30.2,Mania with psychotic symptoms,,Mental and behavioural,true
+F31,Bipolar affective disorder,,Mental and behavioural,false
+F31.0,Bipolar affective disorder current episode hypomanic,,Mental and behavioural,true
+F31.1,Bipolar affective disorder current episode manic without psychotic symptoms,,Mental and behavioural,true
+F31.2,Bipolar affective disorder current episode manic with psychotic symptoms,,Mental and behavioural,true
+F31.3,Bipolar affective disorder current episode mild or moderate depression,,Mental and behavioural,true
+F31.4,Bipolar affective disorder current episode severe depression without psychotic symptoms,,Mental and behavioural,true
+F31.5,Bipolar affective disorder current episode severe depression with psychotic symptoms,,Mental and behavioural,true
+F31.9,Bipolar affective disorder unspecified,,Mental and behavioural,true
+F32,Depressive episode,,Mental and behavioural,false
+F32.0,Mild depressive episode,,Mental and behavioural,true
+F32.1,Moderate depressive episode,,Mental and behavioural,true
+F32.2,Severe depressive episode without psychotic symptoms,,Mental and behavioural,true
+F32.3,Severe depressive episode with psychotic symptoms,,Mental and behavioural,true
+F32.9,Depressive episode unspecified,,Mental and behavioural,true
+F33,Recurrent depressive disorder,,Mental and behavioural,false
+F33.0,Recurrent depressive disorder current episode mild,,Mental and behavioural,true
+F33.1,Recurrent depressive disorder current episode moderate,,Mental and behavioural,true
+F33.2,Recurrent depressive disorder current episode severe without psychotic symptoms,,Mental and behavioural,true
+F33.9,Recurrent depressive disorder unspecified,,Mental and behavioural,true
+F34,Persistent mood (affective) disorders,,Mental and behavioural,false
+F34.1,Dysthymia,,Mental and behavioural,true
+F39,Unspecified mood (affective) disorder,,Mental and behavioural,true
+F40,Phobic anxiety disorders,,Mental and behavioural,false
+F40.0,Agoraphobia,,Mental and behavioural,true
+F40.1,Social phobias,,Mental and behavioural,true
+F40.2,Specific (isolated) phobias,,Mental and behavioural,true
+F41,Other anxiety disorders,,Mental and behavioural,false
+F41.0,Panic disorder,,Mental and behavioural,true
+F41.1,Generalized anxiety disorder,,Mental and behavioural,true
+F41.2,Mixed anxiety and depressive disorder,,Mental and behavioural,true
+F41.9,Anxiety disorder unspecified,,Mental and behavioural,true
+F42,Obsessive-compulsive disorder,,Mental and behavioural,false
+F42.9,Obsessive-compulsive disorder unspecified,,Mental and behavioural,true
+F43,Reaction to severe stress and adjustment disorders,,Mental and behavioural,false
+F43.0,Acute stress reaction,,Mental and behavioural,true
+F43.1,Post-traumatic stress disorder,,Mental and behavioural,true
+F43.2,Adjustment disorders,,Mental and behavioural,true
+F44,Dissociative (conversion) disorders,,Mental and behavioural,false
+F44.9,Dissociative (conversion) disorder unspecified,,Mental and behavioural,true
+F45,Somatoform disorders,,Mental and behavioural,false
+F45.0,Somatization disorder,,Mental and behavioural,true
+F45.4,Persistent somatoform pain disorder,,Mental and behavioural,true
+F48,Other neurotic disorders,,Mental and behavioural,false
+F48.0,Neurasthenia,,Mental and behavioural,true
+F50,Eating disorders,,Mental and behavioural,false
+F50.0,Anorexia nervosa,,Mental and behavioural,true
+F50.2,Bulimia nervosa,,Mental and behavioural,true
+F51,Nonorganic sleep disorders,,Mental and behavioural,false
+F51.0,Nonorganic insomnia,,Mental and behavioural,true
+F60,Specific personality disorders,,Mental and behavioural,false
+F60.3,Emotionally unstable personality disorder,,Mental and behavioural,true
+F60.9,Personality disorder unspecified,,Mental and behavioural,true
+F70,Mild mental retardation,,Mental and behavioural,true
+F71,Moderate mental retardation,,Mental and behavioural,true
+F79,Unspecified mental retardation,,Mental and behavioural,true
+F80,Specific developmental disorders of speech and language,,Mental and behavioural,false
+F84,Pervasive developmental disorders,,Mental and behavioural,false
+F84.0,Childhood autism,,Mental and behavioural,true
+F84.5,Asperger syndrome,,Mental and behavioural,true
+F90,Hyperkinetic disorders,,Mental and behavioural,false
+F90.0,Disturbance of activity and attention,,Mental and behavioural,true
+F91,Conduct disorders,,Mental and behavioural,false
+F95,Tic disorders,,Mental and behavioural,false
+F99,Mental disorder not otherwise specified,,Mental and behavioural,true
+G40,Epilepsy,,Nervous system,false
+G40.9,Epilepsy unspecified,,Nervous system,true
+G43,Migraine,,Nervous system,false
+G43.9,Migraine unspecified,,Nervous system,true
+G47,Sleep disorders,,Nervous system,false
+G47.0,Insomnia,,Nervous system,true
+E03,Other hypothyroidism,,Endocrine,false
+E03.9,Hypothyroidism unspecified,,Endocrine,true
+E05,Thyrotoxicosis (hyperthyroidism),,Endocrine,false
+E11,Type 2 diabetes mellitus,,Endocrine,false
+E11.9,Type 2 diabetes mellitus without complications,,Endocrine,true
+I10,Essential (primary) hypertension,,Circulatory,true
+R45,Symptoms and signs involving emotional state,,Symptoms and signs,false
+R45.8,Other symptoms and signs involving emotional state,,Symptoms and signs,true
+R51,Headache,,Symptoms and signs,true
+Z00,General examination without complaint or reported diagnosis,,Factors influencing health status,false
+Z00.0,General medical examination,,Factors influencing health status,true
+Z63,Problems related to primary support group,,Factors influencing health status,false

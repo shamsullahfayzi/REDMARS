@@ -20,7 +20,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:seed": "prisma db seed",
-    "db:seed:drugs": "ts-node -P tsconfig.seed.json prisma/seed-drugs.ts"
+    "db:seed:drugs": "ts-node -P tsconfig.seed.json prisma/seed-drugs.ts",
+    "db:seed:icd": "ts-node -P tsconfig.seed.json prisma/seed-icd.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

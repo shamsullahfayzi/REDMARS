@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  BookText,
   Building2,
   Clock,
   FlaskConical,
@@ -22,6 +23,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   queue: Clock,
   patients: UserRound,
   consultations: Stethoscope,
+  icd: BookText,
   lab: FlaskConical,
   pharmacy: Pill,
   users: UserCog,

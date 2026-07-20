@@ -16,6 +16,7 @@ import { DrugModule } from './modules/drug/drug.module';
 import { LabTestModule } from './modules/lab-test/lab-test.module';
 import { LabPanelModule } from './modules/lab-panel/lab-panel.module';
 import { ReferenceRangeModule } from './modules/reference-range/reference-range.module';
+import { IcdModule } from './modules/icd/icd.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ReferenceRangeModule } from './modules/reference-range/reference-range.
     LabTestModule,
     LabPanelModule,
     ReferenceRangeModule,
+    IcdModule,
   ],
   providers: [
     // Global. Runs after the guards on every route, so request.auth is already
