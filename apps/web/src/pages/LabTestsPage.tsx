@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Trash2 } from 'lucide-react'
 import {
   createLabTestRequestSchema,
+  createReferenceRangeRequestSchema,
   updateLabTestRequestSchema,
   type LabTestSummary,
+  type ReferenceRangeSummary,
 } from '@redmars/shared'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +14,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 import { useCreateLabTest, useLabTests, useSetLabTestActive, useUpdateLabTest } from '@/hooks/useLabTests'
+import {
+  useCreateReferenceRange,
+  useDeleteReferenceRange,
+  useReferenceRanges,
+} from '@/hooks/useReferenceRanges'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -281,8 +289,9 @@ function LabTestRow({ test }: { test: LabTestSummary }) {
       {isEditing && (
         <tr className="border-b border-border last:border-0 bg-muted/30">
           <td />
-          <td colSpan={6} className="p-3">
+          <td colSpan={6} className="space-y-5 p-3">
             <LabTestEditor test={test} onDone={() => setIsEditing(false)} />
+            <ReferenceRangesPanel test={test} />
           </td>
         </tr>
       )}
@@ -410,6 +419,217 @@ function LabTestEditor({ test, onDone }: { test: LabTestSummary; onDone: () => v
       )}
       <Button type="submit" size="sm" disabled={updateTest.isPending}>
         {updateTest.isPending ? t('labTests.edit.saving') : t('labTests.edit.save')}
+      </Button>
+    </form>
+  )
+}
+
+// --- Reference ranges (task 2.8) ---------------------------------------------
+
+const GENDERS = ['male', 'female', 'other', 'unknown'] as const
+
+// A band's normal value, formatted for the list: numeric bounds (either side may be
+// open) with the test's unit, or the text result. The result screen (a later phase)
+// reads these bands to flag a value high or low — here we only define them.
+function formatValue(range: ReferenceRangeSummary, unit: string | null): string {
+  if (range.low !== null || range.high !== null) {
+    const lo = range.low ?? '…'
+    const hi = range.high ?? '…'
+    return `${lo} – ${hi}${unit ? ` ${unit}` : ''}`
+  }
+  return range.textValue ?? '—'
+}
+
+function ReferenceRangesPanel({ test }: { test: LabTestSummary }) {
+  const { t } = useTranslation()
+  const rangesQuery = useReferenceRanges(test.id, true)
+  const deleteRange = useDeleteReferenceRange(test.id)
+
+  function ageText(range: ReferenceRangeSummary): string {
+    if (range.minAge === null && range.maxAge === null) return t('referenceRanges.allAges')
+    return `${range.minAge ?? '0'}–${range.maxAge ?? '∞'}`
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-3">
+      <div>
+        <h3 className="text-sm font-medium text-foreground">{t('referenceRanges.title')}</h3>
+        <p className="text-xs text-muted-foreground">{t('referenceRanges.hint')}</p>
+      </div>
+
+      {rangesQuery.isPending && (
+        <p className="text-sm text-muted-foreground">{t('referenceRanges.loading')}</p>
+      )}
+      {rangesQuery.isError && (
+        <p className="text-sm text-destructive">{t('referenceRanges.error')}</p>
+      )}
+
+      {rangesQuery.data &&
+        (rangesQuery.data.ranges.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t('referenceRanges.empty')}</p>
+        ) : (
+          <ul className="divide-y divide-border rounded-md border border-border">
+            {rangesQuery.data.ranges.map((range) => (
+              <li key={range.id} className="flex items-center gap-3 p-2 text-sm">
+                <Badge variant="muted">
+                  {range.gender
+                    ? t(`referenceRanges.gender.${range.gender}`)
+                    : t('referenceRanges.genderAny')}
+                </Badge>
+                <span className="text-muted-foreground">{ageText(range)}</span>
+                <span className="flex-1 font-mono text-foreground" dir="ltr">
+                  {formatValue(range, test.unit)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('referenceRanges.delete')}
+                  disabled={deleteRange.isPending}
+                  onClick={() => deleteRange.mutate(range.id)}
+                >
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ))}
+
+      <AddReferenceRangeForm test={test} />
+    </div>
+  )
+}
+
+function AddReferenceRangeForm({ test }: { test: LabTestSummary }) {
+  const { t } = useTranslation()
+  const createRange = useCreateReferenceRange(test.id)
+
+  const [gender, setGender] = useState('')
+  const [minAge, setMinAge] = useState('')
+  const [maxAge, setMaxAge] = useState('')
+  const [low, setLow] = useState('')
+  const [high, setHigh] = useState('')
+  const [textValue, setTextValue] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  function resetForm() {
+    setGender('')
+    setMinAge('')
+    setMaxAge('')
+    setLow('')
+    setHigh('')
+    setTextValue('')
+  }
+
+  function onSubmit(event: FormEvent) {
+    event.preventDefault()
+    setError(null)
+
+    const parsed = createReferenceRangeRequestSchema.safeParse({
+      gender,
+      minAge,
+      maxAge,
+      low,
+      high,
+      textValue,
+    })
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? t('referenceRanges.invalid'))
+      return
+    }
+
+    createRange.mutate(parsed.data, {
+      onSuccess: resetForm,
+      onError: () => setError(t('referenceRanges.failed')),
+    })
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-3 border-t border-border pt-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="space-y-1">
+          <Label htmlFor={`rr-gender-${test.id}`} className="text-xs text-muted-foreground">
+            {t('referenceRanges.genderLabel')}
+          </Label>
+          <Select
+            id={`rr-gender-${test.id}`}
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+          >
+            <option value="">{t('referenceRanges.genderAny')}</option>
+            {GENDERS.map((g) => (
+              <option key={g} value={g}>
+                {t(`referenceRanges.gender.${g}`)}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`rr-minage-${test.id}`} className="text-xs text-muted-foreground">
+            {t('referenceRanges.minAge')}
+          </Label>
+          <Input
+            id={`rr-minage-${test.id}`}
+            inputMode="numeric"
+            dir="ltr"
+            value={minAge}
+            onChange={(e) => setMinAge(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`rr-maxage-${test.id}`} className="text-xs text-muted-foreground">
+            {t('referenceRanges.maxAge')}
+          </Label>
+          <Input
+            id={`rr-maxage-${test.id}`}
+            inputMode="numeric"
+            dir="ltr"
+            value={maxAge}
+            onChange={(e) => setMaxAge(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`rr-low-${test.id}`} className="text-xs text-muted-foreground">
+            {t('referenceRanges.low')}
+          </Label>
+          <Input
+            id={`rr-low-${test.id}`}
+            inputMode="decimal"
+            dir="ltr"
+            value={low}
+            onChange={(e) => setLow(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`rr-high-${test.id}`} className="text-xs text-muted-foreground">
+            {t('referenceRanges.high')}
+          </Label>
+          <Input
+            id={`rr-high-${test.id}`}
+            inputMode="decimal"
+            dir="ltr"
+            value={high}
+            onChange={(e) => setHigh(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`rr-text-${test.id}`} className="text-xs text-muted-foreground">
+            {t('referenceRanges.textValue')}
+          </Label>
+          <Input
+            id={`rr-text-${test.id}`}
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            placeholder={t('referenceRanges.textPlaceholder')}
+          />
+        </div>
+      </div>
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <Button type="submit" size="sm" disabled={createRange.isPending}>
+        {createRange.isPending ? t('referenceRanges.adding') : t('referenceRanges.add')}
       </Button>
     </form>
   )

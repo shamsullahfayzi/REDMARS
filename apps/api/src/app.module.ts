@@ -15,6 +15,7 @@ import { ServiceModule } from './modules/service/service.module';
 import { DrugModule } from './modules/drug/drug.module';
 import { LabTestModule } from './modules/lab-test/lab-test.module';
 import { LabPanelModule } from './modules/lab-panel/lab-panel.module';
+import { ReferenceRangeModule } from './modules/reference-range/reference-range.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { LabPanelModule } from './modules/lab-panel/lab-panel.module';
     DrugModule,
     LabTestModule,
     LabPanelModule,
+    ReferenceRangeModule,
   ],
   providers: [
     // Global. Runs after the guards on every route, so request.auth is already

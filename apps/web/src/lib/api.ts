@@ -189,6 +189,15 @@ export function apiPut<TSchema extends z.ZodType>(
   return request('PUT', path, schema, body)
 }
 
+// DELETE routes return the fresh collection (not 204), so the response parses
+// against a schema exactly like the others.
+export function apiDelete<TSchema extends z.ZodType>(
+  path: string,
+  schema: TSchema,
+): Promise<z.infer<TSchema>> {
+  return request('DELETE', path, schema)
+}
+
 /**
  * The shared tail of every request: reject non-2xx by status (the caller decides
  * what a 401 or 400 means), then parse the body against the agreed schema so a

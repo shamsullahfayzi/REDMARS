@@ -400,5 +400,32 @@
       "invalid": "Please check the form.",
       "failed": "Could not save. Please try again."
     }
+  },
+  "referenceRanges": {
+    "title": "Reference ranges",
+    "hint": "Normal-value bands. The result screen (a later phase) reads these to flag a value high or low. A range is a low/high pair or a text result.",
+    "loading": "Loading…",
+    "error": "Could not load reference ranges.",
+    "empty": "No reference ranges yet.",
+    "genderLabel": "Sex",
+    "genderAny": "Any",
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other",
+      "unknown": "Unknown"
+    },
+    "allAges": "All ages",
+    "minAge": "From age",
+    "maxAge": "To age",
+    "low": "Low",
+    "high": "High",
+    "textValue": "Text result",
+    "textPlaceholder": "e.g. Negative",
+    "add": "Add range",
+    "adding": "Saving…",
+    "delete": "Remove range",
+    "invalid": "Please check the range.",
+    "failed": "Could not save the range. Please try again."
   }
 }
