@@ -52,6 +52,8 @@
     "departments": "Departments",
     "practitioners": "Practitioners",
     "services": "Services",
+    "labTests": "Lab tests",
+    "labPanels": "Lab panels",
     "drugs": "Drugs",
     "reports": "Reports",
     "groups": {
@@ -309,6 +311,90 @@
     },
     "edit": {
       "toggle": "Edit drug",
+      "save": "Save",
+      "saving": "Saving…",
+      "invalid": "Please check the form.",
+      "failed": "Could not save. Please try again."
+    }
+  },
+  "labTests": {
+    "subtitle": "The catalogue of orderable lab tests for this hospital.",
+    "currency": "AFN",
+    "create": {
+      "title": "Add a lab test",
+      "code": "Code",
+      "name": "Name",
+      "nameLocalPrs": "Name (Dari)",
+      "nameLocalPs": "Name (Pashto)",
+      "specimen": "Specimen",
+      "unit": "Unit",
+      "loincCode": "LOINC code",
+      "price": "Price",
+      "submit": "Add test",
+      "submitting": "Saving…",
+      "invalid": "Please check the form.",
+      "duplicate": "That code is already in use.",
+      "failed": "Could not save the test. Please try again."
+    },
+    "list": {
+      "title": "Tests",
+      "loading": "Loading…",
+      "error": "Could not load lab tests.",
+      "empty": "No lab tests yet.",
+      "code": "Code",
+      "name": "Name",
+      "specimen": "Specimen",
+      "price": "Price",
+      "status": "Status",
+      "actions": "Actions",
+      "active": "Active",
+      "inactive": "Inactive",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate"
+    },
+    "edit": {
+      "toggle": "Edit test",
+      "save": "Save",
+      "saving": "Saving…",
+      "invalid": "Please check the form.",
+      "failed": "Could not save. Please try again."
+    }
+  },
+  "labPanels": {
+    "subtitle": "Ordering bundles — a panel expands to its member tests.",
+    "currency": "AFN",
+    "create": {
+      "title": "Add a lab panel",
+      "code": "Code",
+      "name": "Name",
+      "price": "Price",
+      "tests": "Member tests",
+      "noTests": "Add lab tests first — a panel groups existing tests.",
+      "submit": "Add panel",
+      "submitting": "Saving…",
+      "invalid": "Please check the form.",
+      "duplicate": "That code is already in use.",
+      "failed": "Could not save the panel. Please try again."
+    },
+    "list": {
+      "title": "Panels",
+      "loading": "Loading…",
+      "error": "Could not load lab panels.",
+      "empty": "No lab panels yet.",
+      "code": "Code",
+      "name": "Name",
+      "tests": "Tests",
+      "noTests": "No tests",
+      "price": "Price",
+      "status": "Status",
+      "actions": "Actions",
+      "active": "Active",
+      "inactive": "Inactive",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate"
+    },
+    "edit": {
+      "toggle": "Edit panel",
       "save": "Save",
       "saving": "Saving…",
       "invalid": "Please check the form.",
