@@ -4,6 +4,7 @@ import {
   logoutResponseSchema,
   meResponseSchema,
   type AuthUser,
+  type ModuleKey,
   type SessionEndedReason,
 } from '@redmars/shared'
 import { apiGet, apiPost, setOnSessionEnded } from '@/lib/api'
@@ -15,6 +16,7 @@ interface State {
   status: AuthStatus
   user: AuthUser | null
   roles: string[]
+  enabledModules: ModuleKey[]
   sessionEndedReason: SessionEndedReason | null
 }
 
@@ -22,6 +24,7 @@ const UNAUTHENTICATED: State = {
   status: 'unauthenticated',
   user: null,
   roles: [],
+  enabledModules: [],
   sessionEndedReason: null,
 }
 
@@ -42,12 +45,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     status: 'loading',
     user: null,
     roles: [],
+    enabledModules: [],
     sessionEndedReason: null,
   })
 
   const loadMe = useCallback(async () => {
     const me = await apiGet('/auth/me', meResponseSchema)
-    setState({ status: 'authenticated', user: me.user, roles: me.roles, sessionEndedReason: null })
+    setState({
+      status: 'authenticated',
+      user: me.user,
+      roles: me.roles,
+      enabledModules: me.enabledModules,
+      sessionEndedReason: null,
+    })
   }, [])
 
   // Register the "session ended" handler once, and drop the query cache too — the

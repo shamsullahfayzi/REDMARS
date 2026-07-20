@@ -58,4 +58,28 @@ export class FacilityModuleService {
       enabledAt: row.enabledAt?.toISOString() ?? null,
     };
   }
+
+  /**
+   * Is one module on for a facility? The ModuleGuard's read (task 2.13). A missing
+   * row means never enabled, so it reads as off — the same default as the column.
+   */
+  async isEnabled(facilityId: string, module: ModuleKeyContract): Promise<boolean> {
+    const row = await this.prisma.db.facilityModule.findUnique({
+      where: { facilityId_module: { facilityId, module } },
+      select: { enabled: true },
+    });
+    return row?.enabled ?? false;
+  }
+
+  /**
+   * The enabled module keys for a facility — what /auth/me hands the client so the
+   * nav can hide the modules that are off (courtesy; the guard is the control).
+   */
+  async enabledKeys(facilityId: string): Promise<ModuleKeyContract[]> {
+    const rows = await this.prisma.db.facilityModule.findMany({
+      where: { facilityId, enabled: true },
+      select: { module: true },
+    });
+    return rows.map((r) => r.module);
+  }
 }

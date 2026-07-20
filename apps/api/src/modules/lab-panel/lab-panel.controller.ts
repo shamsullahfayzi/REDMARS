@@ -22,12 +22,14 @@ import {
 } from '@redmars/shared';
 import type { AuthContext } from '../../auth/auth-context';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
+import { RequiresModule } from '../../auth/decorators/requires-module.decorator';
 import { LabPanelService } from './lab-panel.service';
 
 /**
  * Lab panel catalog (task 2.7). Admin-only — panel.manage is granted to admin
  * alone in the matrix. A panel groups lab tests for one-click ordering.
  */
+@RequiresModule('lab')
 @Controller('lab-panels')
 export class LabPanelController {
   constructor(private readonly panels: LabPanelService) {}

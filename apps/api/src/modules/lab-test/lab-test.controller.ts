@@ -20,6 +20,7 @@ import {
 } from '@redmars/shared';
 import type { AuthContext } from '../../auth/auth-context';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
+import { RequiresModule } from '../../auth/decorators/requires-module.decorator';
 import { LabTestService } from './lab-test.service';
 
 /**
@@ -28,6 +29,7 @@ import { LabTestService } from './lab-test.service';
  * the guard passes today, so a lab_tech reaches these routes; the approval workflow
  * that R9 describes is a later refinement, not built here.
  */
+@RequiresModule('lab')
 @Controller('lab-tests')
 export class LabTestController {
   constructor(private readonly tests: LabTestService) {}

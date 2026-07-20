@@ -20,6 +20,7 @@ import {
 } from '@redmars/shared';
 import type { AuthContext } from '../../auth/auth-context';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
+import { RequiresModule } from '../../auth/decorators/requires-module.decorator';
 import { ReferenceRangeService } from './reference-range.service';
 
 /**
@@ -29,6 +30,7 @@ import { ReferenceRangeService } from './reference-range.service';
  * same permission as the test catalog these bands belong to — admin, and the lab
  * technician under R9.
  */
+@RequiresModule('lab')
 @Controller('lab-tests/:testId/ranges')
 export class ReferenceRangeController {
   constructor(private readonly ranges: ReferenceRangeService) {}

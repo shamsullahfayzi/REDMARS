@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { NavLink } from 'react-router'
+import type { ModuleKey } from '@redmars/shared'
 import { NAV_GROUPS, navItemsForRoles } from '@/auth/nav'
 import { NAV_ICONS } from '@/components/navIcons'
 import { cn } from '@/lib/utils'
@@ -16,13 +17,14 @@ import { cn } from '@/lib/utils'
 
 interface SidebarProps {
   roles: string[]
+  enabledModules: ModuleKey[]
   open: boolean
   onClose: () => void
 }
 
-export function Sidebar({ roles, open, onClose }: SidebarProps) {
+export function Sidebar({ roles, enabledModules, open, onClose }: SidebarProps) {
   const { t } = useTranslation()
-  const items = navItemsForRoles(roles)
+  const items = navItemsForRoles(roles, enabledModules)
 
   return (
     <>

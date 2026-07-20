@@ -12,6 +12,7 @@ import type {
   SessionEndedReason,
 } from '@redmars/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { FacilityModuleService } from '../modules/facility-module/facility-module.service';
 import type { Env } from '../config/env.validation';
 import type { AuthContext } from './auth-context';
 
@@ -57,6 +58,7 @@ export class AuthService implements OnModuleInit {
     // it at boot — so get() returns T, never T | undefined. That is what kills
     // the two no-unsafe-assignment errors AND the `!` we used to paper over them.
     private readonly config: ConfigService<Env, true>,
+    private readonly modules: FacilityModuleService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -261,7 +263,8 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
-    return { user, roles: auth.roles };
+    const enabledModules = await this.modules.enabledKeys(auth.facilityId);
+    return { user, roles: auth.roles, enabledModules };
   }
 
   /**

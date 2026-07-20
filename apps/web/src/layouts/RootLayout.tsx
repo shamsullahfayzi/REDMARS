@@ -18,12 +18,17 @@ import { Button } from '@/components/ui/button'
  */
 export function RootLayout() {
   const { t } = useTranslation()
-  const { user, roles, logout } = useAuth()
+  const { user, roles, enabledModules, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="flex min-h-svh bg-background text-foreground">
-      <Sidebar roles={roles} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        roles={roles}
+        enabledModules={enabledModules}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur">

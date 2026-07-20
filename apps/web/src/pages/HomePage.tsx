@@ -16,10 +16,10 @@ import { cn } from '@/lib/utils'
  */
 export function HomePage() {
   const { t } = useTranslation()
-  const { user, roles } = useAuth()
+  const { user, roles, enabledModules } = useAuth()
 
   // The dashboard links everywhere except back to itself.
-  const sections = navItemsForRoles(roles).filter((item) => item.key !== 'dashboard')
+  const sections = navItemsForRoles(roles, enabledModules).filter((item) => item.key !== 'dashboard')
 
   return (
     <div className="space-y-8">

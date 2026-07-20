@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { moduleKeySchema } from './facilityModule.js'
 
 /**
  * POST /auth/login — the contract between apps/api and apps/web.
@@ -83,6 +84,13 @@ export type LoginResponse = z.infer<typeof loginResponseSchema>
 export const meResponseSchema = z.object({
   user: authUserSchema,
   roles: z.array(z.string()),
+  /**
+   * The optional modules turned on for this user's facility (task 2.13). Like
+   * `roles`, this is for the menu only — hiding a disabled module is courtesy; the
+   * ModuleGuard re-checks every gated endpoint regardless of what the nav showed.
+   * OPD is never here: it is the core, always on, and not a toggleable module.
+   */
+  enabledModules: z.array(moduleKeySchema),
 })
 
 export type MeResponse = z.infer<typeof meResponseSchema>

@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { hash } from '@node-rs/argon2';
-import { AuditAction, PrismaClient } from '@prisma/client';
+import { AuditAction, ModuleKey, PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import type {
@@ -77,6 +77,13 @@ describe('Lab catalog (e2e)', () => {
     server = app.getHttpServer();
 
     facilityId = (await prisma.facility.findFirstOrThrow()).id;
+    // Lab routes are @RequiresModule('lab') (task 2.13) — ensure the module is on for
+    // this facility so the guard does not 403 before the feature under test runs.
+    await prisma.facilityModule.upsert({
+      where: { facilityId_module: { facilityId, module: ModuleKey.lab } },
+      update: { enabled: true },
+      create: { facilityId, module: ModuleKey.lab, enabled: true, enabledAt: new Date() },
+    });
     await cleanup();
 
     adminId = await seedActor('admin', 'admin');
