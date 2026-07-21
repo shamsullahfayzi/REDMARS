@@ -16,6 +16,7 @@ const patientSummarySelect = {
   dateOfBirth: true,
   estimatedAgeYears: true,
   estimatedAgeMonths: true,
+  ageRecordedAt: true,
 } as const;
 
 type PatientRow = {
@@ -30,7 +31,24 @@ type PatientRow = {
   dateOfBirth: Date | null;
   estimatedAgeYears: number | null;
   estimatedAgeMonths: number | null;
+  ageRecordedAt: Date | null;
 };
+
+/**
+ * Phone numbers are stored as digits so they can be FOUND. "0700 123 456" and
+ * "0700123456" are the same number, and a receptionist searching the second must match
+ * a patient registered as the first — a `contains` against the raw string would not.
+ * A leading + is kept; everything else non-numeric is punctuation.
+ */
+function normalisePhone(value: string): string;
+function normalisePhone(value: string | null | undefined): string | null;
+function normalisePhone(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  const plus = trimmed.startsWith('+') ? '+' : '';
+  return `${plus}${trimmed.replace(/\D/g, '')}`;
+}
 
 @Injectable()
 export class PatientService {
@@ -66,8 +84,8 @@ export class PatientService {
         prefix: input.prefix ?? null,
         gender: input.gender,
 
-        phone: input.phone,
-        altPhone: input.altPhone ?? null,
+        phone: normalisePhone(input.phone),
+        altPhone: normalisePhone(input.altPhone),
 
         // Kept as a plain date — the contract carries YYYY-MM-DD so no timezone can
         // shift a birthday across midnight on the way in.
@@ -110,6 +128,50 @@ export class PatientService {
       dateOfBirth: patient.dateOfBirth ? patient.dateOfBirth.toISOString().slice(0, 10) : null,
       estimatedAgeYears: patient.estimatedAgeYears,
       estimatedAgeMonths: patient.estimatedAgeMonths,
+      ageRecordedAt: patient.ageRecordedAt ? patient.ageRecordedAt.toISOString() : null,
     };
+  }
+
+  /**
+   * Task 3.2 — one box, three kinds of answer: name, MRN, or phone.
+   *
+   * The done-when is the phone: twelve patients called Najila are indistinguishable by
+   * name, and the number is what tells them apart. Phone is matched on digits only,
+   * against the digits stored by `normalisePhone`, so spacing never decides a match.
+   *
+   * Scoped to the caller's facility and to the living register (soft-deleted rows are
+   * not results). Both queries share one `where` so the count can never disagree with
+   * the page it is counting.
+   */
+  async search(facilityId: string, q: string, limit: number) {
+    const term = q.trim();
+    const digits = term.replace(/\D/g, '');
+
+    const where = {
+      facilityId,
+      deletedAt: null,
+      OR: [
+        { firstName: { contains: term, mode: 'insensitive' as const } },
+        { lastName: { contains: term, mode: 'insensitive' as const } },
+        { mrn: { contains: term, mode: 'insensitive' as const } },
+        // Three digits is the shortest fragment worth matching a number on; below that
+        // every phone in the register contains it.
+        ...(digits.length >= 3
+          ? [{ phone: { contains: digits } }, { altPhone: { contains: digits } }]
+          : []),
+      ],
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.db.patient.findMany({
+        where,
+        select: patientSummarySelect,
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+        take: limit,
+      }),
+      this.prisma.db.patient.count({ where }),
+    ]);
+
+    return { patients: rows.map((row) => this.toSummary(row)), total };
   }
 }

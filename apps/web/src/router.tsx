@@ -13,6 +13,7 @@ import { InteractionCheckerPage } from '@/pages/InteractionCheckerPage'
 import { LabPanelsPage } from '@/pages/LabPanelsPage'
 import { ModulesPage } from '@/pages/ModulesPage'
 import { LabTestsPage } from '@/pages/LabTestsPage'
+import { PatientsPage } from '@/pages/PatientsPage'
 import { PractitionersPage } from '@/pages/PractitionersPage'
 import { ServicesPage } from '@/pages/ServicesPage'
 import { UsersPage } from '@/pages/UsersPage'
@@ -36,7 +37,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           { path: 'queue', element: <PlaceholderPage sectionKey="queue" /> },
-          { path: 'patients', element: <PlaceholderPage sectionKey="patients" /> },
+          { path: 'patients', element: <PatientsPage /> },
           { path: 'patients/new', element: <CreatePatientPage /> },
           { path: 'consultations', element: <PlaceholderPage sectionKey="consultations" /> },
           { path: 'icd', element: <IcdLookupPage /> },

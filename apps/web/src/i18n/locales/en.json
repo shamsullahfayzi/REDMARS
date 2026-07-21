@@ -504,7 +504,20 @@
       "error": "Could not register the patient. Nothing was saved — check the fields and try again.",
       "invalid": "Please check the highlighted fields."
     },
+    "search": {
+      "subtitle": "Search by name, medical record number, or phone.",
+      "placeholder": "Name, MRN, or phone…",
+      "register": "Register patient",
+      "registerInstead": "Register a new patient",
+      "tooShort": "Type at least two characters.",
+      "empty": "No patient matches that search.",
+      "error": "Could not search patients.",
+      "name": "Name",
+      "count": "Showing {{shown}} of {{total}}",
+      "years": "{{count}} yr"
+    },
     "fields": {
+      "mrn": "MRN",
       "firstName": "First name",
       "lastName": "Last name",
       "prefix": "Title",

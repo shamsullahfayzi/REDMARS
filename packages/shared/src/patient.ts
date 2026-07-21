@@ -117,6 +117,77 @@ export const patientSummarySchema = z.object({
   dateOfBirth: z.string().nullable(),
   estimatedAgeYears: z.number().int().nullable(),
   estimatedAgeMonths: z.number().int().nullable(),
+  /** The anchor. Without it an estimated age cannot be aged forward — see below. */
+  ageRecordedAt: z.string().nullable(),
 })
 
 export type PatientSummary = z.infer<typeof patientSummarySchema>
+
+/**
+ * The patient's age TODAY, in years, or null if neither path was recorded.
+ *
+ * This is the whole reason `ageRecordedAt` exists. A stored estimate is only true on
+ * the day it was taken, so it has to be aged forward by the time since — otherwise a
+ * patient registered at thirty is still thirty three years later, on every screen that
+ * reads the row. A real date of birth needs no such correction.
+ *
+ * Lives here rather than in the web app so the API, the UI, and any future report all
+ * compute an age the same way.
+ */
+export function currentAgeYears(
+  patient: Pick<
+    PatientSummary,
+    'dateOfBirth' | 'estimatedAgeYears' | 'estimatedAgeMonths' | 'ageRecordedAt'
+  >,
+  now: Date = new Date(),
+): number | null {
+  if (patient.dateOfBirth) {
+    const born = new Date(`${patient.dateOfBirth}T00:00:00Z`)
+    return Math.max(0, Math.floor((now.getTime() - born.getTime()) / MS_PER_YEAR))
+  }
+
+  const base =
+    patient.estimatedAgeYears != null
+      ? patient.estimatedAgeYears
+      : patient.estimatedAgeMonths != null
+        ? patient.estimatedAgeMonths / 12
+        : null
+  if (base == null) return null
+
+  // No anchor means the estimate cannot be aged forward; return it as recorded rather
+  // than silently pretending it is current.
+  if (!patient.ageRecordedAt) return Math.floor(base)
+
+  const elapsed = (now.getTime() - new Date(patient.ageRecordedAt).getTime()) / MS_PER_YEAR
+  return Math.max(0, Math.floor(base + Math.max(0, elapsed)))
+}
+
+const MS_PER_YEAR = 365.2425 * 24 * 60 * 60 * 1000
+
+// ---------------------------------------------------------------------------------
+// Task 3.2 — search
+// ---------------------------------------------------------------------------------
+
+/** Below this a search is noise: two characters match half the register. */
+export const PATIENT_SEARCH_MIN = 2
+export const PATIENT_SEARCH_LIMIT = 20
+
+/**
+ * One box, three kinds of answer. The receptionist is handed a name, a phone, or an old
+ * card with an MRN on it, and should not have to tell the system which — the server
+ * matches all three and lets the term decide.
+ */
+export const patientSearchQuerySchema = z.object({
+  q: z.string().trim().min(PATIENT_SEARCH_MIN, 'Enter at least two characters.').max(60),
+  limit: z.coerce.number().int().min(1).max(50).default(PATIENT_SEARCH_LIMIT),
+})
+
+export type PatientSearchQuery = z.infer<typeof patientSearchQuerySchema>
+
+export const patientSearchResponseSchema = z.object({
+  patients: z.array(patientSummarySchema),
+  /** Total matches, which may exceed the returned page — "12 Najilas, showing 20". */
+  total: z.number().int(),
+})
+
+export type PatientSearchResponse = z.infer<typeof patientSearchResponseSchema>

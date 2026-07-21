@@ -2,12 +2,14 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Post,
+  Query,
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { createPatientRequestSchema } from '@redmars/shared';
+import { createPatientRequestSchema, patientSearchQuerySchema } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuthContext } from '../../auth/auth-context';
 import { PatientService } from './patient.service';
@@ -36,6 +38,25 @@ export class PatientController {
 
     const auth = this.auth(req);
     return this.patientService.create(auth.facilityId, auth.userId, parsed.data);
+  }
+
+  /**
+   * Search is a far wider grant than create — every clinical role needs to find a
+   * patient, only the desk registers one.
+   */
+  @Get()
+  @RequirePermission('patient.search')
+  search(@Req() req: Request, @Query() query: unknown) {
+    const parsed = patientSearchQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid search',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const auth = this.auth(req);
+    return this.patientService.search(auth.facilityId, parsed.data.q, parsed.data.limit);
   }
 
   private auth(req: Request): AuthContext {
