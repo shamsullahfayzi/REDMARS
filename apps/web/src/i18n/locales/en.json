@@ -716,6 +716,18 @@
     "waited": "{{minutes}} min",
     "empty": "Nobody is waiting.",
     "error": "Could not load the queue.",
-    "open": "Open the patient record"
+    "open": "Open the patient record",
+    "justArrived": "Just arrived",
+    "live": {
+      "on": "Updating every {{seconds}} seconds",
+      "paused": "Paused",
+      "failing": "Not updating",
+      "pastDay": "A past day",
+      "updated": "read at {{time}}"
+    },
+    "stale": {
+      "title": "This queue is not updating.",
+      "since": "You are looking at what it said at {{time}}. Check the connection."
+    }
   }
 }

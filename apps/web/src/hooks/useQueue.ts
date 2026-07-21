@@ -3,13 +3,28 @@ import { queueResponseSchema, type QueueQuery } from '@redmars/shared'
 import { apiGet } from '@/lib/api'
 
 /**
- * Task 3.7 — who is waiting.
+ * How often the queue re-reads itself (task 3.8).
  *
- * No polling here on purpose: task 3.8 owns auto-refresh, and it is a `refetchInterval`
- * on this query and nothing else. Built so that is a one-line change rather than a
- * rewrite.
+ * Ten seconds, the slow end of the build order's 5–10. The thing being watched is a
+ * person walking from the reception desk to a waiting room, so five seconds buys no
+ * useful freshness and doubles the requests — and Farhat's network is not something to
+ * spend for nothing.
  */
-export function useQueue(filters: Partial<QueueQuery>) {
+export const QUEUE_POLL_MS = 10_000
+
+/**
+ * Task 3.7 — who is waiting. Task 3.8 — without anyone pressing anything.
+ *
+ * The poll is a `refetchInterval` and genuinely nothing more; the "sync" this looked
+ * like from a distance is one number. What needed thought is not the polling but the
+ * FAILING: react-query keeps the last good data when a refetch errors, so a screen with
+ * a dead network shows a queue that looks current and is not. The page reads
+ * `isError` alongside `dataUpdatedAt` to say so out loud.
+ *
+ * Background tabs do not poll — `refetchIntervalInBackground` defaults to false — so a
+ * forgotten tab costs nothing until someone looks at it again.
+ */
+export function useQueue(filters: Partial<QueueQuery>, options: { poll?: boolean } = {}) {
   const params = new URLSearchParams()
   if (filters.departmentId) params.set('departmentId', filters.departmentId)
   if (filters.practitionerId) params.set('practitionerId', filters.practitionerId)
@@ -21,8 +36,9 @@ export function useQueue(filters: Partial<QueueQuery>) {
   return useQuery({
     queryKey: ['visits', 'queue', query],
     queryFn: () => apiGet(`/visits/queue${query ? `?${query}` : ''}`, queueResponseSchema),
-    // The wait times age between refetches, so a stale queue is a misleading one.
+    // The wait times age between reads, so a stale queue is a misleading one.
     staleTime: 0,
+    refetchInterval: options.poll === false ? false : QUEUE_POLL_MS,
   })
 }
 

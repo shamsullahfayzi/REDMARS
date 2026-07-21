@@ -406,6 +406,42 @@ describe('Doctor queue (e2e)', () => {
   it('rejects an unauthenticated request with 401', () =>
     request(server).get('/visits/queue').expect(401));
 
+  // --- Task 3.8: the poll has something new to find ---------------------------
+
+  it('3.8 done-when: a registration made after the last read shows up on the next one', async () => {
+    const before = (await getQueue().expect(200)).body as QueueResponse;
+    expect(before.entries).toHaveLength(0);
+
+    // The desk registers someone while the doctor's screen sits there polling.
+    await seedVisit({ startedAt: new Date(), name: 'JustArrived' });
+
+    const after = (await getQueue().expect(200)).body as QueueResponse;
+    // The client-side poll is a refetchInterval and cannot be tested from here, but the
+    // property it depends on can: two identical reads a moment apart must not return the
+    // same answer. This is the guard against anyone later adding a cache or a server-side
+    // staleTime and quietly turning the live screen back into a frozen one.
+    expect(after.entries).toHaveLength(1);
+    expect(after.entries[0].patientName).toContain('JustArrived');
+    expect(after.counts.arrived).toBe(1);
+  });
+
+  it('polling a queue leaves no audit rows: a glance is not a chart open', async () => {
+    await seedVisit({ startedAt: new Date() });
+    await prisma.auditLog.deleteMany({
+      where: { facility: { code: { startsWith: PREFIX } } },
+    });
+
+    for (let i = 0; i < 5; i += 1) await getQueue().expect(200);
+
+    // R1 audits reading a clinical RECORD. A queue is a list of who is waiting, and at
+    // one poll every ten seconds an audited one would write thousands of rows a shift
+    // and bury the reads that matter.
+    const rows = await prisma.auditLog.count({
+      where: { facility: { code: { startsWith: PREFIX } } },
+    });
+    expect(rows).toBe(0);
+  });
+
   it('does not swallow /visits/:id — route order still holds', async () => {
     const visitId = await seedVisit({ startedAt: new Date() });
     const res = await request(server)

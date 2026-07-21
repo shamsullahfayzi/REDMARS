@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { Clock, RefreshCw, Stethoscope } from 'lucide-react'
+import { Clock, Pause, Play, RefreshCw, Stethoscope, WifiOff } from 'lucide-react'
 import type { QueueEntry, VisitDepartmentOption } from '@redmars/shared'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
-import { useQueue, waitTone } from '@/hooks/useQueue'
+import { QUEUE_POLL_MS, useQueue, waitTone } from '@/hooks/useQueue'
 import { useVisitOptions } from '@/hooks/useVisits'
 import { cn } from '@/lib/utils'
 
@@ -29,13 +29,64 @@ export function QueuePage() {
   const [departmentId, setDepartmentId] = useState('')
   const [date, setDate] = useState('')
   const [includeClosed, setIncludeClosed] = useState(false)
+  const [paused, setPaused] = useState(false)
 
   const optionsQuery = useVisitOptions()
-  const queue = useQueue({ departmentId: departmentId || undefined, date: date || undefined, includeClosed })
+
+  // What day it is at the HOSPITAL, learned from the server rather than from this
+  // browser's clock — the same reason the day boundary is computed server-side at all
+  // (task 3.7). With no date filter, the date the server served is today there.
+  const [today, setToday] = useState<string | null>(null)
+
+  // A past day cannot change, so polling it is a request that can only ever return the
+  // same answer. Live means live; history is just history.
+  const isPastDay = date !== '' && today != null && date < today
+  const polling = !paused && !isPastDay
+
+  const queue = useQueue(
+    { departmentId: departmentId || undefined, date: date || undefined, includeClosed },
+    { poll: polling },
+  )
 
   const data = queue.data
+
+  useEffect(() => {
+    if (date === '' && data?.date) setToday(data.date)
+  }, [date, data])
   const entries = data?.entries ?? []
   const departments = optionsQuery.data?.departments ?? []
+
+  // Which rows arrived since the last read — the done-when, made visible. A doctor is
+  // not staring at this screen; they glance up, and something should say what changed.
+  const filterSignature = `${departmentId}|${date}|${String(includeClosed)}`
+  const seenIds = useRef<Set<string> | null>(null)
+  const seenFor = useRef(filterSignature)
+  const [freshIds, setFreshIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!data) return
+
+    const ids = new Set(data.entries.map((entry) => entry.id))
+    const previous = seenIds.current
+    // A changed filter means a different list, not new arrivals — everything would
+    // otherwise flash at once and the signal would mean nothing.
+    const sameList = seenFor.current === filterSignature
+    seenIds.current = ids
+    seenFor.current = filterSignature
+
+    // The first read of a list is not an arrival either.
+    if (!previous || !sameList) {
+      setFreshIds(new Set())
+      return
+    }
+
+    const arrived = new Set([...ids].filter((id) => !previous.has(id)))
+    if (arrived.size === 0) return
+
+    setFreshIds(arrived)
+    const timer = window.setTimeout(() => setFreshIds(new Set()), 8000)
+    return () => window.clearTimeout(timer)
+  }, [data, filterSignature])
 
   function departmentName(department: VisitDepartmentOption): string {
     if (i18n.language === 'prs' && department.nameLocalPrs) return department.nameLocalPrs
@@ -107,9 +158,32 @@ export function QueuePage() {
           <RefreshCw className={cn('size-4', queue.isFetching && 'animate-spin')} aria-hidden />
           {t('queue.refresh')}
         </Button>
+
+        <LiveIndicator
+          polling={polling}
+          paused={paused}
+          isPastDay={isPastDay}
+          failing={queue.isError && data != null}
+          updatedAt={queue.dataUpdatedAt}
+          onTogglePause={() => setPaused((p) => !p)}
+        />
       </div>
 
-      {queue.isError && <p className="text-sm text-destructive">{t('queue.error')}</p>}
+      {/* Failing with nothing to show. The one below is failing with stale data, which
+          is the more dangerous case and gets the louder treatment. */}
+      {queue.isError && !data && <p className="text-sm text-destructive">{t('queue.error')}</p>}
+
+      {queue.isError && data && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+          <WifiOff className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+          <div className="text-sm">
+            <p className="font-medium text-destructive">{t('queue.stale.title')}</p>
+            <p className="text-muted-foreground">
+              {t('queue.stale.since', { time: formatClock(queue.dataUpdatedAt) })}
+            </p>
+          </div>
+        </div>
+      )}
 
       {!queue.isError && entries.length === 0 && !queue.isPending ? (
         <Card className="p-8 text-center">
@@ -119,9 +193,74 @@ export function QueuePage() {
       ) : (
         <ul className="space-y-2">
           {entries.map((entry, index) => (
-            <QueueRow key={entry.id} entry={entry} position={index + 1} />
+            <QueueRow
+              key={entry.id}
+              entry={entry}
+              position={index + 1}
+              isNew={freshIds.has(entry.id)}
+            />
           ))}
         </ul>
+      )}
+    </div>
+  )
+}
+
+/** HH:MM in the reader's own locale — this one is about their clock, not the hospital's. */
+function formatClock(at: number): string {
+  if (!at) return '—'
+  return new Date(at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+}
+
+/**
+ * Says whether the screen is actually live, because after task 3.8 it usually is — and a
+ * screen that LOOKS live while quietly frozen is worse than one that never claimed to be.
+ * Four honest states: updating, not updating, paused, and a fixed past day.
+ */
+function LiveIndicator({
+  polling,
+  paused,
+  isPastDay,
+  failing,
+  updatedAt,
+  onTogglePause,
+}: {
+  polling: boolean
+  paused: boolean
+  isPastDay: boolean
+  failing: boolean
+  updatedAt: number
+  onTogglePause: () => void
+}) {
+  const { t } = useTranslation()
+  const seconds = Math.round(QUEUE_POLL_MS / 1000)
+
+  const label = failing
+    ? t('queue.live.failing')
+    : isPastDay
+      ? t('queue.live.pastDay')
+      : paused
+        ? t('queue.live.paused')
+        : t('queue.live.on', { seconds })
+
+  return (
+    <div className="ms-auto flex items-center gap-2 text-sm text-muted-foreground">
+      <span
+        className={cn(
+          'size-2 rounded-full',
+          failing ? 'bg-destructive' : polling ? 'bg-success' : 'bg-muted-foreground',
+        )}
+        aria-hidden
+      />
+      <span>{label}</span>
+      <span className="text-xs">·</span>
+      <span className="text-xs tabular-nums">
+        {t('queue.live.updated', { time: formatClock(updatedAt) })}
+      </span>
+      {!isPastDay && (
+        <Button type="button" variant="ghost" size="icon-sm" onClick={onTogglePause} aria-label={label}>
+          {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
+        </Button>
       )}
     </div>
   )
@@ -146,13 +285,33 @@ function Count({
   )
 }
 
-function QueueRow({ entry, position }: { entry: QueueEntry; position: number }) {
+function QueueRow({
+  entry,
+  position,
+  isNew,
+}: {
+  entry: QueueEntry
+  position: number
+  isNew: boolean
+}) {
   const { t } = useTranslation()
   const tone = waitTone(entry.waitedMinutes)
 
   return (
     <li>
-      <Card className="flex flex-wrap items-center gap-4 p-4">
+      {/* A ring AND a word. Colour alone would say nothing to a colour-blind doctor, and
+          nothing at all to a screen reader. */}
+      <Card
+        className={cn(
+          'flex flex-wrap items-center gap-4 p-4',
+          isNew && 'ring-2 ring-primary/50',
+        )}
+      >
+        {isNew && (
+          <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+            {t('queue.justArrived')}
+          </span>
+        )}
         {/* Position in line, not a clinical priority — the number is just where they are. */}
         <span
           className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground"
