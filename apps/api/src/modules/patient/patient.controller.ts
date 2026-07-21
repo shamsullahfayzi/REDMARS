@@ -9,7 +9,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { createPatientRequestSchema, patientSearchQuerySchema } from '@redmars/shared';
+import {
+  createPatientRequestSchema,
+  duplicateCheckQuerySchema,
+  patientSearchQuerySchema,
+} from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuthContext } from '../../auth/auth-context';
 import { PatientService } from './patient.service';
@@ -56,7 +60,34 @@ export class PatientController {
     }
 
     const auth = this.auth(req);
-    return this.patientService.search(auth.facilityId, parsed.data.q, parsed.data.limit);
+    return this.patientService.search(
+      auth.facilityId,
+      parsed.data.q,
+      parsed.data.page,
+      parsed.data.limit,
+    );
+  }
+
+  /**
+   * Task 3.3 — who might this already be? Declared before the bare @Get() reads, but the
+   * literal segment makes the two unambiguous either way.
+   *
+   * Gated on patient.search rather than patient.create: this only reveals patients the
+   * caller could already find by typing the same name into the search box.
+   */
+  @Get('duplicates')
+  @RequirePermission('patient.search')
+  async duplicates(@Req() req: Request, @Query() query: unknown) {
+    const parsed = duplicateCheckQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid duplicate check',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const auth = this.auth(req);
+    return { matches: await this.patientService.findDuplicates(auth.facilityId, parsed.data) };
   }
 
   private auth(req: Request): AuthContext {

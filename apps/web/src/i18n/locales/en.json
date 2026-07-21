@@ -514,7 +514,11 @@
       "error": "Could not search patients.",
       "name": "Name",
       "count": "Showing {{shown}} of {{total}}",
-      "years": "{{count}} yr"
+      "years": "{{count}} yr",
+      "none": "No patients registered yet.",
+      "page": "Page {{page}} of {{pageCount}}",
+      "previous": "Previous",
+      "next": "Next"
     },
     "fields": {
       "mrn": "MRN",
@@ -555,6 +559,15 @@
       "father_of": "Father of",
       "mother_of": "Mother of",
       "other": "Other"
+    },
+    "duplicates": {
+      "advisoryTitle": "This patient may already be registered",
+      "blockingTitle": "That phone number is already registered",
+      "registerAnyway": "Register anyway",
+      "reason": {
+        "phone": "same phone",
+        "name": "similar name"
+      }
     }
   }
 }

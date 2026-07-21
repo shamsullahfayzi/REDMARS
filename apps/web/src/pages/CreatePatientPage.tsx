@@ -1,19 +1,22 @@
 import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronRight, Copy, Check, UserPlus } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronRight, Copy, Check, UserPlus } from 'lucide-react'
 import {
   AGE_UNITS,
   GUARDIAN_RELATIONS,
   createPatientRequestSchema,
+  currentAgeYears,
   type AgeUnit,
   type CreatePatientRequest,
+  type DuplicateMatch,
 } from '@redmars/shared'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useCreatePatient } from '@/hooks/usePatient'
+import { useDebounced } from '@/hooks/useDebounced'
+import { duplicateMatchesFromError, useCreatePatient, useDuplicateCheck } from '@/hooks/usePatient'
 import { cn } from '@/lib/utils'
 
 /**
@@ -72,6 +75,67 @@ function Field({ id, label, error, required, children }: FieldProps) {
   )
 }
 
+/**
+ * The patients this registration might already be (task 3.3).
+ *
+ * `advisory` is a quiet note while she types; `blocking` is what the server refused on.
+ * Both list the same thing — who is already in the register and how they match — because
+ * the decision is hers either way and she cannot make it without seeing the rows.
+ */
+function DuplicateNotice({
+  matches,
+  tone,
+}: {
+  matches: DuplicateMatch[]
+  tone: 'advisory' | 'blocking'
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div className={cn('space-y-2', tone === 'advisory' && 'rounded-lg bg-warning/10 p-3')}>
+      <p className="flex items-center gap-1.5 text-sm font-medium text-warning">
+        <AlertTriangle className="size-4 shrink-0" aria-hidden />
+        {tone === 'blocking'
+          ? t('patients.duplicates.blockingTitle')
+          : t('patients.duplicates.advisoryTitle')}
+      </p>
+      <ul className="space-y-1.5">
+        {matches.map((match) => {
+          const age = currentAgeYears(match.patient)
+          const name = [match.patient.firstName, match.patient.lastName]
+            .filter(Boolean)
+            .join(' ')
+          return (
+            <li key={match.patient.id} className="text-sm text-foreground">
+              <span className="font-medium">{name}</span>
+              <span className="mx-1.5 font-mono text-muted-foreground" dir="ltr">
+                {match.patient.mrn}
+              </span>
+              {match.patient.phone && (
+                <span className="text-muted-foreground" dir="ltr">
+                  {match.patient.phone}
+                </span>
+              )}
+              {age != null && (
+                <span className="ms-1.5 text-muted-foreground">
+                  {t('patients.search.years', { count: age })}
+                </span>
+              )}
+              <span className="ms-1.5 text-xs text-muted-foreground">
+                (
+                {match.reasons
+                  .map((reason) => t(`patients.duplicates.reason.${reason}`))
+                  .join(', ')}
+                )
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 export function CreatePatientPage() {
   const { t } = useTranslation()
   const createPatient = useCreatePatient()
@@ -101,6 +165,18 @@ export function CreatePatientPage() {
   const [showMore, setShowMore] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [copied, setCopied] = useState(false)
+  /** Held so "Register anyway" can resend exactly what the server refused. */
+  const [lastPayload, setLastPayload] = useState<CreatePatientRequest | null>(null)
+
+  // The advisory check, while she is still typing. Courtesy — the server refuses a
+  // high-confidence duplicate whether or not this ever ran.
+  const advisory = useDuplicateCheck(
+    useDebounced(firstName, 400),
+    useDebounced(lastName, 400),
+    useDebounced(phone, 400),
+  )
+  const blocked = duplicateMatchesFromError(createPatient.error)
+  const advisoryMatches = blocked ? [] : (advisory.data?.matches ?? [])
 
   function clearError(field: string) {
     setErrors((prev) => {
@@ -183,7 +259,15 @@ export function CreatePatientPage() {
       return // never fall through to mutate with undefined data
     }
 
-    createPatient.mutate(parsed.data as CreatePatientRequest)
+    const payload = parsed.data as CreatePatientRequest
+    setLastPayload(payload)
+    createPatient.mutate(payload)
+  }
+
+  /** She has seen the duplicates and is registering anyway — a household shares a phone. */
+  function registerAnyway() {
+    if (!lastPayload) return
+    createPatient.mutate({ ...lastPayload, acknowledgeDuplicate: true })
   }
 
   async function copyMrn(mrn: string) {
@@ -360,7 +444,10 @@ export function CreatePatientPage() {
                 clearError('phone')
               }}
             />
-            {/* Duplicate detection (task 3.3) lands here, under the phone. */}
+            {/* Task 3.3 — the advisory list, right under the number that triggers it. */}
+            {advisoryMatches.length > 0 && (
+              <DuplicateNotice matches={advisoryMatches} tone="advisory" />
+            )}
           </Field>
 
           {/* Everything the patient may or may not volunteer, out of the way by default. */}
@@ -526,7 +613,22 @@ export function CreatePatientPage() {
             )}
           </div>
 
-          {createPatient.isError && (
+          {/* The server refused. Show what it found and let her decide — never a dead end. */}
+          {blocked && blocked.length > 0 && (
+            <div className="space-y-3 rounded-lg border border-warning/40 bg-warning/10 p-4">
+              <DuplicateNotice matches={blocked} tone="blocking" />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={registerAnyway}
+                disabled={createPatient.isPending}
+              >
+                {t('patients.duplicates.registerAnyway')}
+              </Button>
+            </div>
+          )}
+
+          {createPatient.isError && !blocked && (
             <p className="text-sm text-destructive">{t('patients.create.error')}</p>
           )}
 

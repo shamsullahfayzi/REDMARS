@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search } from 'lucide-react'
 import { MIN_ICD_QUERY_LENGTH } from '@redmars/shared'
@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { useDebounced } from '@/hooks/useDebounced'
 import { useIcdSearch } from '@/hooks/useIcdSearch'
 
 /**
@@ -90,11 +91,3 @@ export function IcdLookupPage() {
 
 // A value that only updates after it has stopped changing for `delay` ms — so a
 // keystroke storm makes one request, not one per character.
-function useDebounced<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value)
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), delay)
-    return () => clearTimeout(id)
-  }, [value, delay])
-  return debounced
-}

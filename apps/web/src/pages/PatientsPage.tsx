@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { Search, UserPlus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, UserPlus } from 'lucide-react'
 import { PATIENT_SEARCH_MIN, currentAgeYears, type PatientSummary } from '@redmars/shared'
 import { useAuth } from '@/auth/authContext'
 import { PageHeader } from '@/components/PageHeader'
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { useDebounced } from '@/hooks/useDebounced'
 import { usePatientSearch } from '@/hooks/usePatientSearch'
 import { cn } from '@/lib/utils'
 
@@ -26,15 +27,22 @@ export function PatientsPage() {
   const { t } = useTranslation()
   const { roles } = useAuth()
   const [input, setInput] = useState('')
+  const [page, setPage] = useState(1)
   const query = useDebounced(input, 250)
-  const searchQuery = usePatientSearch(query)
+  const searchQuery = usePatientSearch(query, page)
 
   const term = query.trim()
   const tooShort = term.length > 0 && term.length < PATIENT_SEARCH_MIN
-  const searched = term.length >= PATIENT_SEARCH_MIN
   const results = searchQuery.data?.patients ?? []
   const total = searchQuery.data?.total ?? 0
+  const limit = searchQuery.data?.limit ?? 20
+  const pageCount = Math.max(1, Math.ceil(total / limit))
   const canRegister = roles.includes('receptionist')
+
+  // A new term restarts paging — page 3 of the old results means nothing for the new.
+  useEffect(() => {
+    setPage(1)
+  }, [term])
 
   return (
     <div className="space-y-6">
@@ -64,11 +72,13 @@ export function PatientsPage() {
         <p className="text-sm text-destructive">{t('patients.search.error')}</p>
       )}
 
-      {searched && !searchQuery.isError && (
+      {!searchQuery.isError && (
         <section className="space-y-3">
           {results.length === 0 && !searchQuery.isPending ? (
             <div className="space-y-3">
-              <p className="text-muted-foreground">{t('patients.search.empty')}</p>
+              <p className="text-muted-foreground">
+                {term ? t('patients.search.empty') : t('patients.search.none')}
+              </p>
               {canRegister && (
                 <Link
                   to="/patients/new"
@@ -102,6 +112,33 @@ export function PatientsPage() {
                   </tbody>
                 </table>
               </Card>
+
+              {pageCount > 1 && (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    {t('patients.search.page', { page, pageCount })}
+                  </p>
+                  <div className="flex gap-2">
+                    {/* Chevrons mirror under RTL — "previous" is whichever way back is. */}
+                    <Button
+                      variant="outline"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden />
+                      {t('patients.search.previous')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={page >= pageCount}
+                      onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                    >
+                      {t('patients.search.next')}
+                      <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </section>
@@ -133,15 +170,3 @@ function PatientRow({ patient }: { patient: PatientSummary }) {
   )
 }
 
-/**
- * Kept local, as it is in IcdLookupPage — two uses is a duplicate, not yet a shared
- * abstraction. Extract on the third.
- */
-function useDebounced<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value)
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), delay)
-    return () => clearTimeout(id)
-  }, [value, delay])
-  return debounced
-}

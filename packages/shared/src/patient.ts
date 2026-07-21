@@ -85,6 +85,13 @@ export const createPatientRequestSchema = z
     occupation: optionalText(80),
     nationality: optionalText(60),
     bloodGroup: optionalText(8),
+
+    /**
+     * Task 3.3. The receptionist has been shown the likely duplicates and is registering
+     * anyway — a household really can share one phone, so this must be overridable. The
+     * server refuses a high-confidence duplicate without it.
+     */
+    acknowledgeDuplicate: z.boolean().default(false),
   })
   .refine(
     (v) =>
@@ -178,7 +185,13 @@ export const PATIENT_SEARCH_LIMIT = 20
  * matches all three and lets the term decide.
  */
 export const patientSearchQuerySchema = z.object({
-  q: z.string().trim().min(PATIENT_SEARCH_MIN, 'Enter at least two characters.').max(60),
+  /**
+   * Optional: no term lists the register, paged. An empty search box should show the
+   * patients rather than an empty screen — the desk often wants to browse, and a blank
+   * page teaches nothing about whether the system holds any data at all.
+   */
+  q: z.string().trim().min(PATIENT_SEARCH_MIN, 'Enter at least two characters.').max(60).optional(),
+  page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(PATIENT_SEARCH_LIMIT),
 })
 
@@ -188,6 +201,46 @@ export const patientSearchResponseSchema = z.object({
   patients: z.array(patientSummarySchema),
   /** Total matches, which may exceed the returned page — "12 Najilas, showing 20". */
   total: z.number().int(),
+  page: z.number().int(),
+  limit: z.number().int(),
 })
 
 export type PatientSearchResponse = z.infer<typeof patientSearchResponseSchema>
+
+// ---------------------------------------------------------------------------------
+// Task 3.3 — duplicate detection
+// ---------------------------------------------------------------------------------
+
+/** Why a candidate was flagged. A match may carry both. */
+export const duplicateReasonSchema = z.enum(['phone', 'name'])
+export type DuplicateReason = z.infer<typeof duplicateReasonSchema>
+
+/**
+ * `high` means the same phone number is already registered — strong enough to stop the
+ * save and make the receptionist look. `possible` is a close name alone, which is far too
+ * common here to block on: it is shown, never enforced.
+ */
+export const duplicateConfidenceSchema = z.enum(['high', 'possible'])
+export type DuplicateConfidence = z.infer<typeof duplicateConfidenceSchema>
+
+export const duplicateMatchSchema = z.object({
+  patient: patientSummarySchema,
+  reasons: z.array(duplicateReasonSchema).min(1),
+  confidence: duplicateConfidenceSchema,
+})
+
+export type DuplicateMatch = z.infer<typeof duplicateMatchSchema>
+
+export const duplicateCheckQuerySchema = z.object({
+  firstName: z.string().trim().min(1).max(55),
+  lastName: z.string().trim().max(55).optional(),
+  phone: z.string().trim().max(20).optional(),
+})
+
+export type DuplicateCheckQuery = z.infer<typeof duplicateCheckQuerySchema>
+
+export const duplicateCheckResponseSchema = z.object({
+  matches: z.array(duplicateMatchSchema),
+})
+
+export type DuplicateCheckResponse = z.infer<typeof duplicateCheckResponseSchema>

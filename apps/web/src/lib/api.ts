@@ -26,13 +26,21 @@ export class ApiError extends Error {
   /** 0 means the request never reached the server. */
   readonly status: number
 
-  // Field declared and assigned separately rather than as a constructor
-  // parameter property: this app builds with erasableSyntaxOnly, which forbids
+  /**
+   * The parsed error body, when the server sent one. Some failures carry the detail
+   * that makes them actionable — a 409 from patient create returns the duplicates it
+   * refused on, and the desk cannot decide anything without seeing them.
+   */
+  readonly body: unknown
+
+  // Fields declared and assigned separately rather than as constructor
+  // parameter properties: this app builds with erasableSyntaxOnly, which forbids
   // syntax that emits runtime code.
-  constructor(message: string, status: number, options?: ErrorOptions) {
+  constructor(message: string, status: number, body?: unknown, options?: ErrorOptions) {
     super(message, options)
     this.name = 'ApiError'
     this.status = status
+    this.body = body
   }
 }
 
@@ -70,7 +78,7 @@ async function rawFetch(method: string, path: string, body?: unknown): Promise<R
     })
   } catch (cause) {
     // fetch only rejects on network failure — server unreachable, DNS, CORS.
-    throw new ApiError(`Cannot reach the API at ${API_BASE_URL}`, 0, { cause })
+    throw new ApiError(`Cannot reach the API at ${API_BASE_URL}`, 0, undefined, { cause })
   }
 }
 
@@ -209,7 +217,15 @@ async function parseResponse<TSchema extends z.ZodType>(
   schema: TSchema,
 ): Promise<z.infer<TSchema>> {
   if (!response.ok) {
-    throw new ApiError(`${path} failed`, response.status)
+    // Read the body if there is one; a failure that explains itself is worth more
+    // than a bare status. A missing or non-JSON body is not itself an error.
+    let body: unknown
+    try {
+      body = await response.json()
+    } catch {
+      body = undefined
+    }
+    throw new ApiError(`${path} failed`, response.status, body)
   }
 
   const json: unknown = await response.json()

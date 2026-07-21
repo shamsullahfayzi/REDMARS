@@ -514,7 +514,11 @@
       "error": "د ناروغانو لټون ونشو.",
       "name": "نوم",
       "count": "{{total}} څخه {{shown}} ښودل کیږي",
-      "years": "{{count}} کلن"
+      "years": "{{count}} کلن",
+      "none": "تر اوسه هیڅ ناروغ نه دی ثبت شوی.",
+      "page": "{{pageCount}} څخه {{page}} پاڼه",
+      "previous": "مخکینی",
+      "next": "راتلونکی"
     },
     "fields": {
       "mrn": "د دوسیې شمېره",
@@ -555,6 +559,15 @@
       "father_of": "پلار",
       "mother_of": "مور",
       "other": "بل"
+    },
+    "duplicates": {
+      "advisoryTitle": "دا ناروغ ممکن مخکې ثبت شوی وي",
+      "blockingTitle": "دا د اړیکې شمېره مخکې ثبت شوې ده",
+      "registerAnyway": "بیا هم ثبت کړئ",
+      "reason": {
+        "phone": "ورته شمېره",
+        "name": "ورته نوم"
+      }
     }
   }
 }

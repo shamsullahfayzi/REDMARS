@@ -127,7 +127,10 @@ describe('Patient registration (e2e)', () => {
   });
 
   it('anchors an estimated age, so the number cannot silently rot', async () => {
-    const res = await post(walkIn({ firstName: 'Anchored', estimatedAgeYears: 42 })).expect(201);
+    // Distinct phone: task 3.3 refuses a repeated number without an acknowledgement.
+    const res = await post(
+      walkIn({ firstName: 'Anchored', phone: '0700111001', estimatedAgeYears: 42 }),
+    ).expect(201);
     const row = await prisma.patient.findUniqueOrThrow({
       where: { id: (res.body as PatientSummary).id },
     });
@@ -138,7 +141,12 @@ describe('Patient registration (e2e)', () => {
 
   it('does NOT anchor a real date of birth — a birthday never rots', async () => {
     const res = await post(
-      walkIn({ firstName: 'Dated', estimatedAgeYears: null, dateOfBirth: '1990-05-14' }),
+      walkIn({
+        firstName: 'Dated',
+        phone: '0700111002',
+        estimatedAgeYears: null,
+        dateOfBirth: '1990-05-14',
+      }),
     ).expect(201);
     const row = await prisma.patient.findUniqueOrThrow({
       where: { id: (res.body as PatientSummary).id },
@@ -149,7 +157,12 @@ describe('Patient registration (e2e)', () => {
 
   it('registers an infant by months rather than years', async () => {
     const res = await post(
-      walkIn({ firstName: 'Baby', estimatedAgeYears: null, estimatedAgeMonths: 6 }),
+      walkIn({
+        firstName: 'Baby',
+        phone: '0700111003',
+        estimatedAgeYears: null,
+        estimatedAgeMonths: 6,
+      }),
     ).expect(201);
     const row = await prisma.patient.findUniqueOrThrow({
       where: { id: (res.body as PatientSummary).id },
@@ -159,7 +172,9 @@ describe('Patient registration (e2e)', () => {
   });
 
   it('registers a patient with no family name — blank beats invented', async () => {
-    const res = await post(walkIn({ firstName: 'Najila', lastName: null })).expect(201);
+    const res = await post(
+      walkIn({ firstName: 'Najila', lastName: null, phone: '0700111004' }),
+    ).expect(201);
     expect((res.body as PatientSummary).lastName).toBeNull();
   });
 

@@ -212,9 +212,53 @@ describe('Patient search (e2e)', () => {
 
   it('rejects a one-character search (400)', () => search('N').expect(400));
 
-  it('rejects a missing term (400)', () =>
+  it('lists the register when no term is given, rather than showing nothing', async () => {
+    const res = await request(server)
+      .get('/patients')
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .expect(200);
+    const found = res.body as PatientSearchResponse;
+    // Twelve Najilas in this facility; the foreign patient is not among them.
+    expect(found.total).toBe(NAJILA_COUNT);
+    expect(found.patients).toHaveLength(NAJILA_COUNT);
+    expect(found.page).toBe(1);
+  });
+
+  it('pages the unfiltered list without overlapping', async () => {
+    const first = await request(server)
+      .get('/patients')
+      .query({ page: 1, limit: 5 })
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .expect(200);
+    const second = await request(server)
+      .get('/patients')
+      .query({ page: 2, limit: 5 })
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .expect(200);
+    const third = await request(server)
+      .get('/patients')
+      .query({ page: 3, limit: 5 })
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .expect(200);
+
+    const a = first.body as PatientSearchResponse;
+    const b = second.body as PatientSearchResponse;
+    const c = third.body as PatientSearchResponse;
+    expect(a.patients).toHaveLength(5);
+    expect(b.patients).toHaveLength(5);
+    expect(c.patients).toHaveLength(2); // 12 = 5 + 5 + 2
+    expect(a.total).toBe(NAJILA_COUNT);
+    expect(b.page).toBe(2);
+
+    // No row appears on two pages — the ordering is stable enough to page on.
+    const ids = [...a.patients, ...b.patients, ...c.patients].map((p) => p.id);
+    expect(new Set(ids).size).toBe(NAJILA_COUNT);
+  });
+
+  it('rejects a page below one (400)', () =>
     request(server)
       .get('/patients')
+      .query({ page: 0 })
       .set('Authorization', `Bearer ${receptionistToken}`)
       .expect(400));
 

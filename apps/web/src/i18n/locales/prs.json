@@ -514,7 +514,11 @@
       "error": "جستجوی بیماران ناکام شد.",
       "name": "نام",
       "count": "نمایش {{shown}} از {{total}}",
-      "years": "{{count}} ساله"
+      "years": "{{count}} ساله",
+      "none": "هنوز هیچ بیماری ثبت نشده است.",
+      "page": "صفحهٔ {{page}} از {{pageCount}}",
+      "previous": "قبلی",
+      "next": "بعدی"
     },
     "fields": {
       "mrn": "شمارهٔ دوسیه",
@@ -555,6 +559,15 @@
       "father_of": "پدر",
       "mother_of": "مادر",
       "other": "دیگر"
+    },
+    "duplicates": {
+      "advisoryTitle": "این بیمار ممکن است قبلاً ثبت شده باشد",
+      "blockingTitle": "این شمارهٔ تماس قبلاً ثبت شده است",
+      "registerAnyway": "به هر حال ثبت شود",
+      "reason": {
+        "phone": "شمارهٔ یکسان",
+        "name": "نام مشابه"
+      }
     }
   }
 }
