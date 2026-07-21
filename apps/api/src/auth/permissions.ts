@@ -208,8 +208,35 @@ export const PERMISSION_MATRIX = {
   'visit.cancel': { admin: YES, receptionist: 'R5' },
   /** entered_in_error. */
   'visit.void': { admin: YES },
-  'appointment.create': { receptionist: YES },
+  /**
+   * The doctor holds this alongside the desk (task 3.10), and deliberately.
+   *
+   * A follow-up is decided in the consulting room — "come back on the fifth" — and the
+   * only moment it is certain to be recorded is while the patient is still sitting
+   * there. Routing it through the desk alone means the appointment exists as something
+   * the patient was told, and a patient who leaves past a busy window never books it.
+   * Booking is not the same authority as taking money: nothing here touches a till.
+   */
+  'appointment.create': { receptionist: YES, doctor: YES },
+  /**
+   * Reading the appointment book is the same kind of act as reading the queue, so it
+   * carries the same breadth. Without it nobody could see a booking at all — absence is
+   * denial, and this permission simply did not exist until the book did.
+   */
+  'appointment.read': {
+    admin: YES,
+    receptionist: YES,
+    nurse: YES,
+    doctor: YES,
+    management: YES,
+  },
   'appointment.cancel': { admin: YES, receptionist: YES },
+  /**
+   * Separate from cancel because the two mean different things and the difference is
+   * worth measuring: cancelled is "they told us", no-show is "they never came". The desk
+   * holds it because the desk is what knows who walked through the door.
+   */
+  'appointment.mark_no_show': { admin: YES, receptionist: YES },
 
   // ---- 5. Clinical record --------------------------------------------------
   // Farhat is a psychiatric hospital. A leaked diagnosis does real harm in a

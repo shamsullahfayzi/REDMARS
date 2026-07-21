@@ -44,7 +44,15 @@ function offsetMs(at: Date): number {
     value('minute'),
     value('second'),
   );
-  return asUtc - at.getTime();
+
+  // Compared against `at` with its MILLISECONDS STRIPPED, because the wall clock above
+  // was only rendered down to the second. Subtracting a millisecond-precision instant
+  // from a second-precision one leaves those milliseconds in the offset, which then
+  // shifts every day boundary derived from it — non-deterministically, by however many
+  // milliseconds it happened to be when the question was asked. A boundary that moves
+  // is a boundary that drops the visit registered in the first instant of a day.
+  const atWholeSeconds = Math.floor(at.getTime() / 1000) * 1000;
+  return asUtc - atWholeSeconds;
 }
 
 /** Midnight-to-midnight, in the facility's zone, as the UTC instants a query compares against. */

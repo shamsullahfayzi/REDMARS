@@ -52,6 +52,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: 'clinical',
     roles: ['admin', 'receptionist', 'nurse', 'doctor', 'management'],
   },
+  // The book. Everyone who may read it (appointment.read) — the desk works from it each
+  // morning, a doctor glances ahead from it.
+  {
+    key: 'appointments',
+    to: '/appointments',
+    group: 'clinical',
+    roles: ['admin', 'receptionist', 'nurse', 'doctor', 'management'],
+  },
   {
     key: 'patients',
     to: '/patients',

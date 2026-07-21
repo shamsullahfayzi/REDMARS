@@ -5,6 +5,7 @@ import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
+import { AppointmentsPage } from '@/pages/AppointmentsPage'
 import { CreatePatientPage } from '@/pages/CreatePatientPage'
 import { DepartmentPage } from '@/pages/DepartmentsPage'
 import { DrugsPage } from '@/pages/DrugsPage'
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
           { index: true, element: <HomePage /> },
           { path: 'reception', element: <ReceptionPage /> },
           { path: 'queue', element: <QueuePage /> },
+          { path: 'appointments', element: <AppointmentsPage /> },
           { path: 'patients', element: <PatientsPage /> },
           { path: 'patients/new', element: <CreatePatientPage /> },
           { path: 'patients/:id', element: <PatientDetailPage /> },

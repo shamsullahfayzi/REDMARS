@@ -64,7 +64,8 @@
       "clinical": "کلینیکي",
       "administration": "اداري"
     },
-    "reception": "پذیرش"
+    "reception": "پذیرش",
+    "appointments": "وعدې"
   },
   "theme": {
     "toLight": "روښانه حالت",
@@ -735,6 +736,41 @@
       "on_hold": "ځنډول",
       "completed": "بشپړول",
       "failed": "ونشو — کېدای شي لیدنه بدله شوې وي."
+    }
+  },
+  "appointments": {
+    "subtitle": "څوک تمه کېږي، او څوک رانغی.",
+    "oneDay": "یوه ورځ",
+    "upcoming": "راتلونکي",
+    "from": "له",
+    "empty": "هیڅ نه دي ثبت شوي.",
+    "error": "د وعدو کتاب راوړل ونشول.",
+    "invalid": "مهرباني وکړئ نښه شوي موارد وګورئ.",
+    "fields": {
+      "date": "نېټه",
+      "reason": "دلیل"
+    },
+    "status": {
+      "booked": "ثبت شوی",
+      "arrived": "رسېدلی",
+      "fulfilled": "لیدل شوی",
+      "cancelled": "لغوه شوی",
+      "no_show": "رانغی"
+    },
+    "action": {
+      "no_show": "رانغی",
+      "cancelled": "لغوه",
+      "failed": "ونشو."
+    },
+    "book": {
+      "title": "راتلونکې لیدنه ثبت کړئ",
+      "hint": "یوه ورځ، نه یوه ساعت. ناروغ ته نېټه ویل کېږي او د کار په وخت کې راځي.",
+      "anyDoctor": "هر ډاکټر",
+      "reasonPlaceholder": "د درملو کتنه",
+      "submit": "ثبت",
+      "saving": "ثبتېږي…",
+      "saved": "د {{date}} لپاره ثبت شو.",
+      "error": "ثبتول ونشول. هیڅ شی خوندي نشو."
     }
   }
 }

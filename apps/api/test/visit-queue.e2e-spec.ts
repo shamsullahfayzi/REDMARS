@@ -226,9 +226,27 @@ describe('Doctor queue (e2e)', () => {
     expect(queue.scope.practitionerId).toBe(drOpdId);
   });
 
+  /**
+   * How much of today has actually happened, in the facility's zone.
+   *
+   * The suite can run at any hour, including just after local midnight — when "90 minutes
+   * ago" is yesterday and is CORRECTLY absent from today's queue. Staging waits against
+   * this rather than against a fixed number of minutes keeps these cases about ordering
+   * and arithmetic instead of about what time it happens to be.
+   */
+  function elapsedToday(): number {
+    return Date.now() - kabulMidnightUtc().getTime();
+  }
+
+  /** Too close to local midnight to stage a wait inside today at all. */
+  const CANNOT_STAGE_A_WAIT = 5 * 60 * 1000;
+
   it('carries what decides who to call next: name, age, complaint and the wait', async () => {
-    const fortyMinutesAgo = new Date(Date.now() - 40 * 60 * 1000);
-    await seedVisit({ startedAt: fortyMinutesAgo });
+    const elapsed = elapsedToday();
+    if (elapsed < CANNOT_STAGE_A_WAIT) return;
+
+    const waitMs = Math.min(40 * 60 * 1000, elapsed - 60_000);
+    await seedVisit({ startedAt: new Date(Date.now() - waitMs) });
 
     const queue = (await getQueue().expect(200)).body as QueueResponse;
     const entry = queue.entries[0];
@@ -239,15 +257,20 @@ describe('Doctor queue (e2e)', () => {
     expect(entry.chiefComplaint).toBe('insomnia');
     // Computed by the SERVER — a shared workstation's clock is frequently wrong, and
     // this is the number that decides who is seen next.
-    expect(entry.waitedMinutes).toBeGreaterThanOrEqual(39);
-    expect(entry.waitedMinutes).toBeLessThanOrEqual(41);
+    const expected = Math.floor(waitMs / 60_000);
+    expect(entry.waitedMinutes).toBeGreaterThanOrEqual(expected - 1);
+    expect(entry.waitedMinutes).toBeLessThanOrEqual(expected + 1);
   });
 
   it('orders by arrival, longest wait first', async () => {
+    const elapsed = elapsedToday();
+    if (elapsed < CANNOT_STAGE_A_WAIT) return;
+
     const now = Date.now();
-    await seedVisit({ startedAt: new Date(now - 5 * 60 * 1000), name: 'Recent' });
-    await seedVisit({ startedAt: new Date(now - 90 * 60 * 1000), name: 'Longest' });
-    await seedVisit({ startedAt: new Date(now - 30 * 60 * 1000), name: 'Middle' });
+    const step = Math.min(30 * 60 * 1000, (elapsed - 60_000) / 3);
+    await seedVisit({ startedAt: new Date(now - step), name: 'Recent' });
+    await seedVisit({ startedAt: new Date(now - step * 3), name: 'Longest' });
+    await seedVisit({ startedAt: new Date(now - step * 2), name: 'Middle' });
 
     const queue = (await getQueue().expect(200)).body as QueueResponse;
     // A queue that is not ordered by arrival is a list, and someone waits all morning.
@@ -296,6 +319,20 @@ describe('Doctor queue (e2e)', () => {
   });
 
   it('rejects a malformed date with 400', () => getQueue('?date=21-07-2026').expect(400));
+
+  it('includes a visit started in the very first millisecond of the day', async () => {
+    // Regression: the zone offset was computed by subtracting a millisecond-precision
+    // instant from a second-precision wall clock, which left the current milliseconds
+    // inside the offset and pushed every day boundary that far into the day — moving,
+    // non-deterministically, each time it was asked. Exact midnight is the one arrival
+    // that catches it.
+    await seedVisit({ startedAt: kabulMidnightUtc(), name: 'FirstOfDay' });
+
+    const queue = (await getQueue().expect(200)).body as QueueResponse;
+    expect(queue.entries.map((entry) => entry.patientName)).toContainEqual(
+      expect.stringContaining('FirstOfDay'),
+    );
+  });
 
   // --- What counts as still waiting -------------------------------------------
 

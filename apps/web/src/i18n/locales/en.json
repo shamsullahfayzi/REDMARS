@@ -64,7 +64,8 @@
       "clinical": "Clinical",
       "administration": "Administration"
     },
-    "reception": "Reception"
+    "reception": "Reception",
+    "appointments": "Appointments"
   },
   "theme": {
     "toLight": "Switch to light mode",
@@ -735,6 +736,41 @@
       "on_hold": "Hold",
       "completed": "Complete",
       "failed": "That did not go through — the visit may have moved."
+    }
+  },
+  "appointments": {
+    "subtitle": "Who is expected, and who did not come.",
+    "oneDay": "One day",
+    "upcoming": "Upcoming",
+    "from": "From",
+    "empty": "Nothing booked.",
+    "error": "Could not load the appointment book.",
+    "invalid": "Please check the highlighted fields.",
+    "fields": {
+      "date": "Date",
+      "reason": "Reason"
+    },
+    "status": {
+      "booked": "Booked",
+      "arrived": "Arrived",
+      "fulfilled": "Seen",
+      "cancelled": "Cancelled",
+      "no_show": "Did not come"
+    },
+    "action": {
+      "no_show": "Did not come",
+      "cancelled": "Cancel",
+      "failed": "That did not go through."
+    },
+    "book": {
+      "title": "Book a follow-up",
+      "hint": "A day, not a time. The patient is told the date and comes when the clinic is open.",
+      "anyDoctor": "Any doctor",
+      "reasonPlaceholder": "Review medication",
+      "submit": "Book",
+      "saving": "Booking…",
+      "saved": "Booked for {{date}}.",
+      "error": "Could not book that. Nothing was saved."
     }
   }
 }

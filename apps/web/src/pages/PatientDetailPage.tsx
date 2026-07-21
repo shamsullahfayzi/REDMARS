@@ -12,6 +12,7 @@ import {
 import { useAuth } from '@/auth/authContext'
 import { DuplicateNotice } from '@/components/DuplicateNotice'
 import { PageHeader } from '@/components/PageHeader'
+import { BookFollowUp } from '@/components/BookFollowUp'
 import { PatientFormFields } from '@/components/PatientFormFields'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -133,6 +134,12 @@ export function PatientDetailPage() {
           <Stethoscope className="size-4" aria-hidden />
           {t('visits.create.submit')}
         </Link>
+      )}
+
+      {/* "Come back on the fifth" (task 3.10) — booked from here, where the doctor
+          already is when they say it. Doctor and desk both hold appointment.create. */}
+      {(roles.includes('doctor') || roles.includes('receptionist')) && (
+        <BookFollowUp patientId={patient.id} />
       )}
 
       {/* Identifiers first: this is what task 3.4 exists for. */}

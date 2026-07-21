@@ -10,6 +10,7 @@ import type {
 import { DISCOUNT_CEILING_PCT } from '@redmars/shared';
 import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
+import { AppointmentService } from '../appointment/appointment.service';
 import { PatientService } from '../patient/patient.service';
 import { VisitService } from '../visit/visit.service';
 
@@ -34,6 +35,7 @@ export class ReceptionService {
     private readonly sequence: NumberSequenceService,
     private readonly patients: PatientService,
     private readonly visits: VisitService,
+    private readonly appointments: AppointmentService,
   ) {}
 
   /**
@@ -91,6 +93,11 @@ export class ReceptionService {
           },
           tx,
         );
+
+        // 2b. Was this arrival expected? A booking for this patient today becomes
+        // fulfilled and is linked to the visit. Inside the transaction, so a check-in
+        // that rolls back cannot leave a booking claiming a visit that never existed.
+        await this.appointments.fulfilOnArrival(facilityId, patient.id, visit.id, tx);
 
         // 3. What it costs.
         const lines = input.items.map((item) => {
