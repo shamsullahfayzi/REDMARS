@@ -1,11 +1,14 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   duplicateCheckResponseSchema,
+  patientDetailSchema,
   patientSummarySchema,
+  type AddPatientIdentifierRequest,
   type CreatePatientRequest,
   type DuplicateMatch,
+  type UpdatePatientRequest,
 } from '@redmars/shared'
-import { ApiError, apiGet, apiPost } from '@/lib/api'
+import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api'
 import { queryClient } from '@/lib/queryClient'
 
 export const PATIENT_KEY = ['patients']
@@ -52,5 +55,49 @@ export function useDuplicateCheck(firstName: string, lastName: string, phone: st
       return apiGet(`/patients/duplicates?${params.toString()}`, duplicateCheckResponseSchema)
     },
     enabled,
+  })
+}
+
+// ---------------------------------------------------------------------------------
+// Task 3.4 — one patient, edited, and the numbers they already had
+// ---------------------------------------------------------------------------------
+
+export function usePatientDetail(id: string | undefined) {
+  return useQuery({
+    queryKey: ['patients', 'detail', id],
+    queryFn: () => apiGet(`/patients/${id}`, patientDetailSchema),
+    enabled: Boolean(id),
+  })
+}
+
+/** Every mutation here returns the fresh detail, so the cache is seeded, not invalidated. */
+function seedDetail(id: string) {
+  return (detail: unknown) => {
+    queryClient.setQueryData(['patients', 'detail', id], detail)
+    void queryClient.invalidateQueries({ queryKey: PATIENT_KEY })
+  }
+}
+
+export function useUpdatePatient(id: string) {
+  return useMutation({
+    mutationFn: (input: UpdatePatientRequest) =>
+      apiPatch(`/patients/${id}`, input, patientDetailSchema),
+    onSuccess: seedDetail(id),
+  })
+}
+
+export function useAddPatientIdentifier(id: string) {
+  return useMutation({
+    mutationFn: (input: AddPatientIdentifierRequest) =>
+      apiPost(`/patients/${id}/identifiers`, input, patientDetailSchema),
+    onSuccess: seedDetail(id),
+  })
+}
+
+export function useRemovePatientIdentifier(id: string) {
+  return useMutation({
+    mutationFn: (identifierId: string) =>
+      apiDelete(`/patients/${id}/identifiers/${identifierId}`, patientDetailSchema),
+    onSuccess: seedDetail(id),
   })
 }

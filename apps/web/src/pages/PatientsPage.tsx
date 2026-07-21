@@ -153,12 +153,16 @@ function PatientRow({ patient }: { patient: PatientSummary }) {
   const name = [patient.prefix, patient.firstName, patient.lastName].filter(Boolean).join(' ')
 
   return (
-    <tr className="border-b border-border last:border-0">
+    <tr className="border-b border-border last:border-0 hover:bg-muted/50">
       {/* An identifier reads left-to-right even on an RTL page. */}
       <td className="p-3 font-mono text-foreground" dir="ltr">
         {patient.mrn}
       </td>
-      <td className="p-3 font-medium text-foreground">{name}</td>
+      <td className="p-3 font-medium text-foreground">
+        <Link to={`/patients/${patient.id}`} className="hover:underline">
+          {name}
+        </Link>
+      </td>
       <td className="p-3 text-muted-foreground">{t(`patients.gender.${patient.gender}`)}</td>
       <td className="p-3 text-muted-foreground">
         {age == null ? '—' : t('patients.search.years', { count: age })}

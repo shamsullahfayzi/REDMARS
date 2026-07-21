@@ -1,9 +1,12 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
+  AddPatientIdentifierRequest,
   CreatePatientRequest,
   DuplicateMatch,
   DuplicateReason,
+  PatientDetail,
   PatientSummary,
+  UpdatePatientRequest,
 } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
@@ -42,6 +45,41 @@ type PatientRow = {
 /** Duplicate scoring needs the second number too, which the summary does not carry. */
 const duplicateCandidateSelect = { ...patientSummarySelect, altPhone: true } as const;
 type DuplicateCandidateRow = PatientRow & { altPhone: string | null };
+
+/** The full record the edit form is repopulated from (task 3.4). */
+const patientDetailSelect = {
+  ...patientSummarySelect,
+  altPhone: true,
+  estimatedAgeDays: true,
+  guardianName: true,
+  guardianRelation: true,
+  district: true,
+  province: true,
+  nationalId: true,
+  passportNo: true,
+  occupation: true,
+  nationality: true,
+  bloodGroup: true,
+  identifiers: {
+    select: { id: true, system: true, value: true, createdAt: true },
+    orderBy: { createdAt: 'asc' as const },
+  },
+} as const;
+
+type PatientDetailRow = PatientRow & {
+  altPhone: string | null;
+  estimatedAgeDays: number | null;
+  guardianName: string | null;
+  guardianRelation: PatientDetail['guardianRelation'];
+  district: string | null;
+  province: string | null;
+  nationalId: string | null;
+  passportNo: string | null;
+  occupation: string | null;
+  nationality: string | null;
+  bloodGroup: string | null;
+  identifiers: Array<{ id: string; system: string; value: string; createdAt: Date }>;
+};
 
 /**
  * Phone numbers are stored as digits so they can be FOUND. "0700 123 456" and
@@ -348,5 +386,157 @@ export class PatientService {
     return matches.sort((a, b) =>
       a.confidence === b.confidence ? 0 : a.confidence === 'high' ? -1 : 1,
     );
+  }
+
+  // -------------------------------------------------------------------------------
+  // Task 3.4 — read one, edit, and the numbers a patient already had
+  // -------------------------------------------------------------------------------
+
+  /** The whole record plus its identifiers — enough to repopulate the edit form. */
+  async findById(facilityId: string, id: string): Promise<PatientDetail> {
+    const patient = await this.prisma.db.patient.findFirst({
+      // facilityId in the WHERE, not checked after: a patient in another facility must
+      // be indistinguishable from one that does not exist.
+      where: { id, facilityId, deletedAt: null },
+      select: patientDetailSelect,
+    });
+    if (!patient) throw new NotFoundException('Patient not found');
+    return this.toDetail(patient);
+  }
+
+  /**
+   * Replace a patient's demographics. Omitted fields are cleared, not kept — see the
+   * contract. Re-runs the duplicate guard excluding the patient being edited, so the
+   * check cannot be side-stepped by registering clean and then editing into a collision.
+   */
+  async update(
+    facilityId: string,
+    id: string,
+    input: UpdatePatientRequest,
+  ): Promise<PatientDetail> {
+    await this.findById(facilityId, id); // 404s before anything is written
+
+    if (!input.acknowledgeDuplicate) {
+      const matches = await this.findDuplicates(facilityId, input);
+      const blocking = matches.filter(
+        (match) => match.confidence === 'high' && match.patient.id !== id,
+      );
+      if (blocking.length > 0) {
+        throw new ConflictException({
+          message: 'Possible duplicate patient',
+          code: 'duplicate_patient',
+          matches: blocking,
+        });
+      }
+    }
+
+    // Same anchoring rule as create: an estimate is only true on the day it is taken, so
+    // a re-stated estimate is re-anchored to today, and a real date of birth clears the
+    // anchor entirely rather than leaving a stale one behind.
+    const hasEstimate =
+      input.estimatedAgeYears != null ||
+      input.estimatedAgeMonths != null ||
+      input.estimatedAgeDays != null;
+
+    const updated = await this.prisma.db.patient.update({
+      where: { id },
+      data: {
+        firstName: input.firstName,
+        lastName: input.lastName ?? null,
+        prefix: input.prefix ?? null,
+        gender: input.gender,
+
+        phone: normalisePhone(input.phone),
+        altPhone: normalisePhone(input.altPhone),
+
+        dateOfBirth: input.dateOfBirth ? new Date(`${input.dateOfBirth}T00:00:00Z`) : null,
+        estimatedAgeYears: input.estimatedAgeYears ?? null,
+        estimatedAgeMonths: input.estimatedAgeMonths ?? null,
+        estimatedAgeDays: input.estimatedAgeDays ?? null,
+        ageRecordedAt: hasEstimate ? new Date() : null,
+
+        guardianName: input.guardianName ?? null,
+        guardianRelation: input.guardianRelation ?? null,
+
+        address: input.address ?? null,
+        district: input.district ?? null,
+        province: input.province ?? null,
+
+        nationalId: input.nationalId ?? null,
+        passportNo: input.passportNo ?? null,
+        occupation: input.occupation ?? null,
+        nationality: input.nationality ?? null,
+        bloodGroup: input.bloodGroup ?? null,
+      },
+      select: patientDetailSelect,
+    });
+
+    return this.toDetail(updated);
+  }
+
+  /**
+   * Attach a number the patient already had. THIS IS THE MIGRATION HOOK (task 7.6) — an
+   * existing Medi-Pro patient stays findable by the number the staff already know.
+   */
+  async addIdentifier(
+    facilityId: string,
+    patientId: string,
+    input: AddPatientIdentifierRequest,
+  ): Promise<PatientDetail> {
+    await this.findById(facilityId, patientId);
+
+    const clash = await this.prisma.db.patientIdentifier.findUnique({
+      where: { system_value: { system: input.system, value: input.value } },
+    });
+    if (clash) {
+      // The unique is (system, value) with no facility: one legacy number belongs to one
+      // human, and silently letting it point at two would defeat the migration it exists
+      // to serve.
+      throw new ConflictException('That number is already registered to a patient');
+    }
+
+    await this.prisma.db.patientIdentifier.create({
+      data: { patientId, system: input.system, value: input.value },
+    });
+    return this.findById(facilityId, patientId);
+  }
+
+  async removeIdentifier(
+    facilityId: string,
+    patientId: string,
+    identifierId: string,
+  ): Promise<PatientDetail> {
+    await this.findById(facilityId, patientId);
+
+    const identifier = await this.prisma.db.patientIdentifier.findFirst({
+      where: { id: identifierId, patientId },
+    });
+    if (!identifier) throw new NotFoundException('Identifier not found');
+
+    await this.prisma.db.patientIdentifier.delete({ where: { id: identifierId } });
+    return this.findById(facilityId, patientId);
+  }
+
+  private toDetail(patient: PatientDetailRow): PatientDetail {
+    return {
+      ...this.toSummary(patient),
+      altPhone: patient.altPhone,
+      estimatedAgeDays: patient.estimatedAgeDays,
+      guardianName: patient.guardianName,
+      guardianRelation: patient.guardianRelation,
+      district: patient.district,
+      province: patient.province,
+      nationalId: patient.nationalId,
+      passportNo: patient.passportNo,
+      occupation: patient.occupation,
+      nationality: patient.nationality,
+      bloodGroup: patient.bloodGroup,
+      identifiers: patient.identifiers.map((identifier) => ({
+        id: identifier.id,
+        system: identifier.system as PatientDetail['identifiers'][number]['system'],
+        value: identifier.value,
+        createdAt: identifier.createdAt.toISOString(),
+      })),
+    };
   }
 }

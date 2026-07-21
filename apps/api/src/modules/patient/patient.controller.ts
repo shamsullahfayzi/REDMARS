@@ -2,7 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -10,9 +14,11 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import {
+  addPatientIdentifierRequestSchema,
   createPatientRequestSchema,
   duplicateCheckQuerySchema,
   patientSearchQuerySchema,
+  updatePatientRequestSchema,
 } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuthContext } from '../../auth/auth-context';
@@ -88,6 +94,64 @@ export class PatientController {
 
     const auth = this.auth(req);
     return { matches: await this.patientService.findDuplicates(auth.facilityId, parsed.data) };
+  }
+
+  /**
+   * Declared AFTER @Get('duplicates'). Nest matches routes in declaration order, so a
+   * ':id' above it would swallow /patients/duplicates and try to parse "duplicates" as a
+   * uuid. Order is load-bearing here.
+   */
+  @Get(':id')
+  @RequirePermission('patient.read_demographics')
+  findOne(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string) {
+    const auth = this.auth(req);
+    return this.patientService.findById(auth.facilityId, id);
+  }
+
+  @Patch(':id')
+  @RequirePermission('patient.edit_demographics')
+  update(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string, @Body() body: unknown) {
+    const parsed = updatePatientRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid patient',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const auth = this.auth(req);
+    return this.patientService.update(auth.facilityId, id, parsed.data);
+  }
+
+  /** The Medi-Pro migration hook (task 7.6) — an old number stays attached to its human. */
+  @Post(':id/identifiers')
+  @RequirePermission('patient.edit_demographics')
+  addIdentifier(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ) {
+    const parsed = addPatientIdentifierRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid identifier',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const auth = this.auth(req);
+    return this.patientService.addIdentifier(auth.facilityId, id, parsed.data);
+  }
+
+  @Delete(':id/identifiers/:identifierId')
+  @RequirePermission('patient.edit_demographics')
+  removeIdentifier(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('identifierId', ParseUUIDPipe) identifierId: string,
+  ) {
+    const auth = this.auth(req);
+    return this.patientService.removeIdentifier(auth.facilityId, id, identifierId);
   }
 
   private auth(req: Request): AuthContext {

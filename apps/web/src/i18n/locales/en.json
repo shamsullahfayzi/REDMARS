@@ -567,6 +567,34 @@
       "reason": {
         "phone": "same phone",
         "name": "similar name"
+      },
+      "saveAnyway": "Save anyway"
+    },
+    "detail": {
+      "loading": "Loading patient…",
+      "notFound": "That patient could not be found.",
+      "back": "Back to patients",
+      "editTitle": "Edit details",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Changes saved.",
+      "saveError": "Could not save the changes."
+    },
+    "identifiers": {
+      "title": "Other numbers",
+      "hint": "Numbers this patient already had, so they stay findable by them.",
+      "empty": "No other numbers recorded.",
+      "system": "Type",
+      "number": "Number",
+      "add": "Add",
+      "remove": "Remove",
+      "error": "Could not add that number. It may already belong to another patient.",
+      "systems": {
+        "medipro_legacy": "Old Medi-Pro no.",
+        "tazkira": "Tazkira",
+        "moph": "MoPH",
+        "insurance": "Insurance",
+        "other": "Other"
       }
     }
   }

@@ -48,8 +48,15 @@ const isoDate = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD.')
   .nullish()
 
-export const createPatientRequestSchema = z
-  .object({
+/**
+ * The demographic fields, shared by create and update.
+ *
+ * Update is a full replace, not a partial merge: the edit form sends every field, so an
+ * omitted one means "cleared", the same way reference-range edits behave (task 2.8). A
+ * PATCH that silently kept whatever it was not told about would make it impossible to
+ * ever empty a field the receptionist filled in by mistake.
+ */
+const patientFieldsSchema = z.object({
     firstName: z.string().trim().min(1, 'First name is required.').max(55),
     // Optional on purpose: a patient who has no family name, or declines to give it,
     // must not force the receptionist to invent one. Garbage beats blank.
@@ -91,21 +98,27 @@ export const createPatientRequestSchema = z
      * anyway — a household really can share one phone, so this must be overridable. The
      * server refuses a high-confidence duplicate without it.
      */
-    acknowledgeDuplicate: z.boolean().default(false),
-  })
-  .refine(
-    (v) =>
-      v.dateOfBirth != null ||
-      v.estimatedAgeYears != null ||
-      v.estimatedAgeMonths != null ||
-      v.estimatedAgeDays != null,
-    {
-      message: 'Enter an age or a date of birth.',
-      path: ['estimatedAgeYears'],
-    },
-  )
+  acknowledgeDuplicate: z.boolean().default(false),
+})
 
+/** At least one age path must be present — neither is required on its own. */
+const hasAnAge = (v: z.infer<typeof patientFieldsSchema>) =>
+  v.dateOfBirth != null ||
+  v.estimatedAgeYears != null ||
+  v.estimatedAgeMonths != null ||
+  v.estimatedAgeDays != null
+
+const AGE_REQUIRED = {
+  message: 'Enter an age or a date of birth.',
+  path: ['estimatedAgeYears'],
+}
+
+export const createPatientRequestSchema = patientFieldsSchema.refine(hasAnAge, AGE_REQUIRED)
 export type CreatePatientRequest = z.infer<typeof createPatientRequestSchema>
+
+/** Task 3.4 — the same fields, replaced wholesale. */
+export const updatePatientRequestSchema = patientFieldsSchema.refine(hasAnAge, AGE_REQUIRED)
+export type UpdatePatientRequest = z.infer<typeof updatePatientRequestSchema>
 
 /**
  * What comes back. The MRN is the point — the receptionist never types it, the
@@ -244,3 +257,57 @@ export const duplicateCheckResponseSchema = z.object({
 })
 
 export type DuplicateCheckResponse = z.infer<typeof duplicateCheckResponseSchema>
+
+// ---------------------------------------------------------------------------------
+// Task 3.4 — edit, and the identifiers a patient already had
+// ---------------------------------------------------------------------------------
+
+/**
+ * The same human arrives carrying several numbers: our MRN, the old Medi-Pro patient
+ * number, a tazkira, an insurer's number. One table holds them all rather than a column
+ * each — and `medipro_legacy` is the one that matters most, because it is how the Phase 7
+ * migration keeps an existing patient findable by the number the staff already know.
+ */
+export const IDENTIFIER_SYSTEMS = [
+  'medipro_legacy',
+  'tazkira',
+  'moph',
+  'insurance',
+  'other',
+] as const
+export const identifierSystemSchema = z.enum(IDENTIFIER_SYSTEMS)
+export type IdentifierSystem = z.infer<typeof identifierSystemSchema>
+
+export const patientIdentifierSchema = z.object({
+  id: z.uuid(),
+  system: identifierSystemSchema,
+  value: z.string(),
+  createdAt: z.string(),
+})
+
+export type PatientIdentifier = z.infer<typeof patientIdentifierSchema>
+
+export const addPatientIdentifierRequestSchema = z.object({
+  system: identifierSystemSchema,
+  value: z.string().trim().min(1, 'A number is required.').max(64),
+})
+
+export type AddPatientIdentifierRequest = z.infer<typeof addPatientIdentifierRequestSchema>
+
+/** Everything the edit form needs — the summary is too thin to repopulate a form from. */
+export const patientDetailSchema = patientSummarySchema.extend({
+  altPhone: z.string().nullable(),
+  estimatedAgeDays: z.number().int().nullable(),
+  guardianName: z.string().nullable(),
+  guardianRelation: guardianRelationSchema.nullable(),
+  district: z.string().nullable(),
+  province: z.string().nullable(),
+  nationalId: z.string().nullable(),
+  passportNo: z.string().nullable(),
+  occupation: z.string().nullable(),
+  nationality: z.string().nullable(),
+  bloodGroup: z.string().nullable(),
+  identifiers: z.array(patientIdentifierSchema),
+})
+
+export type PatientDetail = z.infer<typeof patientDetailSchema>

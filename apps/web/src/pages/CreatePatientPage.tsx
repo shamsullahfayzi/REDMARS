@@ -1,273 +1,65 @@
-import { useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, ChevronDown, ChevronRight, Copy, Check, UserPlus } from 'lucide-react'
-import {
-  AGE_UNITS,
-  GUARDIAN_RELATIONS,
-  createPatientRequestSchema,
-  currentAgeYears,
-  type AgeUnit,
-  type CreatePatientRequest,
-  type DuplicateMatch,
-} from '@redmars/shared'
+import { Check, Copy, UserPlus } from 'lucide-react'
+import { createPatientRequestSchema, type CreatePatientRequest } from '@redmars/shared'
+import { DuplicateNotice } from '@/components/DuplicateNotice'
 import { PageHeader } from '@/components/PageHeader'
+import { PatientFormFields } from '@/components/PatientFormFields'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { useDebounced } from '@/hooks/useDebounced'
 import { duplicateMatchesFromError, useCreatePatient, useDuplicateCheck } from '@/hooks/usePatient'
-import { cn } from '@/lib/utils'
+import { toPayload, usePatientForm } from '@/hooks/usePatientForm'
 
 /**
  * Task 3.1 — patient registration.
  *
- * The design constraint is a number, not a feeling: the receptionist is the bottleneck
- * at Farhat, and she registers a walk-in while he is standing at the window. So the
- * screen shows the FOUR fields she actually asks (name, gender, age, phone) and hides
- * the other twelve behind a disclosure. Optional fields you must tab past cost time on
- * every single registration; optional fields behind a toggle cost nothing.
- *
- * Age is one number plus a unit, never three boxes — she is told "thirty" or "six
- * months". The server maps that onto estimatedAgeYears/Months and stamps the anchor.
+ * The design constraint is a number, not a feeling: the receptionist is the bottleneck at
+ * Farhat, and she registers a walk-in while he is standing at the window. The field
+ * layout that follows from that lives in PatientFormFields, shared with the edit screen.
  *
  * The MRN is never typed. It comes back from the server (task 2.10) and is the receipt.
  */
-
-const GENDERS = ['male', 'female', 'other', 'unknown'] as const
-
-/** Arabic-Indic and Persian digits normalised to Western, so 30 is 30 in every locale. */
-function toWesternDigits(value: string): string {
-  return value
-    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
-}
-
-/** Blank optional text becomes null rather than "" — one empty value, not two. */
-function orNull(value: string): string | null {
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
-interface FieldProps {
-  id: string
-  label: string
-  error?: string
-  required?: boolean
-  children: ReactNode
-}
-
-function Field({ id, label, error, required, children }: FieldProps) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>
-        {label}
-        {required && <span className="ms-0.5 text-destructive">*</span>}
-      </Label>
-      {children}
-      {/* Beside the field, not in a summary at the top — she fixes what she is looking at. */}
-      {error && (
-        <p id={`${id}-error`} className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  )
-}
-
-/**
- * The patients this registration might already be (task 3.3).
- *
- * `advisory` is a quiet note while she types; `blocking` is what the server refused on.
- * Both list the same thing — who is already in the register and how they match — because
- * the decision is hers either way and she cannot make it without seeing the rows.
- */
-function DuplicateNotice({
-  matches,
-  tone,
-}: {
-  matches: DuplicateMatch[]
-  tone: 'advisory' | 'blocking'
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <div className={cn('space-y-2', tone === 'advisory' && 'rounded-lg bg-warning/10 p-3')}>
-      <p className="flex items-center gap-1.5 text-sm font-medium text-warning">
-        <AlertTriangle className="size-4 shrink-0" aria-hidden />
-        {tone === 'blocking'
-          ? t('patients.duplicates.blockingTitle')
-          : t('patients.duplicates.advisoryTitle')}
-      </p>
-      <ul className="space-y-1.5">
-        {matches.map((match) => {
-          const age = currentAgeYears(match.patient)
-          const name = [match.patient.firstName, match.patient.lastName]
-            .filter(Boolean)
-            .join(' ')
-          return (
-            <li key={match.patient.id} className="text-sm text-foreground">
-              <span className="font-medium">{name}</span>
-              <span className="mx-1.5 font-mono text-muted-foreground" dir="ltr">
-                {match.patient.mrn}
-              </span>
-              {match.patient.phone && (
-                <span className="text-muted-foreground" dir="ltr">
-                  {match.patient.phone}
-                </span>
-              )}
-              {age != null && (
-                <span className="ms-1.5 text-muted-foreground">
-                  {t('patients.search.years', { count: age })}
-                </span>
-              )}
-              <span className="ms-1.5 text-xs text-muted-foreground">
-                (
-                {match.reasons
-                  .map((reason) => t(`patients.duplicates.reason.${reason}`))
-                  .join(', ')}
-                )
-              </span>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
-  )
-}
-
 export function CreatePatientPage() {
   const { t } = useTranslation()
   const createPatient = useCreatePatient()
-  const firstNameRef = useRef<HTMLInputElement>(null)
-
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [gender, setGender] = useState<(typeof GENDERS)[number]>('male')
-  const [ageValue, setAgeValue] = useState('')
-  const [ageUnit, setAgeUnit] = useState<AgeUnit>('years')
-  const [phone, setPhone] = useState('')
-
-  const [prefix, setPrefix] = useState('')
-  const [dateOfBirth, setDateOfBirth] = useState('')
-  const [guardianName, setGuardianName] = useState('')
-  const [guardianRelation, setGuardianRelation] = useState('')
-  const [altPhone, setAltPhone] = useState('')
-  const [address, setAddress] = useState('')
-  const [district, setDistrict] = useState('')
-  const [province, setProvince] = useState('')
-  const [nationalId, setNationalId] = useState('')
-  const [passportNo, setPassportNo] = useState('')
-  const [occupation, setOccupation] = useState('')
-  const [nationality, setNationality] = useState('')
-  const [bloodGroup, setBloodGroup] = useState('')
-
-  const [showMore, setShowMore] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const { values, set, reset, errors, setErrors } = usePatientForm()
+  const formRef = useRef<HTMLFormElement>(null)
   const [copied, setCopied] = useState(false)
-  /** Held so "Register anyway" can resend exactly what the server refused. */
-  const [lastPayload, setLastPayload] = useState<CreatePatientRequest | null>(null)
 
   // The advisory check, while she is still typing. Courtesy — the server refuses a
   // high-confidence duplicate whether or not this ever ran.
   const advisory = useDuplicateCheck(
-    useDebounced(firstName, 400),
-    useDebounced(lastName, 400),
-    useDebounced(phone, 400),
+    useDebounced(values.firstName, 400),
+    useDebounced(values.lastName, 400),
+    useDebounced(values.phone, 400),
   )
   const blocked = duplicateMatchesFromError(createPatient.error)
   const advisoryMatches = blocked ? [] : (advisory.data?.matches ?? [])
 
-  function clearError(field: string) {
-    setErrors((prev) => {
-      if (!prev[field]) return prev
-      const next = { ...prev }
-      delete next[field]
-      return next
-    })
-  }
-
-  function resetForm() {
-    setFirstName('')
-    setLastName('')
-    setGender('male')
-    setAgeValue('')
-    setAgeUnit('years')
-    setPhone('')
-    setPrefix('')
-    setDateOfBirth('')
-    setGuardianName('')
-    setGuardianRelation('')
-    setAltPhone('')
-    setAddress('')
-    setDistrict('')
-    setProvince('')
-    setNationalId('')
-    setPassportNo('')
-    setOccupation('')
-    setNationality('')
-    setBloodGroup('')
+  function submit(acknowledgeDuplicate: boolean) {
     setErrors({})
-    setShowMore(false)
-  }
-
-  function registerAnother() {
-    createPatient.reset()
-    resetForm()
-    firstNameRef.current?.focus()
-  }
-
-  function onSubmit(event: FormEvent) {
-    event.preventDefault()
-    setErrors({})
-
-    const age = ageValue.trim() === '' ? null : Number(ageValue)
-    const candidate = {
-      firstName: firstName.trim(),
-      lastName: orNull(lastName),
-      prefix: orNull(prefix),
-      gender,
-      phone: phone.trim(),
-      altPhone: orNull(altPhone),
-      dateOfBirth: orNull(dateOfBirth),
-      estimatedAgeYears: ageUnit === 'years' ? age : null,
-      estimatedAgeMonths: ageUnit === 'months' ? age : null,
-      estimatedAgeDays: null,
-      guardianName: orNull(guardianName),
-      guardianRelation: orNull(guardianRelation),
-      address: orNull(address),
-      district: orNull(district),
-      province: orNull(province),
-      nationalId: orNull(nationalId),
-      passportNo: orNull(passportNo),
-      occupation: orNull(occupation),
-      nationality: orNull(nationality),
-      bloodGroup: orNull(bloodGroup),
-    }
-
-    const parsed = createPatientRequestSchema.safeParse(candidate)
+    const parsed = createPatientRequestSchema.safeParse(toPayload(values, acknowledgeDuplicate))
     if (!parsed.success) {
-      // Map each issue onto its field so it renders next to the input that caused it.
       const fieldErrors: Record<string, string> = {}
       for (const issue of parsed.error.issues) {
         const key = String(issue.path[0] ?? 'form')
         if (!fieldErrors[key]) fieldErrors[key] = issue.message
       }
       setErrors(fieldErrors)
-      // A hidden field cannot be corrected — open the drawer if that is where the fault is.
-      if (fieldErrors.dateOfBirth) setShowMore(true)
       return // never fall through to mutate with undefined data
     }
-
-    const payload = parsed.data as CreatePatientRequest
-    setLastPayload(payload)
-    createPatient.mutate(payload)
+    createPatient.mutate(parsed.data as CreatePatientRequest)
   }
 
-  /** She has seen the duplicates and is registering anyway — a household shares a phone. */
-  function registerAnyway() {
-    if (!lastPayload) return
-    createPatient.mutate({ ...lastPayload, acknowledgeDuplicate: true })
+  function onSubmit(event: FormEvent) {
+    event.preventDefault()
+    submit(false)
+  }
+
+  function registerAnother() {
+    createPatient.reset()
+    reset()
   }
 
   async function copyMrn(mrn: string) {
@@ -316,13 +108,11 @@ export function CreatePatientPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {/* Primary, because there is a queue at the window. */}
-            <Button type="button" onClick={registerAnother}>
-              <UserPlus className="size-4" aria-hidden />
-              {t('patients.create.registerAnother')}
-            </Button>
-          </div>
+          {/* Primary, because there is a queue at the window. */}
+          <Button type="button" onClick={registerAnother}>
+            <UserPlus className="size-4" aria-hidden />
+            {t('patients.create.registerAnother')}
+          </Button>
         </Card>
       </div>
     )
@@ -337,281 +127,18 @@ export function CreatePatientPage() {
       />
 
       <Card className="max-w-lg p-6">
-        <form onSubmit={onSubmit} className="space-y-5" noValidate>
-          <Field
-            id="firstName"
-            label={t('patients.fields.firstName')}
-            error={errors.firstName}
-            required
-          >
-            <Input
-              id="firstName"
-              ref={firstNameRef}
-              value={firstName}
-              autoFocus
-              autoComplete="off"
-              aria-invalid={Boolean(errors.firstName)}
-              onChange={(e) => {
-                setFirstName(e.target.value)
-                clearError('firstName')
-              }}
-            />
-          </Field>
-
-          <Field id="lastName" label={t('patients.fields.lastName')} error={errors.lastName}>
-            <Input
-              id="lastName"
-              value={lastName}
-              autoComplete="off"
-              onChange={(e) => {
-                setLastName(e.target.value)
-                clearError('lastName')
-              }}
-            />
-            <p className="text-xs text-muted-foreground">{t('patients.create.lastNameHint')}</p>
-          </Field>
-
-          {/* Segmented, not a dropdown: four visible options cost one keypress. */}
-          <Field id="gender" label={t('patients.fields.gender')} error={errors.gender} required>
-            <div className="flex flex-wrap gap-1.5" role="group" id="gender">
-              {GENDERS.map((value) => (
-                <Button
-                  key={value}
-                  type="button"
-                  variant={gender === value ? 'default' : 'outline'}
-                  aria-pressed={gender === value}
-                  onClick={() => {
-                    setGender(value)
-                    clearError('gender')
-                  }}
-                >
-                  {t(`patients.gender.${value}`)}
-                </Button>
-              ))}
-            </div>
-          </Field>
-
-          {/* One number and a unit — she is told "thirty" or "six months", never three boxes. */}
-          <Field
-            id="age"
-            label={t('patients.fields.age')}
-            error={errors.estimatedAgeYears ?? errors.estimatedAgeMonths}
-            required
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                id="age"
-                value={ageValue}
-                inputMode="numeric"
-                dir="ltr"
-                className="w-24"
-                autoComplete="off"
-                aria-invalid={Boolean(errors.estimatedAgeYears ?? errors.estimatedAgeMonths)}
-                onChange={(e) => {
-                  setAgeValue(toWesternDigits(e.target.value).replace(/[^\d]/g, ''))
-                  clearError('estimatedAgeYears')
-                  clearError('estimatedAgeMonths')
-                }}
-              />
-              <div className="flex gap-1.5" role="group">
-                {AGE_UNITS.map((unit) => (
-                  <Button
-                    key={unit}
-                    type="button"
-                    variant={ageUnit === unit ? 'default' : 'outline'}
-                    aria-pressed={ageUnit === unit}
-                    onClick={() => setAgeUnit(unit)}
-                  >
-                    {t(`patients.ageUnit.${unit}`)}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </Field>
-
-          <Field id="phone" label={t('patients.fields.phone')} error={errors.phone} required>
-            {/* dir="ltr" even under RTL — a phone number renders scrambled otherwise. */}
-            <Input
-              id="phone"
-              value={phone}
-              inputMode="numeric"
-              dir="ltr"
-              autoComplete="off"
-              placeholder="07XX XXX XXX"
-              aria-invalid={Boolean(errors.phone)}
-              onChange={(e) => {
-                setPhone(toWesternDigits(e.target.value))
-                clearError('phone')
-              }}
-            />
-            {/* Task 3.3 — the advisory list, right under the number that triggers it. */}
-            {advisoryMatches.length > 0 && (
-              <DuplicateNotice matches={advisoryMatches} tone="advisory" />
-            )}
-          </Field>
-
-          {/* Everything the patient may or may not volunteer, out of the way by default. */}
-          <div className="border-t border-border pt-4">
-            <button
-              type="button"
-              onClick={() => setShowMore((open) => !open)}
-              aria-expanded={showMore}
-              className="flex items-center gap-1.5 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              {showMore ? (
-                <ChevronDown className="size-4" aria-hidden />
-              ) : (
-                <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />
-              )}
-              {t('patients.create.moreDetails')}
-            </button>
-
-            {showMore && (
-              <div className="mt-4 space-y-5">
-                <Field id="prefix" label={t('patients.fields.prefix')}>
-                  <Input
-                    id="prefix"
-                    value={prefix}
-                    autoComplete="off"
-                    onChange={(e) => setPrefix(e.target.value)}
-                  />
-                </Field>
-
-                <Field
-                  id="dateOfBirth"
-                  label={t('patients.fields.dateOfBirth')}
-                  error={errors.dateOfBirth}
-                >
-                  <Input
-                    id="dateOfBirth"
-                    type="date"
-                    value={dateOfBirth}
-                    dir="ltr"
-                    onChange={(e) => {
-                      setDateOfBirth(e.target.value)
-                      clearError('dateOfBirth')
-                    }}
-                  />
-                  <p className="text-xs text-muted-foreground">{t('patients.create.dobHint')}</p>
-                </Field>
-
-                <Field id="guardianName" label={t('patients.fields.guardianName')}>
-                  <Input
-                    id="guardianName"
-                    value={guardianName}
-                    autoComplete="off"
-                    onChange={(e) => setGuardianName(e.target.value)}
-                  />
-                </Field>
-
-                <Field id="guardianRelation" label={t('patients.fields.guardianRelation')}>
-                  <select
-                    id="guardianRelation"
-                    value={guardianRelation}
-                    onChange={(e) => setGuardianRelation(e.target.value)}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                  >
-                    <option value="">{t('patients.create.notSpecified')}</option>
-                    {GUARDIAN_RELATIONS.map((relation) => (
-                      <option key={relation} value={relation}>
-                        {t(`patients.guardianRelation.${relation}`)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-
-                <Field id="altPhone" label={t('patients.fields.altPhone')}>
-                  <Input
-                    id="altPhone"
-                    value={altPhone}
-                    inputMode="numeric"
-                    dir="ltr"
-                    autoComplete="off"
-                    onChange={(e) => setAltPhone(toWesternDigits(e.target.value))}
-                  />
-                </Field>
-
-                <Field id="address" label={t('patients.fields.address')}>
-                  <Input
-                    id="address"
-                    value={address}
-                    autoComplete="off"
-                    onChange={(e) => setAddress(e.target.value)}
-                  />
-                </Field>
-
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <Field id="district" label={t('patients.fields.district')}>
-                    <Input
-                      id="district"
-                      value={district}
-                      autoComplete="off"
-                      onChange={(e) => setDistrict(e.target.value)}
-                    />
-                  </Field>
-                  <Field id="province" label={t('patients.fields.province')}>
-                    <Input
-                      id="province"
-                      value={province}
-                      autoComplete="off"
-                      onChange={(e) => setProvince(e.target.value)}
-                    />
-                  </Field>
-                </div>
-
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <Field id="nationalId" label={t('patients.fields.nationalId')}>
-                    <Input
-                      id="nationalId"
-                      value={nationalId}
-                      dir="ltr"
-                      autoComplete="off"
-                      onChange={(e) => setNationalId(e.target.value)}
-                    />
-                  </Field>
-                  <Field id="passportNo" label={t('patients.fields.passportNo')}>
-                    <Input
-                      id="passportNo"
-                      value={passportNo}
-                      dir="ltr"
-                      autoComplete="off"
-                      onChange={(e) => setPassportNo(e.target.value)}
-                    />
-                  </Field>
-                </div>
-
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <Field id="occupation" label={t('patients.fields.occupation')}>
-                    <Input
-                      id="occupation"
-                      value={occupation}
-                      autoComplete="off"
-                      onChange={(e) => setOccupation(e.target.value)}
-                    />
-                  </Field>
-                  <Field id="nationality" label={t('patients.fields.nationality')}>
-                    <Input
-                      id="nationality"
-                      value={nationality}
-                      autoComplete="off"
-                      onChange={(e) => setNationality(e.target.value)}
-                    />
-                  </Field>
-                </div>
-
-                <Field id="bloodGroup" label={t('patients.fields.bloodGroup')}>
-                  <Input
-                    id="bloodGroup"
-                    value={bloodGroup}
-                    dir="ltr"
-                    className="w-28"
-                    autoComplete="off"
-                    onChange={(e) => setBloodGroup(e.target.value)}
-                  />
-                </Field>
-              </div>
-            )}
-          </div>
+        <form ref={formRef} onSubmit={onSubmit} className="space-y-5" noValidate>
+          <PatientFormFields
+            values={values}
+            set={set}
+            errors={errors}
+            autoFocus
+            belowPhone={
+              advisoryMatches.length > 0 ? (
+                <DuplicateNotice matches={advisoryMatches} tone="advisory" />
+              ) : null
+            }
+          />
 
           {/* The server refused. Show what it found and let her decide — never a dead end. */}
           {blocked && blocked.length > 0 && (
@@ -620,7 +147,7 @@ export function CreatePatientPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={registerAnyway}
+                onClick={() => submit(true)}
                 disabled={createPatient.isPending}
               >
                 {t('patients.duplicates.registerAnyway')}
@@ -634,13 +161,9 @@ export function CreatePatientPage() {
 
           <div className="flex items-center gap-3 border-t border-border pt-4">
             <Button type="submit" disabled={createPatient.isPending}>
-              {createPatient.isPending
-                ? t('patients.create.saving')
-                : t('patients.create.submit')}
+              {createPatient.isPending ? t('patients.create.saving') : t('patients.create.submit')}
             </Button>
-            <span className={cn('text-xs text-muted-foreground')}>
-              {t('patients.create.enterHint')}
-            </span>
+            <span className="text-xs text-muted-foreground">{t('patients.create.enterHint')}</span>
           </div>
         </form>
       </Card>
