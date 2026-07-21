@@ -476,7 +476,7 @@ model Patient {
   mrn         String // human-facing medical record number
   prefix      String? // Mr. / Mrs. / Dr.
   firstName   String    @map("first_name")
-  lastName    String    @map("last_name")
+  lastName    String?    @map("last_name")
   dateOfBirth DateTime? @map("date_of_birth") @db.Date
 
   /// DOB is often genuinely unknown here. When it is, record the ESTIMATE —

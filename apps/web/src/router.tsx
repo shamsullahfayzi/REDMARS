@@ -5,6 +5,7 @@ import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
+import { CreatePatientPage } from '@/pages/CreatePatientPage'
 import { DepartmentPage } from '@/pages/DepartmentsPage'
 import { DrugsPage } from '@/pages/DrugsPage'
 import { IcdLookupPage } from '@/pages/IcdLookupPage'
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
           { index: true, element: <HomePage /> },
           { path: 'queue', element: <PlaceholderPage sectionKey="queue" /> },
           { path: 'patients', element: <PlaceholderPage sectionKey="patients" /> },
+          { path: 'patients/new', element: <CreatePatientPage /> },
           { path: 'consultations', element: <PlaceholderPage sectionKey="consultations" /> },
           { path: 'icd', element: <IcdLookupPage /> },
           { path: 'interactions', element: <InteractionCheckerPage /> },

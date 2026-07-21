@@ -45,6 +45,7 @@
     "dashboard": "Dashboard",
     "queue": "Queue",
     "patients": "Patients",
+    "patientNew": "Register patient",
     "consultations": "Consultations",
     "icd": "Diagnosis codes",
     "interactions": "Interactions",
@@ -483,6 +484,64 @@
       "radiology": "Radiology",
       "billing": "Billing",
       "reports": "Reports"
+    }
+  },
+  "patients": {
+    "create": {
+      "title": "Register patient",
+      "subtitle": "Ask the four fields below. Everything else is optional.",
+      "moreDetails": "More details",
+      "lastNameHint": "Leave blank if the patient has no family name.",
+      "dobHint": "Only if the patient knows it. The age above is enough.",
+      "notSpecified": "Not specified",
+      "submit": "Register patient",
+      "saving": "Registering…",
+      "enterHint": "Press Enter to save",
+      "registered": "Patient registered",
+      "mrn": "Medical record number",
+      "copyMrn": "Copy medical record number",
+      "registerAnother": "Register another",
+      "error": "Could not register the patient. Nothing was saved — check the fields and try again.",
+      "invalid": "Please check the highlighted fields."
+    },
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "prefix": "Title",
+      "gender": "Gender",
+      "age": "Age",
+      "dateOfBirth": "Date of birth",
+      "phone": "Phone",
+      "altPhone": "Alternative phone",
+      "guardianName": "Guardian name",
+      "guardianRelation": "Relation",
+      "address": "Address",
+      "district": "District",
+      "province": "Province",
+      "nationalId": "Tazkira number",
+      "passportNo": "Passport number",
+      "occupation": "Occupation",
+      "nationality": "Nationality",
+      "bloodGroup": "Blood group"
+    },
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other",
+      "unknown": "Unknown"
+    },
+    "ageUnit": {
+      "years": "Years",
+      "months": "Months"
+    },
+    "guardianRelation": {
+      "son_of": "Son of",
+      "daughter_of": "Daughter of",
+      "wife_of": "Wife of",
+      "husband_of": "Husband of",
+      "father_of": "Father of",
+      "mother_of": "Mother of",
+      "other": "Other"
     }
   }
 }

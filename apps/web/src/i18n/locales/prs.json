@@ -45,6 +45,7 @@
     "dashboard": "داشبورد",
     "queue": "نوبت",
     "patients": "بیماران",
+    "patientNew": "ثبت بیمار",
     "consultations": "معاینات",
     "icd": "کدهای تشخیص",
     "interactions": "تداخلات",
@@ -483,6 +484,64 @@
       "radiology": "رادیولوژی",
       "billing": "صدور بل",
       "reports": "گزارش‌ها"
+    }
+  },
+  "patients": {
+    "create": {
+      "title": "ثبت بیمار",
+      "subtitle": "چهار مورد زیر را بپرسید. بقیه اختیاری است.",
+      "moreDetails": "معلومات بیشتر",
+      "lastNameHint": "اگر بیمار تخلص ندارد، خالی بگذارید.",
+      "dobHint": "تنها اگر بیمار آن را می‌داند. سن بالا کافی است.",
+      "notSpecified": "مشخص نشده",
+      "submit": "ثبت بیمار",
+      "saving": "در حال ثبت…",
+      "enterHint": "برای ذخیره Enter را فشار دهید",
+      "registered": "بیمار ثبت شد",
+      "mrn": "شمارهٔ دوسیهٔ طبی",
+      "copyMrn": "کاپی شمارهٔ دوسیهٔ طبی",
+      "registerAnother": "ثبت بیمار دیگر",
+      "error": "ثبت بیمار ناکام شد. چیزی ذخیره نشد — موارد را بررسی و دوباره کوشش کنید.",
+      "invalid": "لطفاً موارد نشانی‌شده را بررسی کنید."
+    },
+    "fields": {
+      "firstName": "نام",
+      "lastName": "تخلص",
+      "prefix": "لقب",
+      "gender": "جنسیت",
+      "age": "سن",
+      "dateOfBirth": "تاریخ تولد",
+      "phone": "شمارهٔ تماس",
+      "altPhone": "شمارهٔ تماس دیگر",
+      "guardianName": "نام سرپرست",
+      "guardianRelation": "نسبت",
+      "address": "آدرس",
+      "district": "ولسوالی",
+      "province": "ولایت",
+      "nationalId": "شمارهٔ تذکره",
+      "passportNo": "شمارهٔ پاسپورت",
+      "occupation": "وظیفه",
+      "nationality": "تابعیت",
+      "bloodGroup": "گروپ خون"
+    },
+    "gender": {
+      "male": "مرد",
+      "female": "زن",
+      "other": "دیگر",
+      "unknown": "نامعلوم"
+    },
+    "ageUnit": {
+      "years": "سال",
+      "months": "ماه"
+    },
+    "guardianRelation": {
+      "son_of": "ولد",
+      "daughter_of": "بنت",
+      "wife_of": "زوجهٔ",
+      "husband_of": "شوهر",
+      "father_of": "پدر",
+      "mother_of": "مادر",
+      "other": "دیگر"
     }
   }
 }

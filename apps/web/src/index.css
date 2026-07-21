@@ -83,7 +83,11 @@
     --accent-foreground: oklch(0.34 0.06 200);
     --destructive: oklch(0.577 0.245 27.325);
     --border: oklch(0.9 0.008 240);
-    --input: oklch(0.9 0.008 240);
+    /* Deliberately much darker than --border. A divider may be a hairline, but the
+       outline of a text field is the ONLY thing telling a receptionist where to type,
+       so it has to clear WCAG 1.4.11's 3:1 for component boundaries. At 0.9 it sat at
+       ~1.2:1 on a white card and the fields read as invisible. */
+    --input: oklch(0.62 0.02 245);
     --ring: oklch(0.52 0.09 195);
     /* Categorical ramp for future data viz — distinct hues, not five greys. */
     --chart-1: oklch(0.55 0.1 195);
@@ -128,7 +132,9 @@
     --accent-foreground: oklch(0.92 0.03 195);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 12%);
-    --input: oklch(1 0 0 / 16%);
+    /* Dark mode already cleared 3:1 at 16% (the input's fill also differs from the card
+       here, unlike light mode). Nudged up for parity of feel, not to fix a failure. */
+    --input: oklch(1 0 0 / 24%);
     --ring: oklch(0.7 0.11 195);
     --chart-1: oklch(0.7 0.11 195);
     --chart-2: oklch(0.78 0.14 75);

@@ -55,6 +55,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: 'clinical',
     roles: ['admin', 'receptionist', 'nurse', 'doctor', 'lab_tech', 'pharmacist'],
   },
+  // Receptionist only, matching `patient.create` — the desk registers, so there is one
+  // till and one duplicate-check path. Showing it to an admin would lead to a 403.
+  { key: 'patientNew', to: '/patients/new', group: 'clinical', roles: ['receptionist'] },
   { key: 'consultations', to: '/consultations', group: 'clinical', roles: ['doctor'] },
   { key: 'icd', to: '/icd', group: 'clinical', roles: ['admin', 'doctor'] },
   {

@@ -15,6 +15,7 @@ import {
   Stethoscope,
   Users,
   UserCog,
+  UserPlus,
   UserRound,
   type LucideIcon,
 } from 'lucide-react'
@@ -24,6 +25,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
   queue: Clock,
   patients: UserRound,
+  patientNew: UserPlus,
   consultations: Stethoscope,
   icd: BookText,
   interactions: ShieldAlert,

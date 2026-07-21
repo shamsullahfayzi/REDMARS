@@ -45,6 +45,7 @@
     "dashboard": "ډشبورډ",
     "queue": "نوبت",
     "patients": "ناروغان",
+    "patientNew": "د ناروغ ثبت",
     "consultations": "معاینې",
     "icd": "د تشخیص کوډونه",
     "interactions": "تداخلونه",
@@ -483,6 +484,64 @@
       "radiology": "رادیولوژي",
       "billing": "بل جوړول",
       "reports": "راپورونه"
+    }
+  },
+  "patients": {
+    "create": {
+      "title": "د ناروغ ثبت",
+      "subtitle": "لاندې څلور موارد وپوښتئ. نور اختیاري دي.",
+      "moreDetails": "نور معلومات",
+      "lastNameHint": "که ناروغ تخلص نه لري، خالي پرېږدئ.",
+      "dobHint": "یوازې که ناروغ یې پېژني. پورتنی عمر بس دی.",
+      "notSpecified": "نه دی ټاکل شوی",
+      "submit": "ناروغ ثبت کړئ",
+      "saving": "ثبتېږي…",
+      "enterHint": "د خوندي کولو لپاره Enter کېکاږئ",
+      "registered": "ناروغ ثبت شو",
+      "mrn": "د طبي دوسیې شمېره",
+      "copyMrn": "د طبي دوسیې شمېره کاپي کړئ",
+      "registerAnother": "بل ناروغ ثبت کړئ",
+      "error": "د ناروغ ثبتول ونشول. هیڅ شی خوندي نشو — موارد وګورئ او بیا هڅه وکړئ.",
+      "invalid": "مهرباني وکړئ نښه شوي موارد وګورئ."
+    },
+    "fields": {
+      "firstName": "نوم",
+      "lastName": "تخلص",
+      "prefix": "لقب",
+      "gender": "جنسیت",
+      "age": "عمر",
+      "dateOfBirth": "د زېږون نېټه",
+      "phone": "د اړیکې شمېره",
+      "altPhone": "بله شمېره",
+      "guardianName": "د سرپرست نوم",
+      "guardianRelation": "اړیکه",
+      "address": "پته",
+      "district": "ولسوالي",
+      "province": "ولایت",
+      "nationalId": "د تذکرې شمېره",
+      "passportNo": "د پاسپورت شمېره",
+      "occupation": "دنده",
+      "nationality": "تابعیت",
+      "bloodGroup": "د وینې ګروپ"
+    },
+    "gender": {
+      "male": "نر",
+      "female": "ښځه",
+      "other": "بل",
+      "unknown": "نامعلوم"
+    },
+    "ageUnit": {
+      "years": "کاله",
+      "months": "میاشتې"
+    },
+    "guardianRelation": {
+      "son_of": "زوی",
+      "daughter_of": "لور",
+      "wife_of": "مېرمن",
+      "husband_of": "مېړه",
+      "father_of": "پلار",
+      "mother_of": "مور",
+      "other": "بل"
     }
   }
 }
