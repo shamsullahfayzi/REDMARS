@@ -168,3 +168,43 @@
     @apply font-sans;
     }
 }
+/*
+ * Printing a receipt (task 3.6).
+ *
+ * The desk hands a slip to the patient, so the browser's default — the sidebar, the
+ * navigation, a dark background eating a print cartridge — is not what should come out
+ * of the printer. Only the receipt survives, on white, at a readable size.
+ *
+ * Driven by `print:` utilities on the page plus this block for the chrome the receipt
+ * cannot reach from where it renders.
+ */
+@media print {
+  :root,
+  .dark {
+    /* A dark-mode receipt would print a black page. Force the light tokens. */
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.15 0.01 250);
+    --muted-foreground: oklch(0.35 0.01 250);
+    --border: oklch(0.75 0.01 250);
+  }
+
+  aside,
+  header,
+  nav {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  /* A receipt cut in half across a page break is not a receipt. */
+  table,
+  dl {
+    break-inside: avoid;
+  }
+}

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import type { CreateVisitRequest, VisitOptionsResponse, VisitSummary } from '@redmars/shared';
 import { OPEN_VISIT_STATUSES } from '@redmars/shared';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
 
 /** Exactly what `VisitSummary` promises, plus the joins its denormalised names come from. */
@@ -59,13 +59,19 @@ export class VisitService {
    * Start a visit. Everything the desk sends is checked against THIS facility before a
    * number is issued, because a visit number is gapless — burning one on a request that
    * was going to fail anyway leaves a hole no one can explain later.
+   *
+   * `tx` lets the visit join a caller's transaction (task 3.6). The validating reads go
+   * through it too, so a patient created earlier in the same transaction is visible here
+   * — outside it, that patient does not exist yet and the check would 404 on a row it
+   * had just written.
    */
   async create(
     facilityId: string,
     userId: string,
     input: CreateVisitRequest,
+    tx: AuditedTx = this.prisma.db,
   ): Promise<VisitSummary> {
-    const patient = await this.prisma.db.patient.findFirst({
+    const patient = await tx.patient.findFirst({
       where: { id: input.patientId, facilityId },
       select: { id: true },
     });
@@ -73,7 +79,7 @@ export class VisitService {
     // one gets to learn — the same rule the patient reads follow (task 3.4).
     if (!patient) throw new NotFoundException('Patient not found');
 
-    const department = await this.prisma.db.department.findFirst({
+    const department = await tx.department.findFirst({
       where: { id: input.departmentId, facilityId },
       select: { id: true, isActive: true },
     });
@@ -83,7 +89,7 @@ export class VisitService {
     if (!department.isActive) throw new BadRequestException('Department is not active');
 
     if (input.practitionerId) {
-      const practitioner = await this.prisma.db.practitioner.findFirst({
+      const practitioner = await tx.practitioner.findFirst({
         where: { id: input.practitionerId, facilityId },
         select: {
           isActive: true,
@@ -108,7 +114,7 @@ export class VisitService {
     // the desk override. A receptionist double-clicking Save otherwise files two queue
     // rows for one arrival — and at task 3.6, two invoices.
     if (!input.acknowledgeOpenVisit) {
-      const open = await this.findOpenVisits(facilityId, input.patientId, input.departmentId);
+      const open = await this.findOpenVisits(facilityId, input.patientId, input.departmentId, tx);
       if (open.length > 0) {
         throw new ConflictException({
           code: 'open_visit',
@@ -118,9 +124,9 @@ export class VisitService {
       }
     }
 
-    const visitNo = await this.sequence.next(facilityId, 'visit_no');
+    const visitNo = await this.sequence.next(facilityId, 'visit_no', undefined, tx);
 
-    const created = await this.prisma.db.visit.create({
+    const created = await tx.visit.create({
       data: {
         facilityId,
         createdBy: userId,
@@ -157,12 +163,16 @@ export class VisitService {
   }
 
   /**
-   * The two pickers the visit form needs, narrowed to what the desk chooses between:
+   * The pickers the reception screen needs, narrowed to what the desk chooses between:
    * active rows only, no licence numbers, no linked user accounts. Deliberately not the
    * admin lists — those are gated on `*.manage` and carry more than this screen needs.
+   *
+   * Services joined the payload at task 3.6. The check-in screen picks a department, a
+   * doctor and a set of charges in one pass, and three round trips on the one screen
+   * that has a queue in front of it is three chances to be slow.
    */
   async options(facilityId: string): Promise<VisitOptionsResponse> {
-    const [departments, practitioners] = await Promise.all([
+    const [departments, practitioners, services] = await Promise.all([
       this.prisma.db.department.findMany({
         where: { facilityId, isActive: true },
         select: { id: true, code: true, name: true, nameLocalPrs: true, nameLocalPs: true },
@@ -179,10 +189,19 @@ export class VisitService {
         },
         orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
       }),
+      this.prisma.db.service.findMany({
+        where: { facilityId, isActive: true },
+        select: { id: true, departmentId: true, code: true, name: true, fee: true },
+        orderBy: { name: 'asc' },
+      }),
     ]);
 
     return {
       departments,
+      // Fee as a fixed-2 STRING, never a number: Decimal(12,2) is exact and a float is
+      // not. It is shown to the desk and never sent back — the server prices the
+      // invoice from this same catalog (task 3.6).
+      services: services.map((service) => ({ ...service, fee: service.fee.toFixed(2) })),
       practitioners: practitioners.map((practitioner) => ({
         id: practitioner.id,
         name: fullName([practitioner.firstName, practitioner.lastName]),
@@ -196,8 +215,9 @@ export class VisitService {
     facilityId: string,
     patientId: string,
     departmentId: string,
+    tx: AuditedTx = this.prisma.db,
   ): Promise<VisitSummary[]> {
-    const rows = await this.prisma.db.visit.findMany({
+    const rows = await tx.visit.findMany({
       where: {
         facilityId,
         patientId,

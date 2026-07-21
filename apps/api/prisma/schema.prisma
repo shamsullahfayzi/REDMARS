@@ -1061,6 +1061,12 @@ model Invoice {
   status     InvoiceStatus @default(draft)
   subtotal   Decimal       @default(0) @db.Decimal(12, 2)
   discount   Decimal       @default(0) @db.Decimal(12, 2)
+
+  /// Why the price was reduced. Required whenever discount > 0 (task 3.6).
+  /// A discount column with no reason column is how cash walks out of a till:
+  /// the money is gone and the record says only that someone decided so.
+  discountReason String? @map("discount_reason")
+
   total      Decimal       @default(0) @db.Decimal(12, 2)
   paidAmount Decimal       @default(0) @map("paid_amount") @db.Decimal(12, 2)
   currency   String        @default("AFN")

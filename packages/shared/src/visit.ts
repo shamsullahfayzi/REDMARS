@@ -148,8 +148,26 @@ export const visitPractitionerOptionSchema = z.object({
 })
 export type VisitPractitionerOption = z.infer<typeof visitPractitionerOptionSchema>
 
+/**
+ * The priced catalog the desk bills from (task 3.6). Carried here rather than on its own
+ * endpoint because the reception screen needs departments, doctors and services in the
+ * same breath, and a screen that must be fast should not pay for three round trips.
+ *
+ * `fee` is a decimal string, never a number — see the service contract. It is shown to
+ * the desk and never sent back: the server prices the invoice from this same catalog.
+ */
+export const visitServiceOptionSchema = z.object({
+  id: z.uuid(),
+  departmentId: z.uuid(),
+  code: z.string(),
+  name: z.string(),
+  fee: z.string(),
+})
+export type VisitServiceOption = z.infer<typeof visitServiceOptionSchema>
+
 export const visitOptionsResponseSchema = z.object({
   departments: z.array(visitDepartmentOptionSchema),
   practitioners: z.array(visitPractitionerOptionSchema),
+  services: z.array(visitServiceOptionSchema),
 })
 export type VisitOptionsResponse = z.infer<typeof visitOptionsResponseSchema>

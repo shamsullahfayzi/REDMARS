@@ -63,7 +63,8 @@
     "groups": {
       "clinical": "Clinical",
       "administration": "Administration"
-    }
+    },
+    "reception": "Reception"
   },
   "theme": {
     "toLight": "Switch to light mode",
@@ -649,6 +650,60 @@
     "open": {
       "title": "This patient already has an open visit here",
       "startAnyway": "Start another visit"
+    }
+  },
+  "reception": {
+    "title": "Reception",
+    "subtitle": "Register, start the visit and take payment — one save.",
+    "steps": {
+      "patient": "Patient",
+      "visit": "Visit",
+      "bill": "Charges",
+      "payment": "Payment"
+    },
+    "newPatient": "Register a new patient",
+    "searchInstead": "Find an existing patient instead",
+    "clearPatient": "Choose a different patient",
+    "submit": "Save and take {{amount}}",
+    "submitHint": "Registers the patient, starts the visit, raises the bill and logs the payment.",
+    "saving": "Saving…",
+    "invalid": "Please check the highlighted fields.",
+    "error": "Could not complete the check-in. Nothing was saved — check the fields and try again.",
+    "bill": {
+      "chooseFirst": "Choose a department to see its charges.",
+      "noneHere": "No charges are set up for this department yet.",
+      "moreServices": "Other departments’ charges",
+      "discount": "Discount",
+      "reason": "Reason for discount",
+      "ceiling": "Up to {{pct}}% at the desk — maximum {{max}}.",
+      "subtotal": "Subtotal",
+      "total": "Total"
+    },
+    "payment": {
+      "reference": "Reference number",
+      "paid": "Paid by",
+      "method": {
+        "cash": "Cash",
+        "card": "Card",
+        "bank_transfer": "Bank transfer",
+        "mobile_money": "Mobile money",
+        "panel": "Panel",
+        "waiver": "Waived"
+      }
+    },
+    "receipt": {
+      "invoiceNo": "Invoice number",
+      "item": "Item",
+      "qty": "Qty",
+      "amount": "Amount",
+      "nothingDue": "Nothing to pay"
+    },
+    "done": {
+      "title": "Checked in",
+      "saved": "Patient registered, visit started, payment logged.",
+      "print": "Print receipt",
+      "next": "Next patient",
+      "openRecord": "Open the patient record"
     }
   }
 }

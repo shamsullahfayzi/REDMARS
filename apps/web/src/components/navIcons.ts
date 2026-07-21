@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookText,
+  ConciergeBell,
   Building2,
   Clock,
   FlaskConical,
@@ -23,6 +24,7 @@ import {
 /** One icon per nav key. Shared by the sidebar and the dashboard so they never drift. */
 export const NAV_ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
+  reception: ConciergeBell,
   queue: Clock,
   patients: UserRound,
   patientNew: UserPlus,

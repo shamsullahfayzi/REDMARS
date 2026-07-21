@@ -8,7 +8,7 @@ import type {
   PatientSummary,
   UpdatePatientRequest,
 } from '@redmars/shared';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
 
 /** Exactly the columns `PatientSummary` promises — the select and the DTO stay in step. */
@@ -186,10 +186,17 @@ export class PatientService {
     private readonly sequence: NumberSequenceService,
   ) {}
 
+  /**
+   * `tx` lets the whole registration join a caller's transaction (task 3.6): the desk
+   * saves a patient, a visit, an invoice and a payment as one act, and a patient left
+   * behind by a half-failed check-in is a stranger nobody meant to create. Defaults to
+   * the audited client, so every existing caller is unchanged.
+   */
   async create(
     facilityId: string,
     userId: string,
     input: CreatePatientRequest,
+    tx: AuditedTx = this.prisma.db,
   ): Promise<PatientSummary> {
     // Task 3.3 — refuse a high-confidence duplicate unless the desk has seen it and said
     // so. Deliberately overridable: a household can genuinely share one phone, and a
@@ -206,7 +213,7 @@ export class PatientService {
       }
     }
 
-    const mrn = await this.sequence.next(facilityId, 'patient_mrn');
+    const mrn = await this.sequence.next(facilityId, 'patient_mrn', undefined, tx);
 
     // An estimated age is a fact about a person AT A MOMENT — "thirty" stops being true
     // the year after it is recorded. `ageRecordedAt` is the anchor that lets a real age
@@ -217,7 +224,7 @@ export class PatientService {
       input.estimatedAgeMonths != null ||
       input.estimatedAgeDays != null;
 
-    const created = await this.prisma.db.patient.create({
+    const created = await tx.patient.create({
       data: {
         facilityId,
         createdBy: userId,

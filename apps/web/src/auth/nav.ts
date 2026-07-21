@@ -43,6 +43,9 @@ const ALL_ROLES = [
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'dashboard', to: '/', group: 'main', roles: ALL_ROLES },
+  // The desk's home screen (task 3.6). Receptionist only, matching `visit.create` —
+  // the one route that registers, queues, bills and takes cash in a single save.
+  { key: 'reception', to: '/reception', group: 'clinical', roles: ['receptionist'] },
   {
     key: 'queue',
     to: '/queue',

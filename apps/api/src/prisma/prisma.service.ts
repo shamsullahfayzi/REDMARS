@@ -282,3 +282,20 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
   }
 }
+
+/**
+ * The transaction handle `db.$transaction(async (tx) => …)` hands back.
+ *
+ * NOT `Prisma.TransactionClient`: that is the PLAIN client's transaction type, and
+ * `$extends` returns a structurally different (if identically shaped) client TypeScript
+ * refuses to unify with it. Deriving the type from `db` instead keeps the audit
+ * extension inside it, so a service typed against this cannot be handed the un-audited
+ * base client by mistake — which is the whole reason `db` and `this` are separate.
+ *
+ * The omitted members are the ones Prisma removes inside a transaction: nesting one,
+ * or disconnecting from within one, is not a thing.
+ */
+export type AuditedTx = Omit<
+  PrismaService['db'],
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;

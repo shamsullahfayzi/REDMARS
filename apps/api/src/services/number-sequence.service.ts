@@ -33,6 +33,18 @@ export interface IssuedNumber {
   formatted: string;
 }
 
+/**
+ * Anything that can run a raw query — the service's own client, or a transaction client
+ * handed in by a caller (task 3.6).
+ *
+ * A number issued outside its caller's transaction is a number that survives a rollback,
+ * and a survivor in a gapless sequence is a gap. So a caller that may roll back passes
+ * its transaction in here and the increment rolls back with everything else.
+ */
+export interface SequenceRunner {
+  $queryRaw<T = unknown>(query: TemplateStringsArray, ...values: unknown[]): Promise<T>;
+}
+
 @Injectable()
 export class NumberSequenceService {
   constructor(private readonly prisma: PrismaService) {}
@@ -41,8 +53,18 @@ export class NumberSequenceService {
    * Issue the next number for a facility + key. Gapless, unique, per-year — safe to
    * call concurrently. `at` is the moment the number is issued (defaults to now),
    * used only to pick the year for a yearly sequence; pass it explicitly in tests.
+   *
+   * `runner` lets a caller issue the number INSIDE its own transaction (task 3.6), so a
+   * rollback takes the increment with it. The row lock is then held until that
+   * transaction commits, which serialises concurrent issuers of the same key — correct,
+   * and the trade the word "gapless" was always asking for.
    */
-  async next(facilityId: string, key: SequenceKey, at: Date = new Date()): Promise<IssuedNumber> {
+  async next(
+    facilityId: string,
+    key: SequenceKey,
+    at: Date = new Date(),
+    runner: SequenceRunner = this.prisma,
+  ): Promise<IssuedNumber> {
     const config = SEQUENCE_CONFIG[key];
     if (!config) {
       // A typo'd key would otherwise create a brand-new counter under a bogus name
@@ -55,7 +77,7 @@ export class NumberSequenceService {
     // The atomic read-and-increment. Bootstraps the row at 1 on first use, else adds
     // one to the current value under a row lock. Parameterised — $queryRaw binds the
     // values, never string-concatenates them.
-    const rows = await this.prisma.$queryRaw<Array<{ current: number }>>`
+    const rows = await runner.$queryRaw<Array<{ current: number }>>`
       INSERT INTO number_sequence (id, facility_id, key, prefix, year, current, updated_at)
       VALUES (${randomUUID()}, ${facilityId}, ${key}, ${config.prefix}, ${year}, 1, now())
       ON CONFLICT (facility_id, key, year)
