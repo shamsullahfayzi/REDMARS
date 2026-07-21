@@ -502,7 +502,8 @@
       "copyMrn": "Copy medical record number",
       "registerAnother": "Register another",
       "error": "Could not register the patient. Nothing was saved — check the fields and try again.",
-      "invalid": "Please check the highlighted fields."
+      "invalid": "Please check the highlighted fields.",
+      "startVisit": "Start visit"
     },
     "search": {
       "subtitle": "Search by name, medical record number, or phone.",
@@ -596,6 +597,58 @@
         "insurance": "Insurance",
         "other": "Other"
       }
+    }
+  },
+  "visits": {
+    "create": {
+      "title": "Start visit",
+      "subtitle": "Which department, which doctor, and what the patient says is wrong.",
+      "back": "Back to patient",
+      "submit": "Start visit",
+      "saving": "Starting…",
+      "started": "Visit started",
+      "chooseDepartment": "Choose a department",
+      "noDoctor": "No doctor",
+      "doctorHint": "Leave blank for a walk-in lab or pharmacy visit.",
+      "noDoctorsHere": "No doctor is assigned to this department yet.",
+      "complaintPlaceholder": "insomnia, low mood",
+      "complaintHint": "In the patient's own words. The diagnosis comes later.",
+      "referral": "Referral",
+      "nextPatient": "Next patient",
+      "backToPatient": "Back to patient",
+      "error": "Could not start the visit. Nothing was saved — check the fields and try again.",
+      "optionsError": "Could not load departments and doctors.",
+      "invalid": "Please check the highlighted fields."
+    },
+    "fields": {
+      "visitNo": "Visit number",
+      "type": "Visit type",
+      "department": "Department",
+      "practitioner": "Doctor",
+      "chiefComplaint": "Chief complaint",
+      "referredBy": "Referred by",
+      "referralSource": "Referral source"
+    },
+    "type": {
+      "opd_consult": "Consultation",
+      "follow_up": "Follow-up",
+      "walk_in_lab": "Walk-in lab",
+      "walk_in_pharmacy": "Walk-in pharmacy",
+      "emergency": "Emergency",
+      "ipd": "Admission"
+    },
+    "status": {
+      "planned": "Planned",
+      "arrived": "Arrived",
+      "in_progress": "In progress",
+      "on_hold": "On hold",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "entered_in_error": "Entered in error"
+    },
+    "open": {
+      "title": "This patient already has an open visit here",
+      "startAnyway": "Start another visit"
     }
   }
 }

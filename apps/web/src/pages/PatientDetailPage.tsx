@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
-import { ArrowLeft, IdCard, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, IdCard, Plus, Stethoscope, Trash2 } from 'lucide-react'
 import {
   IDENTIFIER_SYSTEMS,
   currentAgeYears,
@@ -13,7 +13,7 @@ import { useAuth } from '@/auth/authContext'
 import { DuplicateNotice } from '@/components/DuplicateNotice'
 import { PageHeader } from '@/components/PageHeader'
 import { PatientFormFields } from '@/components/PatientFormFields'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +25,7 @@ import {
   useUpdatePatient,
 } from '@/hooks/usePatient'
 import { fromDetail, toPayload, usePatientForm } from '@/hooks/usePatientForm'
+import { cn } from '@/lib/utils'
 
 /**
  * Task 3.4 — one patient: their record, edited, and the numbers they arrived carrying.
@@ -124,6 +125,15 @@ export function PatientDetailPage() {
           .filter(Boolean)
           .join(' · ')}
       />
+
+      {/* A returning patient is already registered — what they need is a new visit.
+          Only the desk starts one (visit.create), so only the desk is offered it. */}
+      {roles.includes('receptionist') && (
+        <Link to={`/patients/${patient.id}/visit`} className={cn(buttonVariants())}>
+          <Stethoscope className="size-4" aria-hidden />
+          {t('visits.create.submit')}
+        </Link>
+      )}
 
       {/* Identifiers first: this is what task 3.4 exists for. */}
       <Card className="max-w-lg space-y-4 p-6">

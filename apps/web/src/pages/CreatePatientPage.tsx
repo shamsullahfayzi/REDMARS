@@ -1,15 +1,17 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, Copy, UserPlus } from 'lucide-react'
+import { Link } from 'react-router'
+import { Check, Copy, Stethoscope, UserPlus } from 'lucide-react'
 import { createPatientRequestSchema, type CreatePatientRequest } from '@redmars/shared'
 import { DuplicateNotice } from '@/components/DuplicateNotice'
 import { PageHeader } from '@/components/PageHeader'
 import { PatientFormFields } from '@/components/PatientFormFields'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useDebounced } from '@/hooks/useDebounced'
 import { duplicateMatchesFromError, useCreatePatient, useDuplicateCheck } from '@/hooks/usePatient'
 import { toPayload, usePatientForm } from '@/hooks/usePatientForm'
+import { cn } from '@/lib/utils'
 
 /**
  * Task 3.1 — patient registration.
@@ -108,11 +110,19 @@ export function CreatePatientPage() {
             </div>
           </div>
 
-          {/* Primary, because there is a queue at the window. */}
-          <Button type="button" onClick={registerAnother}>
-            <UserPlus className="size-4" aria-hidden />
-            {t('patients.create.registerAnother')}
-          </Button>
+          {/* Registration on its own does not put anyone in a queue — the visit does.
+              Primary, because the patient in front of her came to be seen, not to be
+              filed. Task 3.6 collapses the two into one save. */}
+          <div className="flex flex-wrap gap-3">
+            <Link to={`/patients/${patient.id}/visit`} className={cn(buttonVariants())}>
+              <Stethoscope className="size-4" aria-hidden />
+              {t('patients.create.startVisit')}
+            </Link>
+            <Button type="button" variant="outline" onClick={registerAnother}>
+              <UserPlus className="size-4" aria-hidden />
+              {t('patients.create.registerAnother')}
+            </Button>
+          </div>
         </Card>
       </div>
     )

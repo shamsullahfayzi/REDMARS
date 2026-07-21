@@ -21,6 +21,7 @@ import { DrugInteractionModule } from './modules/drug-interaction/drug-interacti
 import { FacilityModuleModule } from './modules/facility-module/facility-module.module';
 import { NumberSequenceModule } from './services/number-sequence.module';
 import { PatientModule } from './modules/patient/patient.module';
+import { VisitModule } from './modules/visit/visit.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { PatientModule } from './modules/patient/patient.module';
     FacilityModuleModule,
     NumberSequenceModule,
     PatientModule,
+    VisitModule,
   ],
   providers: [
     // Global. Runs after the guards on every route, so request.auth is already

@@ -17,6 +17,7 @@ import { PatientDetailPage } from '@/pages/PatientDetailPage'
 import { PatientsPage } from '@/pages/PatientsPage'
 import { PractitionersPage } from '@/pages/PractitionersPage'
 import { ServicesPage } from '@/pages/ServicesPage'
+import { StartVisitPage } from '@/pages/StartVisitPage'
 import { UsersPage } from '@/pages/UsersPage'
 
 /**
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
           { path: 'patients', element: <PatientsPage /> },
           { path: 'patients/new', element: <CreatePatientPage /> },
           { path: 'patients/:id', element: <PatientDetailPage /> },
+          { path: 'patients/:id/visit', element: <StartVisitPage /> },
           { path: 'consultations', element: <PlaceholderPage sectionKey="consultations" /> },
           { path: 'icd', element: <IcdLookupPage /> },
           { path: 'interactions', element: <InteractionCheckerPage /> },
