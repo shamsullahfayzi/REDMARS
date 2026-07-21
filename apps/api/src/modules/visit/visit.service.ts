@@ -4,15 +4,23 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type {
+  ChangeVisitStatusRequest,
   CreateVisitRequest,
   QueueEntry,
   QueueQuery,
   QueueResponse,
+  VisitHistoryResponse,
   VisitOptionsResponse,
   VisitSummary,
 } from '@redmars/shared';
-import { OPEN_VISIT_STATUSES, currentAgeYears } from '@redmars/shared';
+import {
+  OPEN_VISIT_STATUSES,
+  VISIT_STATUS_TRANSITIONS,
+  allowedStatusChanges,
+  currentAgeYears,
+} from '@redmars/shared';
 import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
 import {
@@ -203,6 +211,143 @@ export class VisitService {
     });
     if (!visit) throw new NotFoundException('Visit not found');
     return this.toSummary(visit);
+  }
+
+  /**
+   * Task 3.9 — move a visit through care, and leave a record of who moved it.
+   *
+   * Every move appends to VisitStatusHistory. The opening `arrived` row was written at
+   * creation (task 3.5), so the trail is complete from the first status rather than the
+   * second — a visit whose earliest state nobody signed is exactly the gap this table
+   * exists to close.
+   */
+  async changeStatus(
+    facilityId: string,
+    userId: string,
+    id: string,
+    input: ChangeVisitStatusRequest,
+  ): Promise<VisitSummary> {
+    const current = await this.prisma.db.visit.findFirst({
+      where: { id, facilityId },
+      select: { id: true, status: true },
+    });
+    if (!current) throw new NotFoundException('Visit not found');
+
+    // A double-click is not a clinical event. Returning the state the caller asked for
+    // rather than appending "in_progress -> in_progress" keeps the trail readable, and a
+    // medico-legal record is only useful if a human can read it.
+    if (current.status === input.status) {
+      return this.findById(facilityId, id);
+    }
+
+    const allowed = VISIT_STATUS_TRANSITIONS[current.status];
+    if (!allowed.includes(input.status)) {
+      throw new BadRequestException({
+        message: `A ${current.status} visit cannot become ${input.status}.`,
+        code: 'illegal_transition',
+        from: current.status,
+        allowed: allowedStatusChanges(current.status),
+      });
+    }
+
+    try {
+      const updated = await this.prisma.db.visit.update({
+        // `status` in the WHERE is optimistic concurrency, not decoration: the doctor
+        // and the nurse can both have this visit on screen, and whoever clicks second
+        // must be told the state moved rather than silently overwrite the first move.
+        // A single update() — never updateMany(), which the audit extension deliberately
+        // does not cover, and an unaudited status change is the one kind this table
+        // exists to prevent.
+        where: { id, facilityId, status: current.status },
+        data: {
+          status: input.status,
+          // The visit is over. Closing the clock here rather than leaving it to a report
+          // means the duration is a fact recorded at the time, not one inferred later.
+          ...(input.status === 'completed' ? { endedAt: new Date() } : {}),
+          statusHistory: {
+            create: { status: input.status, changedBy: userId, note: input.note ?? null },
+          },
+        },
+        select: visitSummarySelect,
+      });
+      return this.toSummary(updated);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        // P2025: the WHERE matched nothing, which here can only mean the status moved
+        // under us between the read and the write.
+        error.code === 'P2025'
+      ) {
+        throw new ConflictException({
+          message: 'Someone else moved this visit first.',
+          code: 'status_changed',
+        });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * The trail, and the two durations it exists to make answerable: how long the patient
+   * waited, and how long they were actually seen for.
+   */
+  async history(facilityId: string, id: string): Promise<VisitHistoryResponse> {
+    const visit = await this.prisma.db.visit.findFirst({
+      where: { id, facilityId },
+      select: {
+        id: true,
+        visitNo: true,
+        statusHistory: {
+          select: {
+            id: true,
+            status: true,
+            changedAt: true,
+            changedBy: true,
+            note: true,
+            // The name, so the record reads as a person rather than a uuid. Follows the
+            // FK, so a deleted account still leaves the row it signed.
+            visit: false,
+          },
+          orderBy: { changedAt: 'asc' },
+        },
+      },
+    });
+    if (!visit) throw new NotFoundException('Visit not found');
+
+    const actorIds = [
+      ...new Set(visit.statusHistory.map((row) => row.changedBy).filter((v): v is string => !!v)),
+    ];
+    const actors = await this.prisma.db.appUser.findMany({
+      where: { id: { in: actorIds } },
+      select: { id: true, fullName: true },
+    });
+    const names = new Map(actors.map((actor) => [actor.id, actor.fullName]));
+
+    const at = (status: string): Date | null =>
+      visit.statusHistory.find((row) => row.status === status)?.changedAt ?? null;
+
+    const arrivedAt = at('arrived');
+    const calledAt = at('in_progress');
+    const endedAt = at('completed');
+    const minutesBetween = (from: Date | null, to: Date | null): number | null =>
+      from && to ? Math.max(0, Math.round((to.getTime() - from.getTime()) / 60_000)) : null;
+
+    return {
+      visitId: visit.id,
+      visitNo: visit.visitNo,
+      entries: visit.statusHistory.map((row) => ({
+        id: row.id,
+        status: row.status,
+        changedAt: row.changedAt.toISOString(),
+        changedBy: row.changedBy,
+        changedByName: row.changedBy ? (names.get(row.changedBy) ?? null) : null,
+        note: row.note,
+      })),
+      // "The gap between the two is how you measure waiting time" — the schema's own
+      // comment on VisitStatus, finally computed.
+      waitedMinutes: minutesBetween(arrivedAt, calledAt),
+      consultationMinutes: minutesBetween(calledAt, endedAt),
+    };
   }
 
   /**

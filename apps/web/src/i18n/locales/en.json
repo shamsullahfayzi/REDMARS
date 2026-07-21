@@ -728,6 +728,13 @@
     "stale": {
       "title": "This queue is not updating.",
       "since": "You are looking at what it said at {{time}}. Check the connection."
+    },
+    "action": {
+      "arrived": "Check in",
+      "in_progress": "Call in",
+      "on_hold": "Hold",
+      "completed": "Complete",
+      "failed": "That did not go through — the visit may have moved."
     }
   }
 }

@@ -166,6 +166,88 @@ export const visitServiceOptionSchema = z.object({
 export type VisitServiceOption = z.infer<typeof visitServiceOptionSchema>
 
 // ---------------------------------------------------------------------------------
+// Task 3.9 — moving a visit through care
+// ---------------------------------------------------------------------------------
+
+/**
+ * What this endpoint may move a visit to.
+ *
+ * `cancelled` and `entered_in_error` are deliberately absent. Ending a visit early is a
+ * different authority from moving one through care — the matrix puts them on
+ * `visit.cancel` (admin, or a receptionist within rule R5) and `visit.void` (admin
+ * alone), while every clinical role holds `visit.change_status`. Folding them in here
+ * would hand a nurse the power to void a visit, which the matrix never granted.
+ */
+export const VISIT_STATUS_CHANGES = ['arrived', 'in_progress', 'on_hold', 'completed'] as const
+export type VisitStatusChange = (typeof VISIT_STATUS_CHANGES)[number]
+
+/**
+ * Which moves are legal, from each status. Shared rather than server-only so the queue
+ * can offer exactly the buttons that will work, instead of showing one that 409s.
+ *
+ * Three properties are doing real work here:
+ *
+ *  - `completed` leads nowhere. A finished visit is finished; reopening one silently
+ *    rewrites what the record already said happened.
+ *  - `arrived` cannot jump to `completed`. A visit that was never in progress and is
+ *    suddenly complete is a visit nobody can say took place — and clearing the queue at
+ *    closing time would otherwise record a room full of patients as having been seen.
+ *    A patient who left without being seen is a cancellation (task 3.11), not a
+ *    completion.
+ *  - `on_hold` exists for the patient sent off for a test mid-consultation, so it goes
+ *    both ways: back to `in_progress` when they return, or straight to `completed` when
+ *    it turns out there is nothing more to do.
+ */
+export const VISIT_STATUS_TRANSITIONS: Readonly<Record<VisitStatus, readonly VisitStatus[]>> = {
+  planned: ['arrived'],
+  arrived: ['in_progress', 'on_hold'],
+  in_progress: ['on_hold', 'completed'],
+  on_hold: ['in_progress', 'completed'],
+  completed: [],
+  cancelled: [],
+  entered_in_error: [],
+}
+
+/** The moves this endpoint offers from a given status — the transitions, minus the ones it does not own. */
+export function allowedStatusChanges(from: VisitStatus): VisitStatusChange[] {
+  return VISIT_STATUS_TRANSITIONS[from].filter((to): to is VisitStatusChange =>
+    (VISIT_STATUS_CHANGES as readonly string[]).includes(to),
+  )
+}
+
+export const changeVisitStatusRequestSchema = z.object({
+  status: z.enum(VISIT_STATUS_CHANGES),
+  /** Why, when it is not obvious. Free text, and the only part of a move a human writes. */
+  note: z.string().trim().max(300).nullish(),
+})
+export type ChangeVisitStatusRequest = z.infer<typeof changeVisitStatusRequestSchema>
+
+/** One line of the medico-legal trail: who moved it where, and when. */
+export const visitStatusHistoryEntrySchema = z.object({
+  id: z.uuid(),
+  status: visitStatusSchema,
+  changedAt: z.string(),
+  changedBy: z.string().nullable(),
+  changedByName: z.string().nullable(),
+  note: z.string().nullable(),
+})
+export type VisitStatusHistoryEntry = z.infer<typeof visitStatusHistoryEntrySchema>
+
+export const visitHistoryResponseSchema = z.object({
+  visitId: z.uuid(),
+  visitNo: z.string(),
+  entries: z.array(visitStatusHistoryEntrySchema),
+  /**
+   * Minutes between arriving and being called in — the number the schema's own comment
+   * calls the point of having two statuses. Null while the patient is still waiting.
+   */
+  waitedMinutes: z.number().int().nullable(),
+  /** Minutes the consultation itself took, once the visit is complete. */
+  consultationMinutes: z.number().int().nullable(),
+})
+export type VisitHistoryResponse = z.infer<typeof visitHistoryResponseSchema>
+
+// ---------------------------------------------------------------------------------
 // Task 3.7 — the queue
 // ---------------------------------------------------------------------------------
 

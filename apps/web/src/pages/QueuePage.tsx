@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Clock, Pause, Play, RefreshCw, Stethoscope, WifiOff } from 'lucide-react'
-import type { QueueEntry, VisitDepartmentOption } from '@redmars/shared'
+import { allowedStatusChanges, type QueueEntry, type VisitDepartmentOption } from '@redmars/shared'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { QUEUE_POLL_MS, useQueue, waitTone } from '@/hooks/useQueue'
+import { useChangeVisitStatus } from '@/hooks/useVisitStatus'
 import { useVisitOptions } from '@/hooks/useVisits'
 import { cn } from '@/lib/utils'
 
@@ -21,8 +22,12 @@ import { cn } from '@/lib/utils'
  * longest first — because a queue sorted any other way is how somebody waits all morning
  * without anyone meaning it.
  *
- * Auto-refresh is task 3.8. Until then the refresh is a button, which is honest: a screen
- * that looks live and is not is worse than one that plainly asks to be re-read.
+ * It re-reads itself every ten seconds (task 3.8) and says so — including when it stops,
+ * because a screen that looks live while quietly frozen is worse than one that never
+ * claimed to be.
+ *
+ * The buttons on each row are the visit's legal moves (task 3.9), taken from the shared
+ * transition map so the screen cannot offer one the server will refuse.
  */
 export function QueuePage() {
   const { t, i18n } = useTranslation()
@@ -383,6 +388,8 @@ function QueueRow({
           </span>
         </div>
 
+        <StatusActions entry={entry} />
+
         <Link
           to={`/patients/${entry.patientId}`}
           className="text-sm text-primary hover:underline"
@@ -392,5 +399,44 @@ function QueueRow({
         </Link>
       </Card>
     </li>
+  )
+}
+
+/**
+ * The moves this visit can actually make, as buttons (task 3.9).
+ *
+ * Driven by the shared transition map rather than a list written out here, so the screen
+ * cannot offer a button the server will refuse — and cannot quietly stop offering one
+ * when the rules change on the server side only.
+ */
+function StatusActions({ entry }: { entry: QueueEntry }) {
+  const { t } = useTranslation()
+  const change = useChangeVisitStatus(entry.id)
+  const moves = allowedStatusChanges(entry.status)
+
+  if (moves.length === 0) return null
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex gap-2">
+        {moves.map((to) => (
+          <Button
+            key={to}
+            type="button"
+            size="sm"
+            variant={to === 'in_progress' ? 'default' : 'outline'}
+            disabled={change.isPending}
+            onClick={() => change.mutate({ status: to, note: null })}
+          >
+            {t(`queue.action.${to}`)}
+          </Button>
+        ))}
+      </div>
+      {/* Says what happened rather than silently reverting — the common cause is a
+          colleague having moved this visit first, which the doctor should know. */}
+      {change.isError && (
+        <p className="text-xs text-destructive">{t('queue.action.failed')}</p>
+      )}
+    </div>
   )
 }

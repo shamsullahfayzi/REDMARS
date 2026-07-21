@@ -6,14 +6,24 @@ import {
   HttpCode,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { createVisitRequestSchema, queueQuerySchema } from '@redmars/shared';
-import type { QueueResponse, VisitOptionsResponse, VisitSummary } from '@redmars/shared';
+import {
+  changeVisitStatusRequestSchema,
+  createVisitRequestSchema,
+  queueQuerySchema,
+} from '@redmars/shared';
+import type {
+  QueueResponse,
+  VisitHistoryResponse,
+  VisitOptionsResponse,
+  VisitSummary,
+} from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuthContext } from '../../auth/auth-context';
 import { VisitService } from './visit.service';
@@ -86,6 +96,44 @@ export class VisitController {
   @RequirePermission('visit.read_queue')
   findOne(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string): Promise<VisitSummary> {
     return this.visits.findById(this.auth(req).facilityId, id);
+  }
+
+  /**
+   * Task 3.9 — move a visit through care.
+   *
+   * `visit.change_status` is held by receptionist, nurse and doctor: all three legitimately
+   * move a patient along, and which of them did it is answered by the history row, not by
+   * narrowing the grant. Ending a visit early is NOT here — cancelling needs
+   * `visit.cancel` and voiding needs `visit.void`, and the request contract refuses those
+   * statuses so this route cannot become a back door to either.
+   */
+  @Patch(':id/status')
+  @RequirePermission('visit.change_status')
+  changeStatus(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ): Promise<VisitSummary> {
+    const parsed = changeVisitStatusRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid status change',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const auth = this.auth(req);
+    return this.visits.changeStatus(auth.facilityId, auth.userId, id, parsed.data);
+  }
+
+  /** The medico-legal trail, plus the wait and consultation durations it makes answerable. */
+  @Get(':id/history')
+  @RequirePermission('visit.read_queue')
+  history(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<VisitHistoryResponse> {
+    return this.visits.history(this.auth(req).facilityId, id);
   }
 
   private auth(req: Request): AuthContext {
