@@ -705,5 +705,17 @@
       "next": "Next patient",
       "openRecord": "Open the patient record"
     }
+  },
+  "queue": {
+    "mine": "Your patients waiting today, longest wait first.",
+    "everyone": "Everyone waiting today, longest wait first.",
+    "allDepartments": "All departments",
+    "date": "Day",
+    "includeClosed": "Include finished visits",
+    "refresh": "Refresh",
+    "waited": "{{minutes}} min",
+    "empty": "Nobody is waiting.",
+    "error": "Could not load the queue.",
+    "open": "Open the patient record"
   }
 }

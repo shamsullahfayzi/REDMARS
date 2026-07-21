@@ -7,12 +7,13 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { createVisitRequestSchema } from '@redmars/shared';
-import type { VisitOptionsResponse, VisitSummary } from '@redmars/shared';
+import { createVisitRequestSchema, queueQuerySchema } from '@redmars/shared';
+import type { QueueResponse, VisitOptionsResponse, VisitSummary } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuthContext } from '../../auth/auth-context';
 import { VisitService } from './visit.service';
@@ -56,6 +57,29 @@ export class VisitController {
   @RequirePermission('visit.read_queue')
   options(@Req() req: Request): Promise<VisitOptionsResponse> {
     return this.visits.options(this.auth(req).facilityId);
+  }
+
+  /**
+   * Task 3.7 — the queue. Also declared before @Get(':id'), same reason as options.
+   *
+   * `visit.read_queue` is held by admin, receptionist, nurse, doctor and management, and
+   * that breadth is right: knowing who is waiting is not clinical detail. The entries
+   * carry a name, an age and a complaint — opening the chart behind one is a separate
+   * request and a separate audited read.
+   */
+  @Get('queue')
+  @RequirePermission('visit.read_queue')
+  queue(@Req() req: Request, @Query() query: unknown): Promise<QueueResponse> {
+    const parsed = queueQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid queue filter',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const auth = this.auth(req);
+    return this.visits.queue(auth.facilityId, auth.userId, parsed.data);
   }
 
   @Get(':id')

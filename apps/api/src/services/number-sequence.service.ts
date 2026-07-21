@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FACILITY_TIME_ZONE } from '../common/facility-time';
 
 const SEQUENCE_CONFIG = {
   patient_mrn: { prefix: 'MRN', yearly: false, pad: 6 },
@@ -17,11 +18,11 @@ export type SequenceKey = keyof typeof SEQUENCE_CONFIG;
 // concrete sentinel makes the unique tuple real and the row lock land on one row.
 const NO_YEAR = 0;
 
-// Farhat is UTC+04:30, no DST. Computing the year in the facility's zone (not the
-// server's UTC) keeps the invoice year correct for a registration made just after
-// local midnight on 1 January. Reading the zone per-facility is a later refinement;
-// there is one facility per database today.
-const FACILITY_TIME_ZONE = 'Asia/Kabul';
+// Computing the year in the facility's zone (not the server's UTC) keeps the invoice
+// year correct for a registration made just after local midnight on 1 January. The
+// constant moved to common/facility-time.ts at task 3.7, when the doctor's queue needed
+// the same zone to decide what "today" means — one definition of where the hospital is,
+// not two that can drift apart.
 
 export interface IssuedNumber {
   key: SequenceKey;

@@ -165,6 +165,84 @@ export const visitServiceOptionSchema = z.object({
 })
 export type VisitServiceOption = z.infer<typeof visitServiceOptionSchema>
 
+// ---------------------------------------------------------------------------------
+// Task 3.7 — the queue
+// ---------------------------------------------------------------------------------
+
+/**
+ * Who is waiting, and for how long.
+ *
+ * The queue is the one screen a doctor keeps open all day, so it carries what decides
+ * WHO TO CALL NEXT and nothing else: the name, the age and sex that frame the
+ * consultation, the complaint in the patient's own words, and the wait. Opening the
+ * chart is a click away and is a separate, audited read (R1) — a queue that quietly
+ * rendered clinical detail would log nobody as having looked at it.
+ */
+export const queueEntrySchema = z.object({
+  id: z.uuid(),
+  visitNo: z.string(),
+  type: visitTypeSchema,
+  status: visitStatusSchema,
+  patientId: z.uuid(),
+  patientName: z.string(),
+  patientMrn: z.string(),
+  gender: z.string(),
+  ageYears: z.number().nullable(),
+  departmentId: z.uuid(),
+  departmentName: z.string(),
+  practitionerId: z.string().nullable(),
+  practitionerName: z.string().nullable(),
+  chiefComplaint: z.string().nullable(),
+  startedAt: z.string(),
+  /**
+   * Minutes since arrival, computed by the SERVER. A browser clock on a shared hospital
+   * workstation is frequently wrong, and "waited 40 minutes" is the number that decides
+   * who gets seen next — it should not depend on whose machine is reading it.
+   */
+  waitedMinutes: z.number().int(),
+})
+export type QueueEntry = z.infer<typeof queueEntrySchema>
+
+/** The queue filters. Everything optional: the server picks sensible defaults per role. */
+export const queueQuerySchema = z.object({
+  departmentId: z.uuid().optional(),
+  practitionerId: z.uuid().optional(),
+  /** YYYY-MM-DD in the facility's own zone. Absent means today, there. */
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD.')
+    .optional(),
+  /** Absent means the open statuses — the people actually still in the building. */
+  status: visitStatusSchema.optional(),
+  /** Show every visit of the day, closed ones included. */
+  includeClosed: z
+    .union([z.boolean(), z.literal('true'), z.literal('false')])
+    .optional()
+    .transform((v) => v === true || v === 'true'),
+})
+export type QueueQuery = z.infer<typeof queueQuerySchema>
+
+export const queueResponseSchema = z.object({
+  entries: z.array(queueEntrySchema),
+  /** The date actually served, so the screen can say which day it is showing. */
+  date: z.string(),
+  /** Counts per status for the day, so the header does not need a second request. */
+  counts: z.object({
+    arrived: z.number().int(),
+    in_progress: z.number().int(),
+    on_hold: z.number().int(),
+    completed: z.number().int(),
+  }),
+  /** Echoes the scope the server resolved — a doctor's queue defaults to their own. */
+  scope: z.object({
+    departmentId: z.string().nullable(),
+    practitionerId: z.string().nullable(),
+    /** True when the server narrowed to the caller's own practitioner record. */
+    mine: z.boolean(),
+  }),
+})
+export type QueueResponse = z.infer<typeof queueResponseSchema>
+
 export const visitOptionsResponseSchema = z.object({
   departments: z.array(visitDepartmentOptionSchema),
   practitioners: z.array(visitPractitionerOptionSchema),

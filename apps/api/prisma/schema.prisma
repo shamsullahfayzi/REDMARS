@@ -633,6 +633,11 @@ model Visit {
   @@unique([facilityId, visitNo])
   /// THIS INDEX IS THE DOCTOR'S QUEUE.
   @@index([facilityId, departmentId, status, startedAt])
+  /// And this one is the same queue asked the other way (task 3.7). A doctor opens
+  /// "my patients today"; the desk and the nurses open "the OPD queue". Same screen,
+  /// different leading column, and neither query can use the other's index — the
+  /// filter that is not leading would degrade to a scan of the whole department.
+  @@index([facilityId, practitionerId, status, startedAt])
   @@index([patientId, startedAt])
   @@map("visit")
 }

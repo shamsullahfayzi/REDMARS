@@ -16,6 +16,7 @@ import { LabTestsPage } from '@/pages/LabTestsPage'
 import { PatientDetailPage } from '@/pages/PatientDetailPage'
 import { PatientsPage } from '@/pages/PatientsPage'
 import { PractitionersPage } from '@/pages/PractitionersPage'
+import { QueuePage } from '@/pages/QueuePage'
 import { ReceptionPage } from '@/pages/ReceptionPage'
 import { ServicesPage } from '@/pages/ServicesPage'
 import { StartVisitPage } from '@/pages/StartVisitPage'
@@ -40,7 +41,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           { path: 'reception', element: <ReceptionPage /> },
-          { path: 'queue', element: <PlaceholderPage sectionKey="queue" /> },
+          { path: 'queue', element: <QueuePage /> },
           { path: 'patients', element: <PatientsPage /> },
           { path: 'patients/new', element: <CreatePatientPage /> },
           { path: 'patients/:id', element: <PatientDetailPage /> },

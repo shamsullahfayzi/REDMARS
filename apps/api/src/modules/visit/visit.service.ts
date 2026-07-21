@@ -4,10 +4,22 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { CreateVisitRequest, VisitOptionsResponse, VisitSummary } from '@redmars/shared';
-import { OPEN_VISIT_STATUSES } from '@redmars/shared';
+import type {
+  CreateVisitRequest,
+  QueueEntry,
+  QueueQuery,
+  QueueResponse,
+  VisitOptionsResponse,
+  VisitSummary,
+} from '@redmars/shared';
+import { OPEN_VISIT_STATUSES, currentAgeYears } from '@redmars/shared';
 import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
+import {
+  facilityDateString,
+  facilityDayBounds,
+  facilityDayBoundsFor,
+} from '../../common/facility-time';
 
 /** Exactly what `VisitSummary` promises, plus the joins its denormalised names come from. */
 const visitSummarySelect = {
@@ -42,6 +54,37 @@ type VisitRow = {
   patient: { mrn: string; prefix: string | null; firstName: string; lastName: string | null };
   department: { name: string };
   practitioner: { firstName: string; lastName: string } | null;
+};
+
+/**
+ * What the queue needs beyond a visit summary (task 3.7): enough of the patient to say
+ * who is waiting, and enough of their age to compute it honestly rather than show a
+ * number recorded years ago.
+ */
+const queueExtraSelect = {
+  patient: {
+    select: {
+      mrn: true,
+      prefix: true,
+      firstName: true,
+      lastName: true,
+      gender: true,
+      dateOfBirth: true,
+      estimatedAgeYears: true,
+      estimatedAgeMonths: true,
+      ageRecordedAt: true,
+    },
+  },
+} as const;
+
+type QueueRow = VisitRow & {
+  patient: VisitRow['patient'] & {
+    gender: string;
+    dateOfBirth: Date | null;
+    estimatedAgeYears: number | null;
+    estimatedAgeMonths: number | null;
+    ageRecordedAt: Date | null;
+  };
 };
 
 function fullName(parts: Array<string | null | undefined>): string {
@@ -160,6 +203,117 @@ export class VisitService {
     });
     if (!visit) throw new NotFoundException('Visit not found');
     return this.toSummary(visit);
+  }
+
+  /**
+   * Task 3.7 — who is waiting.
+   *
+   * The done-when is "a doctor sees today's arrived patients", and the word doing the
+   * work is TODAY'S. Today is a fact about Kabul, not about the server: at UTC+04:30 a
+   * patient registered at 02:00 local is still the previous UTC day, and a naive
+   * boundary would drop them off the queue on the night shift — when nobody is watching
+   * a screen closely enough to catch it.
+   *
+   * Scope defaults by who is asking. A doctor with a linked practitioner record gets
+   * their own list, because that is the question a doctor has; anyone else gets the
+   * whole facility and narrows it by hand. The default is a convenience, not a control:
+   * a doctor may still pass another practitionerId and see that queue, exactly as
+   * `visit.read_queue` allows — knowing who is waiting for a colleague is how a clinic
+   * covers for someone running late.
+   */
+  async queue(facilityId: string, userId: string, query: QueueQuery): Promise<QueueResponse> {
+    const { start, end } = query.date ? facilityDayBoundsFor(query.date) : facilityDayBounds();
+
+    // "Whose queue is this?" — the caller's own, unless they said otherwise.
+    let practitionerId = query.practitionerId ?? null;
+    let mine = false;
+    if (!practitionerId) {
+      const self = await this.prisma.db.practitioner.findFirst({
+        where: { facilityId, userId },
+        select: { id: true },
+      });
+      if (self) {
+        practitionerId = self.id;
+        mine = true;
+      }
+    }
+
+    const dayWhere = {
+      facilityId,
+      startedAt: { gte: start, lt: end },
+      ...(query.departmentId ? { departmentId: query.departmentId } : {}),
+      ...(practitionerId ? { practitionerId } : {}),
+    };
+
+    const statusWhere = query.status
+      ? { status: query.status }
+      : query.includeClosed
+        ? {}
+        : // The people still in the building. A completed visit is not a queue entry —
+          // it is history, and history belongs on the record, not on the screen the
+          // doctor is deciding from.
+          { status: { in: [...OPEN_VISIT_STATUSES] } };
+
+    const [rows, grouped] = await Promise.all([
+      this.prisma.db.visit.findMany({
+        where: { ...dayWhere, ...statusWhere },
+        select: { ...visitSummarySelect, ...queueExtraSelect },
+        // Longest wait first. A queue that is not ordered by arrival is not a queue,
+        // it is a list, and someone quietly waits all morning.
+        orderBy: { startedAt: 'asc' },
+      }),
+      // The header counts cover the whole day regardless of the status filter — the
+      // point of them is to say what the filter is hiding.
+      this.prisma.db.visit.groupBy({
+        by: ['status'],
+        where: dayWhere,
+        _count: { _all: true },
+      }),
+    ]);
+
+    const counts = { arrived: 0, in_progress: 0, on_hold: 0, completed: 0 };
+    for (const group of grouped) {
+      if (group.status in counts) {
+        counts[group.status as keyof typeof counts] = group._count._all;
+      }
+    }
+
+    const now = Date.now();
+    return {
+      entries: rows.map((row) => this.toQueueEntry(row, now)),
+      date: query.date ?? facilityDateString(),
+      counts,
+      scope: { departmentId: query.departmentId ?? null, practitionerId, mine },
+    };
+  }
+
+  private toQueueEntry(row: QueueRow, now: number): QueueEntry {
+    const summary = this.toSummary(row);
+    return {
+      id: summary.id,
+      visitNo: summary.visitNo,
+      type: summary.type,
+      status: summary.status,
+      patientId: summary.patientId,
+      patientName: summary.patientName,
+      patientMrn: summary.patientMrn,
+      gender: row.patient.gender,
+      // Computed from the stored estimate and its anchor, never read raw — a patient
+      // registered at thirty is thirty-three three years later (task 3.1).
+      ageYears: currentAgeYears({
+        dateOfBirth: row.patient.dateOfBirth?.toISOString().slice(0, 10) ?? null,
+        estimatedAgeYears: row.patient.estimatedAgeYears,
+        estimatedAgeMonths: row.patient.estimatedAgeMonths,
+        ageRecordedAt: row.patient.ageRecordedAt?.toISOString() ?? null,
+      }),
+      departmentId: summary.departmentId,
+      departmentName: summary.departmentName,
+      practitionerId: summary.practitionerId,
+      practitionerName: summary.practitionerName,
+      chiefComplaint: summary.chiefComplaint,
+      startedAt: summary.startedAt,
+      waitedMinutes: Math.max(0, Math.floor((now - row.startedAt.getTime()) / 60_000)),
+    };
   }
 
   /**
