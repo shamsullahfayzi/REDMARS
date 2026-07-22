@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import {
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { isVisitOpen, type ConsultContext } from '@redmars/shared'
 import { ConsultActions } from '@/components/ConsultActions'
+import { VitalsTab } from '@/components/VitalsTab'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -86,7 +87,11 @@ export function ConsultPage() {
       <div className="space-y-4">
         <BackToQueue />
         <PatientBanner context={context} />
-        <ConsultTabs active={tab} onChange={setTab} />
+        <ConsultTabs
+          active={tab}
+          onChange={setTab}
+          panels={{ vitals: <VitalsTab visit={context.visit} /> }}
+        />
         <ConsultActions visit={context.visit} />
       </div>
     </ConsultSaveProvider>
@@ -230,7 +235,15 @@ function StartConsultation({ visit }: { visit: ConsultContext['visit'] }) {
  * Arrow direction follows the page. Under dir="rtl" the strip runs right to left, so
  * ArrowRight has to mean "previous" or the keys fight the layout.
  */
-function ConsultTabs({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) => void }) {
+function ConsultTabs({
+  active,
+  onChange,
+  panels,
+}: {
+  active: TabKey
+  onChange: (tab: TabKey) => void
+  panels: Partial<Record<TabKey, ReactNode>>
+}) {
   const { t, i18n } = useTranslation()
   const strip = useRef<HTMLDivElement>(null)
   const rtl = i18n.dir() === 'rtl'
@@ -315,6 +328,14 @@ function ConsultTabs({ active, onChange }: { active: TabKey; onChange: (tab: Tab
         ))}
       </div>
 
+      {/*
+        Every panel stays MOUNTED and is hidden, rather than rendered only when active.
+        Task 4.3 is what proved this matters: a tab that unmounts takes its saver out of
+        the registry with it (task 4.2), so a doctor who typed a blood pressure and then
+        moved to Diagnosis would press F2 and have the vitals silently skipped — and press
+        Esc and be told there was nothing unsaved. Work in progress does not stop existing
+        because it scrolled off screen.
+      */}
       {TABS.map(({ key }) => (
         <div
           key={key}
@@ -324,7 +345,7 @@ function ConsultTabs({ active, onChange }: { active: TabKey; onChange: (tab: Tab
           hidden={active !== key}
           tabIndex={0}
         >
-          {active === key && (
+          {panels[key] ?? (
             <Card className="p-8 text-center">
               <p className="text-muted-foreground">
                 {t('consult.notBuilt', { section: t(`consult.tabs.${key}`) })}

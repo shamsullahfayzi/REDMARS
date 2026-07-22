@@ -821,5 +821,25 @@
       "discard": "Discard and leave",
       "stay": "Stay here"
     }
+  },
+  "vitals": {
+    "fields": {
+      "systolicBp": "Systolic",
+      "diastolicBp": "Diastolic",
+      "bp": "BP",
+      "pulse": "Pulse",
+      "temperatureC": "Temp",
+      "respiratory": "Resp",
+      "spo2": "SpO₂",
+      "weightKg": "Weight",
+      "heightCm": "Height"
+    },
+    "record": "Record reading",
+    "saving": "Recording…",
+    "bmi": "BMI",
+    "optional": "All optional. Record what you measured and leave the rest blank.",
+    "none": "No vitals recorded for this visit.",
+    "loading": "Loading readings…",
+    "failed": "Could not record that reading. Nothing was saved."
   }
 }
