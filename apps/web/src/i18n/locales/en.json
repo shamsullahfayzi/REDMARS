@@ -957,6 +957,75 @@
       "failed": "Could not save that regimen."
     }
   },
+  "notes": {
+    "loading": "Opening the notes…",
+    "error": "Could not open the notes.",
+    "denied": "Only a doctor writes clinical notes.",
+    "closed": "This visit is closed. The notes are the record now.",
+    "save": "Save notes",
+    "saving": "Saving…",
+    "failed": "Could not save this note.",
+    "author": "Written by {{name}}",
+    "written": "Written",
+    "unsaved": "Unsaved",
+    "type": {
+      "psych_assessment": "Psychiatric assessment",
+      "mse": "Mental state examination",
+      "risk_assessment": "Risk assessment",
+      "progress": "Progress note"
+    },
+    "hint": {
+      "psych_assessment": "The first-visit workup. Nothing here is required — save what you have and come back to it.",
+      "mse": "Ten domains. The buttons add a common finding to the box; edit it afterwards.",
+      "risk_assessment": "A rating of moderate or high has to say what it is based on, and what is being done about it.",
+      "progress": "A follow-up. How they have been since the last visit."
+    },
+    "field": {
+      "historyOfPresentingIllness": "History of presenting illness",
+      "pastPsychiatricHistory": "Past psychiatric history",
+      "pastMedicalHistory": "Past medical history",
+      "medicationHistory": "Medication history",
+      "substanceUse": "Substance use",
+      "familyHistory": "Family history",
+      "personalHistory": "Personal history",
+      "premorbidPersonality": "Premorbid personality",
+      "physicalExamination": "Physical examination",
+      "formulation": "Formulation",
+      "plan": "Plan",
+      "appearanceAndBehaviour": "Appearance and behaviour",
+      "speech": "Speech",
+      "mood": "Mood",
+      "affect": "Affect",
+      "thoughtForm": "Thought form",
+      "thoughtContent": "Thought content",
+      "perception": "Perception",
+      "cognition": "Cognition",
+      "insight": "Insight",
+      "judgement": "Judgement",
+      "progress": "Progress since the last visit",
+      "mentalState": "Mental state"
+    },
+    "risk": {
+      "levelLabel": "Level",
+      "detail": "What was assessed",
+      "protectiveFactors": "Protective factors",
+      "plan": "Plan — what is being done about it",
+      "needDetail": "A moderate or high rating has to say what it is based on.",
+      "needPlan": "This patient is at moderate or high risk. Write what is being done about it.",
+      "level": {
+        "none": "None",
+        "low": "Low",
+        "moderate": "Moderate",
+        "high": "High"
+      },
+      "domain": {
+        "selfHarm": "Self-harm and suicide",
+        "harmToOthers": "Harm to others",
+        "selfNeglect": "Self-neglect",
+        "vulnerability": "Vulnerability to others"
+      }
+    }
+  },
   "codes": {
     "placeholder": "Type or choose…",
     "noMatch": "No match.",

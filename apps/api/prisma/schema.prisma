@@ -735,6 +735,13 @@ model ClinicalNote {
   visit        Visit         @relation(fields: [visitId], references: [id])
   practitioner Practitioner? @relation(fields: [practitionerId], references: [id])
 
+  /// Task 4.13 — one note of each type per visit. A psychiatric assessment is written
+  /// across a consultation and re-saved, so the write is a replace rather than an append,
+  /// and this is what makes two saves racing produce a constraint error instead of two
+  /// half-notes nobody can tell apart. The service still reads-then-writes rather than
+  /// calling upsert: the audit extension covers create/update/delete and NOT upsert, and
+  /// an unaudited psychiatric note is the one thing this table must never contain.
+  @@unique([visitId, noteType])
   @@index([visitId])
   @@map("clinical_note")
 }

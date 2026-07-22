@@ -957,6 +957,75 @@
       "failed": "دا چمتو نسخه خوندي نه شوه."
     }
   },
+  "notes": {
+    "loading": "یادښتونه پرانیستل کیږي…",
+    "error": "یادښتونه ونه پرانیستل شول.",
+    "denied": "یوازې ډاکټر کلینیکي یادښتونه لیکي.",
+    "closed": "دا کتنه بنده ده. یادښتونه اوس سند دي.",
+    "save": "یادښتونه خوندي کړئ",
+    "saving": "خوندي کیږي…",
+    "failed": "دا یادښت خوندي نشو.",
+    "author": "لیکونکي {{name}}",
+    "written": "لیکل شوی",
+    "unsaved": "خوندي نشوی",
+    "type": {
+      "psych_assessment": "رواني ارزونه",
+      "mse": "د رواني حالت معاینه",
+      "risk_assessment": "د خطر ارزونه",
+      "progress": "د پرمختګ یادښت"
+    },
+    "hint": {
+      "psych_assessment": "د لومړۍ کتنې ارزونه. هېڅ ساحه اړینه نه ده — څه چې لرئ خوندي کړئ او بیا یې بشپړ کړئ.",
+      "mse": "لس برخې. تڼۍ یوه عامه موندنه بکس ته ورزیاتوي؛ وروسته یې سم کړئ.",
+      "risk_assessment": "منځنۍ یا لوړه درجه باید ووایي پر څه بنسټ ده او څه اقدام ورسره کیږي.",
+      "progress": "د تعقیبي کتنې یادښت. له تېرې کتنې راهیسې څنګه و."
+    },
+    "field": {
+      "historyOfPresentingIllness": "د اوسنۍ ناروغۍ تاریخچه",
+      "pastPsychiatricHistory": "د رواني ناروغۍ پخوانۍ سابقه",
+      "pastMedicalHistory": "پخوانۍ طبي سابقه",
+      "medicationHistory": "د درملو سابقه",
+      "substanceUse": "د موادو کارول",
+      "familyHistory": "کورنۍ سابقه",
+      "personalHistory": "شخصي تاریخچه",
+      "premorbidPersonality": "له ناروغۍ مخکې شخصیت",
+      "physicalExamination": "فزیکي معاینه",
+      "formulation": "جمع‌بندي",
+      "plan": "پلان",
+      "appearanceAndBehaviour": "بڼه او چلند",
+      "speech": "خبرې",
+      "mood": "خُلق",
+      "affect": "عاطفه",
+      "thoughtForm": "د فکر بڼه",
+      "thoughtContent": "د فکر محتوا",
+      "perception": "ادراک",
+      "cognition": "پېژندنه",
+      "insight": "بصیرت",
+      "judgement": "قضاوت",
+      "progress": "له تېرې کتنې راهیسې پرمختګ",
+      "mentalState": "رواني حالت"
+    },
+    "risk": {
+      "levelLabel": "درجه",
+      "detail": "څه چې ارزول شوي",
+      "protectiveFactors": "ساتونکي عوامل",
+      "plan": "پلان — څه اقدام کېږي",
+      "needDetail": "منځنۍ یا لوړه درجه باید ووایي پر څه بنسټ ده.",
+      "needPlan": "دا ناروغ په منځني یا لوړ خطر کې دی. ولیکئ چې څه اقدام کېږي.",
+      "level": {
+        "none": "هیڅ",
+        "low": "ټیټ",
+        "moderate": "منځنی",
+        "high": "لوړ"
+      },
+      "domain": {
+        "selfHarm": "ځان‌زیانونه او ځان وژنه",
+        "harmToOthers": "نورو ته زیان",
+        "selfNeglect": "له ځانه بې پروايي",
+        "vulnerability": "د نورو له خوا زیانمنېدنه"
+      }
+    }
+  },
   "codes": {
     "placeholder": "ولیکئ یا وټاکئ…",
     "noMatch": "سمون نشته.",

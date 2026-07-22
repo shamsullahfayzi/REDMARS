@@ -957,6 +957,75 @@
       "failed": "این نسخهٔ آماده ذخیره نشد."
     }
   },
+  "notes": {
+    "loading": "باز کردن یادداشت‌ها…",
+    "error": "یادداشت‌ها باز نشد.",
+    "denied": "تنها داکتر یادداشت کلینیکی می‌نویسد.",
+    "closed": "این ملاقات بسته است. یادداشت‌ها حالا سند اند.",
+    "save": "ذخیرهٔ یادداشت‌ها",
+    "saving": "در حال ذخیره…",
+    "failed": "این یادداشت ذخیره نشد.",
+    "author": "نوشتهٔ {{name}}",
+    "written": "نوشته شده",
+    "unsaved": "ذخیره‌نشده",
+    "type": {
+      "psych_assessment": "ارزیابی روانی",
+      "mse": "معاینهٔ وضعیت روانی",
+      "risk_assessment": "ارزیابی خطر",
+      "progress": "یادداشت پیشرفت"
+    },
+    "hint": {
+      "psych_assessment": "ارزیابی ملاقات اول. هیچ ساحه الزامی نیست — آنچه دارید ذخیره کنید و بعداً تکمیل کنید.",
+      "mse": "ده ساحه. تکمه‌ها یک یافتهٔ معمول را به جعبه اضافه می‌کنند؛ بعداً آن را ویرایش کنید.",
+      "risk_assessment": "درجهٔ متوسط یا بلند باید بگوید بر چه اساسی است و چه اقدامی صورت می‌گیرد.",
+      "progress": "ملاقات پیگیری. از ملاقات قبلی تا حال چطور بوده."
+    },
+    "field": {
+      "historyOfPresentingIllness": "تاریخچهٔ بیماری فعلی",
+      "pastPsychiatricHistory": "سابقهٔ روانی",
+      "pastMedicalHistory": "سابقهٔ طبی",
+      "medicationHistory": "سابقهٔ دوایی",
+      "substanceUse": "استعمال مواد",
+      "familyHistory": "سابقهٔ فامیلی",
+      "personalHistory": "تاریخچهٔ شخصی",
+      "premorbidPersonality": "شخصیت پیش از بیماری",
+      "physicalExamination": "معاینهٔ فزیکی",
+      "formulation": "جمع‌بندی",
+      "plan": "پلان",
+      "appearanceAndBehaviour": "ظاهر و رفتار",
+      "speech": "تکلم",
+      "mood": "خلق",
+      "affect": "عاطفه",
+      "thoughtForm": "شکل تفکر",
+      "thoughtContent": "محتوای تفکر",
+      "perception": "ادراک",
+      "cognition": "شناخت",
+      "insight": "بصیرت",
+      "judgement": "قضاوت",
+      "progress": "پیشرفت از ملاقات قبلی",
+      "mentalState": "وضعیت روانی"
+    },
+    "risk": {
+      "levelLabel": "درجه",
+      "detail": "آنچه ارزیابی شد",
+      "protectiveFactors": "عوامل محافظتی",
+      "plan": "پلان — چه اقدامی صورت می‌گیرد",
+      "needDetail": "درجهٔ متوسط یا بلند باید بگوید بر چه اساسی است.",
+      "needPlan": "این مریض در خطر متوسط یا بلند است. بنویسید چه اقدامی صورت می‌گیرد.",
+      "level": {
+        "none": "هیچ",
+        "low": "پایین",
+        "moderate": "متوسط",
+        "high": "بلند"
+      },
+      "domain": {
+        "selfHarm": "خودآزاری و خودکشی",
+        "harmToOthers": "آسیب به دیگران",
+        "selfNeglect": "بی‌توجهی به خود",
+        "vulnerability": "آسیب‌پذیری از دیگران"
+      }
+    }
+  },
   "codes": {
     "placeholder": "تایپ یا انتخاب کنید…",
     "noMatch": "مطابقتی نیست.",
