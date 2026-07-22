@@ -46,7 +46,7 @@
     "queue": "Queue",
     "patients": "Patients",
     "patientNew": "Register patient",
-    "consultations": "Consultations",
+    "consultations": "My consultations",
     "icd": "Diagnosis codes",
     "interactions": "Interactions",
     "lab": "Lab",
@@ -746,6 +746,19 @@
       "saving": "Cancelling…",
       "failed": "Could not cancel that visit."
     }
+  },
+  "consultations": {
+    "description": "Every patient assigned to you on this day, finished ones included.",
+    "notMine": "Your account is not linked to a practitioner, so this is the whole hospital's day rather than yours.",
+    "date": "Day",
+    "previous": "Previous day",
+    "next": "Next day",
+    "today": "Today",
+    "empty": "No visits assigned to you on this day.",
+    "error": "Could not load your consultations.",
+    "open": "Open",
+    "review": "Review",
+    "leftOpen": "{{count}} consultations from this day were never closed."
   },
   "appointments": {
     "subtitle": "Who is expected, and who did not come.",

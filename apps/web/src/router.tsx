@@ -7,6 +7,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { AppointmentsPage } from '@/pages/AppointmentsPage'
 import { ConsultPage } from '@/pages/ConsultPage'
+import { MyConsultationsPage } from '@/pages/MyConsultationsPage'
 import { CreatePatientPage } from '@/pages/CreatePatientPage'
 import { DepartmentPage } from '@/pages/DepartmentsPage'
 import { DrugsPage } from '@/pages/DrugsPage'
@@ -49,7 +50,10 @@ export const router = createBrowserRouter([
           { path: 'patients/new', element: <CreatePatientPage /> },
           { path: 'patients/:id', element: <PatientDetailPage /> },
           { path: 'patients/:id/visit', element: <StartVisitPage /> },
-          { path: 'consultations', element: <PlaceholderPage sectionKey="consultations" /> },
+          // The doctor's own day. A placeholder since task 1.6 — the sidebar has pointed
+          // a doctor at a dead page the whole time, while their real entry point was the
+          // queue. It is NOT a second queue: see the page for what the two questions are.
+          { path: 'consultations', element: <MyConsultationsPage /> },
           // Keyed by the VISIT, not the patient (task 4.1): a consultation is one
           // occasion, and the same patient has many. /consult/:patientId would have no
           // answer to "which visit am I writing this prescription against".
