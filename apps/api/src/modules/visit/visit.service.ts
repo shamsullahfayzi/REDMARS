@@ -1,11 +1,14 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type {
+  CancelVisitRequest,
+  CancelVisitResponse,
   ChangeVisitStatusRequest,
   CreateVisitRequest,
   QueueEntry,
@@ -285,6 +288,152 @@ export class VisitService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Task 3.11 — cancel a visit and give the money back, as one act.
+   *
+   * Rule R5, enforced in three parts because it is written in three parts:
+   *
+   *  1. SAME-DAY. A receptionist may only cancel a visit that started today, in the
+   *     facility's own zone. Outside that, admin only — which is what an unconditional
+   *     grant means in the matrix.
+   *  2. BEFORE THE NEXT STEP. The next step after arriving is being seen, so a
+   *     receptionist may not cancel a visit the doctor has already called in. An admin
+   *     may, because abandoning a started consultation is a real event — a patient who
+   *     collapses and is sent elsewhere. Nobody may cancel a COMPLETED visit at all.
+   *  3. A REASON, always. Required by the contract, so it cannot be forgotten here.
+   *
+   * The refund is not an edit. The original payment is marked reversed AND a negative
+   * payment is appended, because the schema says append-only and reverse, never delete:
+   * the till's history has to show money going out as its own event, with its own time
+   * and its own author. Summing every row still gives the true balance.
+   */
+  async cancel(
+    facilityId: string,
+    userId: string,
+    permissions: ReadonlyMap<string, string | null>,
+    id: string,
+    input: CancelVisitRequest,
+  ): Promise<CancelVisitResponse> {
+    const visit = await this.prisma.db.visit.findFirst({
+      where: { id, facilityId },
+      select: { id: true, status: true, startedAt: true },
+    });
+    if (!visit) throw new NotFoundException('Visit not found');
+
+    if (visit.status === 'cancelled') {
+      throw new BadRequestException('That visit is already cancelled.');
+    }
+    if (!VISIT_STATUS_TRANSITIONS[visit.status].includes('cancelled')) {
+      throw new BadRequestException({
+        message: `A ${visit.status} visit cannot be cancelled.`,
+        code: 'illegal_transition',
+        from: visit.status,
+      });
+    }
+
+    // An unconditional grant is the admin's; 'R5' is everyone else's, and it is the
+    // conditions the guard said it could not check that get checked here.
+    const timeBoxed = permissions.get('visit.cancel') === 'R5';
+    if (timeBoxed) {
+      const { start, end } = facilityDayBounds();
+      const startedToday =
+        visit.startedAt.getTime() >= start.getTime() && visit.startedAt.getTime() < end.getTime();
+      if (!startedToday) {
+        throw new ForbiddenException({
+          message: 'Only today’s visits can be cancelled here. Ask an administrator.',
+          code: 'outside_r5_window',
+        });
+      }
+      if (visit.status !== 'arrived' && visit.status !== 'planned') {
+        throw new ForbiddenException({
+          message: 'The doctor has already started this visit. Ask an administrator.',
+          code: 'next_step_occurred',
+        });
+      }
+    }
+
+    // Everything the invoice needs, read before the transaction so the money question is
+    // settled before anything is written.
+    const invoices = await this.prisma.db.invoice.findMany({
+      where: { visitId: id, status: { not: 'cancelled' } },
+      select: {
+        id: true,
+        invoiceNo: true,
+        currency: true,
+        payments: {
+          where: { isReversed: false },
+          select: { id: true, amount: true, method: true },
+        },
+      },
+    });
+
+    const refundable = invoices.flatMap((invoice) => invoice.payments);
+    const total = refundable.reduce(
+      (sum, payment) => sum.add(payment.amount),
+      new Prisma.Decimal(0),
+    );
+
+    // Money only leaves the till if the caller may make it leave. Checked here rather
+    // than on the route, because a visit that was never paid for needs no such grant.
+    if (total.greaterThan(0) && !permissions.has('payment.refund')) {
+      throw new ForbiddenException('Missing permission: payment.refund');
+    }
+
+    return this.prisma.db.$transaction(async (tx) => {
+      const updated = await tx.visit.update({
+        // The status in the WHERE is the same optimistic concurrency task 3.9 uses: a
+        // colleague may have moved this visit since it was read.
+        where: { id, facilityId, status: visit.status },
+        data: {
+          status: 'cancelled',
+          endedAt: new Date(),
+          // The reason lives on the history row, which is where "logs why" belongs — it
+          // is signed and timestamped, and it cannot be overwritten by the next move.
+          statusHistory: {
+            create: { status: 'cancelled', changedBy: userId, note: input.reason },
+          },
+        },
+        select: visitSummarySelect,
+      });
+
+      let refund: CancelVisitResponse['refund'] = null;
+      for (const invoice of invoices) {
+        for (const payment of invoice.payments) {
+          // Marked, not deleted: the original still says money came in, which it did.
+          await tx.payment.update({ where: { id: payment.id }, data: { isReversed: true } });
+          // And the money going back out is its own row, with its own author and time.
+          await tx.payment.create({
+            data: {
+              invoiceId: invoice.id,
+              amount: payment.amount.negated(),
+              method: payment.method,
+              receivedBy: userId,
+              reference: input.reason.slice(0, 60),
+            },
+          });
+        }
+
+        await tx.invoice.update({
+          where: { id: invoice.id },
+          data: { status: 'cancelled', paidAmount: 0 },
+        });
+
+        if (invoice.payments.length > 0 && refund === null) {
+          refund = {
+            invoiceId: invoice.id,
+            invoiceNo: invoice.invoiceNo,
+            // Positive: this is what the receptionist counts out of the drawer, not a
+            // signed ledger entry.
+            refunded: total.toFixed(2),
+            currency: invoice.currency,
+          };
+        }
+      }
+
+      return { visit: this.toSummary(updated), refund };
+    });
   }
 
   /**

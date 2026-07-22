@@ -1,11 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
 import {
+  cancelVisitResponseSchema,
   visitHistoryResponseSchema,
   visitSummarySchema,
+  type CancelVisitRequest,
   type ChangeVisitStatusRequest,
 } from '@redmars/shared'
 import { useQuery } from '@tanstack/react-query'
-import { apiGet, apiPatch } from '@/lib/api'
+import { apiGet, apiPatch, apiPost } from '@/lib/api'
 import { queryClient } from '@/lib/queryClient'
 
 /**
@@ -23,6 +25,23 @@ export function useChangeVisitStatus(visitId: string) {
       apiPatch(`/visits/${visitId}/status`, input, visitSummarySchema),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['visits'] })
+    },
+  })
+}
+
+/**
+ * Task 3.11 — cancel a visit and give back what was paid for it.
+ *
+ * Invalidates the invoice side as well as the visit: the money moved, and any screen
+ * showing a balance is now wrong.
+ */
+export function useCancelVisit(visitId: string) {
+  return useMutation({
+    mutationFn: (input: CancelVisitRequest) =>
+      apiPost(`/visits/${visitId}/cancel`, input, cancelVisitResponseSchema),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['visits'] })
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
     },
   })
 }

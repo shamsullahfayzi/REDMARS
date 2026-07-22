@@ -14,11 +14,13 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import {
+  cancelVisitRequestSchema,
   changeVisitStatusRequestSchema,
   createVisitRequestSchema,
   queueQuerySchema,
 } from '@redmars/shared';
 import type {
+  CancelVisitResponse,
   QueueResponse,
   VisitHistoryResponse,
   VisitOptionsResponse,
@@ -124,6 +126,37 @@ export class VisitController {
 
     const auth = this.auth(req);
     return this.visits.changeStatus(auth.facilityId, auth.userId, id, parsed.data);
+  }
+
+  /**
+   * Task 3.11 — cancel a visit and refund what was paid for it.
+   *
+   * Gated on `visit.cancel`, which the matrix grants to admin outright and to the
+   * receptionist under rule R5. The guard cannot evaluate R5 — the same-day window and
+   * "before the next step" both need the visit itself, which the guard has never seen —
+   * so the condition travels on request.auth.permissions and the service applies it.
+   *
+   * `payment.refund` is demanded too, but only when there is money to give back: a visit
+   * that was never paid for needs no refund authority to cancel.
+   */
+  @Post(':id/cancel')
+  @RequirePermission('visit.cancel')
+  @HttpCode(200)
+  cancel(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ): Promise<CancelVisitResponse> {
+    const parsed = cancelVisitRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid cancellation',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const auth = this.auth(req);
+    return this.visits.cancel(auth.facilityId, auth.userId, auth.permissions, id, parsed.data);
   }
 
   /** The medico-legal trail, plus the wait and consultation durations it makes answerable. */

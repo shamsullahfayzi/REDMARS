@@ -736,6 +736,15 @@
       "on_hold": "Hold",
       "completed": "Complete",
       "failed": "That did not go through — the visit may have moved."
+    },
+    "cancel": {
+      "start": "Cancel visit",
+      "reason": "Why is this visit being cancelled?",
+      "reasonPlaceholder": "Patient left before being seen",
+      "confirm": "Cancel and refund",
+      "keep": "Keep the visit",
+      "saving": "Cancelling…",
+      "failed": "Could not cancel that visit."
     }
   },
   "appointments": {

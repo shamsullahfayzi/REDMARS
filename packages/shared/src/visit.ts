@@ -199,10 +199,14 @@ export type VisitStatusChange = (typeof VISIT_STATUS_CHANGES)[number]
  *    it turns out there is nothing more to do.
  */
 export const VISIT_STATUS_TRANSITIONS: Readonly<Record<VisitStatus, readonly VisitStatus[]>> = {
-  planned: ['arrived'],
-  arrived: ['in_progress', 'on_hold'],
-  in_progress: ['on_hold', 'completed'],
-  on_hold: ['in_progress', 'completed'],
+  planned: ['arrived', 'cancelled'],
+  arrived: ['in_progress', 'on_hold', 'cancelled'],
+  in_progress: ['on_hold', 'completed', 'cancelled'],
+  on_hold: ['in_progress', 'completed', 'cancelled'],
+  // A completed visit is never cancelled. The patient was seen; saying otherwise
+  // afterwards is a lie about a record that already has clinical work attached. The
+  // correction for a visit that should never have existed is `entered_in_error`, which
+  // is visit.void and admin-only.
   completed: [],
   cancelled: [],
   entered_in_error: [],
@@ -221,6 +225,39 @@ export const changeVisitStatusRequestSchema = z.object({
   note: z.string().trim().max(300).nullish(),
 })
 export type ChangeVisitStatusRequest = z.infer<typeof changeVisitStatusRequestSchema>
+
+// ---------------------------------------------------------------------------------
+// Task 3.11 — cancelling a visit, and giving the money back
+// ---------------------------------------------------------------------------------
+
+/**
+ * Rule R5, as written: "allowed same-day, before the next step has occurred. Outside the
+ * window → admin only. All logged with a mandatory reason."
+ *
+ * So the reason is required by the CONTRACT, not by a handler that might forget. A
+ * cancellation with no reason is a visit that vanished and a refund nobody can account
+ * for, which is the shape of every till that quietly loses money.
+ */
+export const cancelVisitRequestSchema = z.object({
+  reason: z.string().trim().min(3, 'Say why this visit is being cancelled.').max(300),
+})
+export type CancelVisitRequest = z.infer<typeof cancelVisitRequestSchema>
+
+/** What was given back, if anything. Null when the visit was never paid for. */
+export const refundSummarySchema = z.object({
+  invoiceId: z.uuid(),
+  invoiceNo: z.string(),
+  /** A positive amount as a decimal string — what left the till, not a signed ledger row. */
+  refunded: z.string(),
+  currency: z.string(),
+})
+export type RefundSummary = z.infer<typeof refundSummarySchema>
+
+export const cancelVisitResponseSchema = z.object({
+  visit: visitSummarySchema,
+  refund: refundSummarySchema.nullable(),
+})
+export type CancelVisitResponse = z.infer<typeof cancelVisitResponseSchema>
 
 /** One line of the medico-legal trail: who moved it where, and when. */
 export const visitStatusHistoryEntrySchema = z.object({

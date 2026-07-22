@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { Clock, Pause, Play, RefreshCw, Stethoscope, WifiOff } from 'lucide-react'
+import { Ban, Clock, Pause, Play, RefreshCw, Stethoscope, WifiOff } from 'lucide-react'
 import { allowedStatusChanges, type QueueEntry, type VisitDepartmentOption } from '@redmars/shared'
+import { useAuth } from '@/auth/authContext'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -10,8 +11,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { QUEUE_POLL_MS, useQueue, waitTone } from '@/hooks/useQueue'
-import { useChangeVisitStatus } from '@/hooks/useVisitStatus'
+import { useCancelVisit, useChangeVisitStatus } from '@/hooks/useVisitStatus'
 import { useVisitOptions } from '@/hooks/useVisits'
+import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 /**
@@ -390,6 +392,8 @@ function QueueRow({
 
         <StatusActions entry={entry} />
 
+        <CancelVisitAction entry={entry} />
+
         <Link
           to={`/patients/${entry.patientId}`}
           className="text-sm text-primary hover:underline"
@@ -399,6 +403,73 @@ function QueueRow({
         </Link>
       </Card>
     </li>
+  )
+}
+
+/**
+ * Cancelling a visit, and refunding it (task 3.11).
+ *
+ * Two steps on purpose. Rule R5 makes the reason mandatory, so there is no one-click
+ * cancel to reach for — the receptionist has to say what happened before the money moves,
+ * and the button that finally does it says how much is going back.
+ *
+ * Offered only to the desk and to administrators, matching `visit.cancel`. The server
+ * applies R5's window and its "before the next step" clause on top of that, so a refusal
+ * here is explained rather than merely denied.
+ */
+function CancelVisitAction({ entry }: { entry: QueueEntry }) {
+  const { t } = useTranslation()
+  const { roles } = useAuth()
+  const cancel = useCancelVisit(entry.id)
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('')
+
+  const mayCancel = roles.includes('admin') || roles.includes('receptionist')
+  if (!mayCancel || entry.status === 'completed' || entry.status === 'cancelled') return null
+
+  if (!open) {
+    return (
+      <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(true)}>
+        <Ban className="size-4" aria-hidden />
+        {t('queue.cancel.start')}
+      </Button>
+    )
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+      <Label htmlFor={`cancel-${entry.id}`}>{t('queue.cancel.reason')}</Label>
+      <Input
+        id={`cancel-${entry.id}`}
+        value={reason}
+        autoFocus
+        placeholder={t('queue.cancel.reasonPlaceholder')}
+        onChange={(e) => setReason(e.target.value)}
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="destructive"
+          disabled={cancel.isPending || reason.trim().length < 3}
+          onClick={() => cancel.mutate({ reason: reason.trim() })}
+        >
+          {cancel.isPending ? t('queue.cancel.saving') : t('queue.cancel.confirm')}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
+          {t('queue.cancel.keep')}
+        </Button>
+      </div>
+      {/* The server's own words: R5 refusals say WHY, and "ask an administrator" is
+          actionable in a way that a bare "forbidden" is not. */}
+      {cancel.isError && (
+        <p className="text-xs text-destructive">
+          {cancel.error instanceof ApiError && typeof cancel.error.body === 'object'
+            ? ((cancel.error.body as { message?: string }).message ?? t('queue.cancel.failed'))
+            : t('queue.cancel.failed')}
+        </p>
+      )}
+    </div>
   )
 }
 
