@@ -33,7 +33,16 @@ import { DrugService } from './drug.service';
 export class DrugController {
   constructor(private readonly drugs: DrugService) {}
 
-  @RequirePermission('drug.manage')
+  /**
+   * `drug.read`, not `drug.manage` (task 4.7).
+   *
+   * Editing the formulary stays on `drug.manage` — every other route below. READING it was
+   * gated there too, which left the doctor unable to look up the drug they are about to
+   * prescribe: the one thing the catalogue exists for. The nurse holds it because R7 says
+   * "vitals and allergies, plus the drug list"; the receptionist does not, because she
+   * bills from the service catalogue.
+   */
+  @RequirePermission('drug.read')
   @Get()
   list(@Req() req: Request, @Query('q') q?: string): Promise<DrugListResponse> {
     return this.drugs.list(this.auth(req).facilityId, q);

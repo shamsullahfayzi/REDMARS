@@ -901,5 +901,21 @@
     },
     "banner": "حساسیتونه",
     "retractedCount": "بېرته اخیستل شوي"
+  },
+  "prescription": {
+    "addDrug": "دارو زیات کړئ",
+    "addDrugPlaceholder": "درې توري ولیکئ، بیا Enter",
+    "dose": "اندازه",
+    "frequency": "شمېر",
+    "duration": "موده",
+    "route": "لاره",
+    "instructions": "لارښوونې",
+    "advice": "مشوره",
+    "advicePlaceholder": "له درملو پرته څه باید وکړي.",
+    "save": "نسخه خوندي کړئ",
+    "saving": "خوندي کېږي…",
+    "removeRow": "دا دارو لرې کړئ",
+    "none": "لا په دې نسخه کې هیڅ دارو نشته.",
+    "failed": "د نسخې خوندي کول ونشول. هیڅ بدلون ونشو."
   }
 }

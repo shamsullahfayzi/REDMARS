@@ -1,0 +1,362 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Plus, Trash2 } from 'lucide-react'
+import {
+  isVisitOpen,
+  savePrescriptionRequestSchema,
+  type DrugSummary,
+  type VisitSummary,
+} from '@redmars/shared'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { useConsultSaver } from '@/hooks/useConsultSave'
+import { useFormulary, usePrescription, useSavePrescription } from '@/hooks/usePrescription'
+
+/**
+ * Task 4.7 — the prescription table. "4 drugs prescribed in under 30 seconds."
+ *
+ * Everything here is arranged around that number.
+ *
+ * THE AUTOCOMPLETE AUTOFILLS. Picking duloxetine fills route, frequency and duration from
+ * the formulary's defaults (task 2.6) in the same keystroke — so the common case is type
+ * three letters, press Enter, and the row is already complete. The defaults are STARTERS:
+ * every one of them is an editable box, because a default the prescriber cannot override is
+ * worse than no default at all.
+ *
+ * THE WHOLE SHEET SAVES AT ONCE, so adding a row costs nothing until F2. The server diffs
+ * what it is sent, which is why a row keeps its id across saves and why saving three times
+ * does not leave three prescriptions.
+ *
+ * The formulary is fetched once and filtered in the browser. A request per keystroke is how
+ * you lose the thirty seconds.
+ */
+
+interface Row {
+  /** Server id when the row is already stored; undefined for a new one. */
+  id?: string
+  drugId: string
+  drugLabel: string
+  dose: string
+  frequency: string
+  duration: string
+  route: string
+  instructions: string
+}
+
+function drugLabel(drug: DrugSummary): string {
+  return [drug.brandName ?? drug.genericName, drug.strength].filter(Boolean).join(' ')
+}
+
+export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
+  const { t } = useTranslation()
+  const listQuery = usePrescription(visit.id)
+  const formulary = useFormulary()
+  const save = useSavePrescription(visit.id)
+
+  const [rows, setRows] = useState<Row[]>([])
+  const [advice, setAdvice] = useState('')
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const open = isVisitOpen(visit.status)
+  const stored = listQuery.data?.prescription ?? null
+
+  // Load the saved sheet once. Not on every refetch — that would overwrite a half-typed
+  // row while the doctor is looking at it.
+  useEffect(() => {
+    if (!listQuery.isSuccess || loadedFor === visit.id) return
+    setRows(
+      (stored?.items ?? []).map((item) => ({
+        id: item.id,
+        drugId: item.drugId,
+        drugLabel: item.drugNameAtTime,
+        dose: item.dose ?? '',
+        frequency: item.frequency,
+        duration: item.duration,
+        route: item.route,
+        instructions: item.instructions ?? '',
+      })),
+    )
+    setAdvice(stored?.advice ?? '')
+    setLoadedFor(visit.id)
+  }, [listQuery.isSuccess, stored, loadedFor, visit.id])
+
+  const savedSignature = useMemo(
+    () =>
+      JSON.stringify({
+        items: (stored?.items ?? []).map((item) => ({
+          id: item.id,
+          drugId: item.drugId,
+          dose: item.dose ?? '',
+          frequency: item.frequency,
+          duration: item.duration,
+          route: item.route,
+          instructions: item.instructions ?? '',
+        })),
+        advice: stored?.advice ?? '',
+      }),
+    [stored],
+  )
+
+  const currentSignature = useMemo(
+    () =>
+      JSON.stringify({
+        items: rows.map(({ drugLabel: _label, ...rest }) => rest),
+        advice,
+      }),
+    [rows, advice],
+  )
+
+  const isDirty = loadedFor === visit.id && currentSignature !== savedSignature
+
+  const doSave = useCallback(async () => {
+    const parsed = savePrescriptionRequestSchema.safeParse({
+      items: rows.map((row) => ({
+        id: row.id,
+        drugId: row.drugId,
+        dose: row.dose,
+        frequency: row.frequency,
+        duration: row.duration,
+        route: row.route,
+        instructions: row.instructions,
+      })),
+      advice,
+    })
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? t('prescription.failed'))
+      // Thrown, so F9 cannot finish a visit over an incomplete drug order.
+      throw new Error('invalid prescription')
+    }
+    setError(null)
+    const result = await save.mutateAsync(parsed.data)
+    // Re-seed from the server so new rows pick up their ids and the next save is a diff
+    // rather than a second insert.
+    setRows(
+      (result.prescription?.items ?? []).map((item) => ({
+        id: item.id,
+        drugId: item.drugId,
+        drugLabel: item.drugNameAtTime,
+        dose: item.dose ?? '',
+        frequency: item.frequency,
+        duration: item.duration,
+        route: item.route,
+        instructions: item.instructions ?? '',
+      })),
+    )
+  }, [rows, advice, save, t])
+
+  useConsultSaver('prescription', { isDirty, save: doSave })
+
+  function addDrug(drug: DrugSummary) {
+    setRows((current) => [
+      ...current,
+      {
+        drugId: drug.id,
+        drugLabel: drugLabel(drug),
+        dose: '',
+        // THE AUTOFILL. Starters from the formulary, every one of them editable below.
+        frequency: drug.defaultFreq ?? '',
+        duration: drug.defaultDuration ?? '',
+        route: drug.defaultRoute ?? '',
+        instructions: '',
+      },
+    ])
+  }
+
+  function setRow(index: number, patch: Partial<Row>) {
+    setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)))
+  }
+
+  return (
+    <div className="space-y-4">
+      {open && <DrugPicker drugs={formulary.data?.drugs ?? []} onPick={addDrug} />}
+
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t('prescription.none')}</p>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((row, index) => (
+            <li key={row.id ?? `new-${index}`}>
+              <Card className="space-y-3 p-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-foreground">{row.drugLabel}</span>
+                  {open && (
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      className="ms-auto"
+                      aria-label={t('prescription.removeRow')}
+                      onClick={() => setRows((current) => current.filter((_, i) => i !== index))}
+                    >
+                      <Trash2 className="size-4 text-destructive" aria-hidden />
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                  <Field
+                    label={t('prescription.dose')}
+                    value={row.dose}
+                    disabled={!open}
+                    onChange={(dose) => setRow(index, { dose })}
+                  />
+                  <Field
+                    label={t('prescription.frequency')}
+                    value={row.frequency}
+                    disabled={!open}
+                    onChange={(frequency) => setRow(index, { frequency })}
+                  />
+                  <Field
+                    label={t('prescription.duration')}
+                    value={row.duration}
+                    disabled={!open}
+                    onChange={(duration) => setRow(index, { duration })}
+                  />
+                  <Field
+                    label={t('prescription.route')}
+                    value={row.route}
+                    disabled={!open}
+                    onChange={(route) => setRow(index, { route })}
+                  />
+                  <Field
+                    label={t('prescription.instructions')}
+                    value={row.instructions}
+                    disabled={!open}
+                    onChange={(instructions) => setRow(index, { instructions })}
+                  />
+                </div>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="space-y-1.5">
+        <Label htmlFor="prescriptionAdvice">{t('prescription.advice')}</Label>
+        <Textarea
+          id="prescriptionAdvice"
+          rows={2}
+          value={advice}
+          disabled={!open}
+          placeholder={t('prescription.advicePlaceholder')}
+          onChange={(e) => setAdvice(e.target.value)}
+        />
+      </div>
+
+      {open && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            disabled={!isDirty || save.isPending}
+            onClick={() => void doSave().catch(() => undefined)}
+          >
+            {save.isPending ? t('prescription.saving') : t('prescription.save')}
+          </Button>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          {save.isError && <p className="text-sm text-destructive">{t('prescription.failed')}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Type three letters, press Enter, the row appears complete.
+ *
+ * Filtered in the browser over the whole formulary — a request per keystroke is how the
+ * thirty seconds get spent. Enter picks the first match, so a doctor who knows the drug
+ * never has to look at the list.
+ */
+function DrugPicker({ drugs, onPick }: { drugs: DrugSummary[]; onPick: (drug: DrugSummary) => void }) {
+  const { t } = useTranslation()
+  const [query, setQuery] = useState('')
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (q.length < 2) return []
+    return drugs
+      // A withdrawn drug is not offered — the server refuses it anyway, and a suggestion
+      // that 400s is worse than no suggestion.
+      .filter((drug) => drug.isActive)
+      .filter(
+        (drug) =>
+          drug.genericName.toLowerCase().includes(q) ||
+          (drug.brandName?.toLowerCase().includes(q) ?? false),
+      )
+      .slice(0, 8)
+  }, [drugs, query])
+
+  function pick(drug: DrugSummary) {
+    onPick(drug)
+    setQuery('')
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="drugSearch">{t('prescription.addDrug')}</Label>
+      <Input
+        id="drugSearch"
+        value={query}
+        placeholder={t('prescription.addDrugPlaceholder')}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' || matches.length === 0) return
+          // Enter would submit an enclosing form; here it means "the first one".
+          e.preventDefault()
+          pick(matches[0])
+        }}
+      />
+      {matches.length > 0 && (
+        <ul className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-border p-1">
+          {matches.map((drug) => (
+            <li key={drug.id}>
+              <button
+                type="button"
+                onClick={() => pick(drug)}
+                className="flex w-full items-baseline gap-3 rounded px-2 py-1.5 text-start text-sm hover:bg-muted"
+              >
+                <Plus className="size-3.5 shrink-0 text-primary" aria-hidden />
+                <span className="font-medium text-foreground">{drugLabel(drug)}</span>
+                {/* What will be filled in, shown before it is — so the doctor knows what
+                    they are accepting rather than discovering it in five boxes. */}
+                <span className="text-xs text-muted-foreground" dir="ltr">
+                  {[drug.defaultRoute, drug.defaultFreq, drug.defaultDuration]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function Field({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string
+  value: string
+  disabled: boolean
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="space-y-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <Input
+        value={value}
+        disabled={disabled}
+        aria-label={label}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  )
+}

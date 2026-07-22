@@ -901,5 +901,21 @@
     },
     "banner": "حساسیت‌ها",
     "retractedCount": "پس‌گرفته‌شده"
+  },
+  "prescription": {
+    "addDrug": "افزودن دوا",
+    "addDrugPlaceholder": "سه حرف تایپ کنید، بعد Enter",
+    "dose": "خوراک",
+    "frequency": "تعداد",
+    "duration": "مدت",
+    "route": "راه",
+    "instructions": "هدایات",
+    "advice": "مشوره",
+    "advicePlaceholder": "غیر از دواها چه باید بکند.",
+    "save": "ذخیرهٔ نسخه",
+    "saving": "در حال ذخیره…",
+    "removeRow": "حذف این دوا",
+    "none": "هنوز دوایی در این نسخه نیست.",
+    "failed": "ذخیرهٔ نسخه ناکام شد. چیزی تغییر نکرد."
   }
 }

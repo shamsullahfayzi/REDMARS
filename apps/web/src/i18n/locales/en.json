@@ -901,5 +901,21 @@
     },
     "banner": "Allergies",
     "retractedCount": "Retracted"
+  },
+  "prescription": {
+    "addDrug": "Add a drug",
+    "addDrugPlaceholder": "Type three letters, then Enter",
+    "dose": "Dose",
+    "frequency": "Frequency",
+    "duration": "Duration",
+    "route": "Route",
+    "instructions": "Instructions",
+    "advice": "Advice",
+    "advicePlaceholder": "What to do besides the medicines.",
+    "save": "Save prescription",
+    "saving": "Saving…",
+    "removeRow": "Remove this drug",
+    "none": "No drugs on this prescription yet.",
+    "failed": "Could not save the prescription. Nothing was changed."
   }
 }

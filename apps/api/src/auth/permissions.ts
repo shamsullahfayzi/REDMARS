@@ -137,6 +137,20 @@ export const PERMISSION_MATRIX = {
   'price.change': { admin: YES },
   /** Formulary. Pharmacist proposes, admin approves (R9). */
   'drug.manage': { admin: YES, pharmacist: 'R9' },
+  /**
+   * Reading the formulary in order to prescribe from it (task 4.7).
+   *
+   * `drug.manage` is EDITING the catalogue — admin, and the pharmacist under R9's
+   * propose-don't-commit. It left the doctor unable to look a drug up, which is the one
+   * thing the catalogue exists for. Absence is denial, so until now there was no way for
+   * a prescriber to see the list at all.
+   *
+   * The nurse holds it because R7 says so in as many words: "Nurse sees vitals and
+   * allergies, PLUS THE DRUG LIST." The receptionist does not — she bills from the service
+   * catalogue, not the formulary. A drug row carries no patient data, so nothing here is a
+   * confidentiality question; it is only about who has a reason to look.
+   */
+  'drug.read': { admin: YES, nurse: YES, doctor: YES, pharmacist: YES },
   /** Test catalog. Lab proposes, admin approves (R9). */
   'labtest.manage': { admin: YES, lab_tech: 'R9' },
   /** Insurance panels. Open question 5: may not exist at Farhat. */
