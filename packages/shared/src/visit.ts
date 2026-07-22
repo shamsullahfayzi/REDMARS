@@ -62,6 +62,16 @@ export type VisitStatus = z.infer<typeof visitStatusSchema>
  */
 export const OPEN_VISIT_STATUSES = ['arrived', 'in_progress', 'on_hold'] as const
 
+/**
+ * Is the patient still here? Asked by every screen that has to decide whether clinical
+ * work may still be written against this visit (task 4.1 onwards) — a completed visit is
+ * a record of what happened, and appending to it afterwards is how a note ends up dated
+ * to a day nobody was in the room.
+ */
+export function isVisitOpen(status: VisitStatus): boolean {
+  return (OPEN_VISIT_STATUSES as readonly VisitStatus[]).includes(status)
+}
+
 const optionalText = (max: number) => z.string().trim().max(max).nullish()
 
 /** A <select> hands back '' when nothing is chosen. Treat that as "not chosen". */

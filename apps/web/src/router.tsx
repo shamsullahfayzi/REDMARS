@@ -6,6 +6,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { AppointmentsPage } from '@/pages/AppointmentsPage'
+import { ConsultPage } from '@/pages/ConsultPage'
 import { CreatePatientPage } from '@/pages/CreatePatientPage'
 import { DepartmentPage } from '@/pages/DepartmentsPage'
 import { DrugsPage } from '@/pages/DrugsPage'
@@ -49,6 +50,10 @@ export const router = createBrowserRouter([
           { path: 'patients/:id', element: <PatientDetailPage /> },
           { path: 'patients/:id/visit', element: <StartVisitPage /> },
           { path: 'consultations', element: <PlaceholderPage sectionKey="consultations" /> },
+          // Keyed by the VISIT, not the patient (task 4.1): a consultation is one
+          // occasion, and the same patient has many. /consult/:patientId would have no
+          // answer to "which visit am I writing this prescription against".
+          { path: 'consult/:visitId', element: <ConsultPage /> },
           { path: 'icd', element: <IcdLookupPage /> },
           { path: 'interactions', element: <InteractionCheckerPage /> },
           { path: 'lab', element: <PlaceholderPage sectionKey="lab" /> },

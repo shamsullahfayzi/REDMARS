@@ -10,6 +10,7 @@ import type {
   CancelVisitRequest,
   CancelVisitResponse,
   ChangeVisitStatusRequest,
+  ConsultContext,
   CreateVisitRequest,
   QueueEntry,
   QueueQuery,
@@ -214,6 +215,84 @@ export class VisitService {
     });
     if (!visit) throw new NotFoundException('Visit not found');
     return this.toSummary(visit);
+  }
+
+  /**
+   * Task 4.1 — everything the top of the consulting-room screen needs, in one read.
+   *
+   * Deliberately NOT `visit.read_queue` plus a second call for the patient. A doctor
+   * opens this between two patients and the header has to be right before anything else
+   * renders; two round trips means a screen that briefly shows a visit with no patient
+   * attached to it, which on a consult screen is the wrong kind of brief.
+   *
+   * It carries nothing clinical. That is not an oversight — vitals, diagnoses,
+   * prescriptions and notes each arrive with their own task and their own permission, and
+   * a context endpoint that quietly returned all of them would hand a nurse the psych
+   * note that `clinical_note.read` denies even to the admin.
+   *
+   * R6 and R8 are refused here rather than in the guard, the same split the guard's own
+   * docblock describes: it holds `patient.read_clinical` and cannot tell WHICH read this
+   * is. R6 is written as "drugs and allergies — nothing else", and R8 scopes the lab tech
+   * to the order in front of them. This screen is the patient's wider record, so neither
+   * condition covers it, and a conditional grant that nobody narrows is an unconditional
+   * one wearing a rule code.
+   */
+  async consult(
+    facilityId: string,
+    permissions: ReadonlyMap<string, string | null>,
+    id: string,
+  ): Promise<ConsultContext> {
+    const condition = permissions.get('patient.read_clinical');
+    if (condition === 'R6' || condition === 'R8') {
+      throw new ForbiddenException({
+        message: 'Your role may not open a consultation record.',
+        code: 'clinical_read_scoped',
+      });
+    }
+
+    const visit = await this.prisma.db.visit.findFirst({
+      where: { id, facilityId },
+      select: {
+        ...visitSummarySelect,
+        ...queueExtraSelect,
+        patient: { select: { ...queueExtraSelect.patient.select, phone: true } },
+        // Two rows at most, and only the two the wait is measured between. Reading the
+        // whole trail here would duplicate the history endpoint for a number the header
+        // shows in one line.
+        statusHistory: {
+          where: { status: { in: ['arrived', 'in_progress'] } },
+          select: { status: true, changedAt: true },
+          orderBy: { changedAt: 'asc' },
+        },
+      },
+    });
+    if (!visit) throw new NotFoundException('Visit not found');
+
+    const entry = this.toQueueEntry(visit, Date.now());
+    const arrivedAt = visit.statusHistory.find((row) => row.status === 'arrived')?.changedAt;
+    const calledAt = visit.statusHistory.find((row) => row.status === 'in_progress')?.changedAt;
+
+    return {
+      visit: this.toSummary(visit),
+      patient: {
+        id: visit.patientId,
+        mrn: entry.patientMrn,
+        name: entry.patientName,
+        gender: visit.patient.gender,
+        ageYears: entry.ageYears,
+        dateOfBirth: visit.patient.dateOfBirth?.toISOString().slice(0, 10) ?? null,
+        phone: visit.patient.phone,
+      },
+      // Once the patient has been called in the wait is a settled fact; while they are
+      // still outside it keeps climbing, which is the number the doctor is apologising
+      // for. Null only if the trail somehow has no arrival — an old row, not a new one.
+      waitedMinutes: arrivedAt
+        ? Math.max(
+            0,
+            Math.round(((calledAt ?? new Date()).getTime() - arrivedAt.getTime()) / 60_000),
+          )
+        : null,
+    };
   }
 
   /**

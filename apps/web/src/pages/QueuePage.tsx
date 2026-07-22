@@ -394,8 +394,11 @@ function QueueRow({
 
         <CancelVisitAction entry={entry} />
 
+        {/* The done-when of task 4.1: this is how a doctor opens a patient. It points at
+            the VISIT, not the patient — a consultation is one occasion, and everything
+            written in it is filed against that occasion. */}
         <Link
-          to={`/patients/${entry.patientId}`}
+          to={`/consult/${entry.id}`}
           className="text-sm text-primary hover:underline"
           aria-label={t('queue.open')}
         >

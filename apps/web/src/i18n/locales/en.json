@@ -717,7 +717,7 @@
     "waited": "{{minutes}} min",
     "empty": "Nobody is waiting.",
     "error": "Could not load the queue.",
-    "open": "Open the patient record",
+    "open": "Open the consultation",
     "justArrived": "Just arrived",
     "live": {
       "on": "Updating every {{seconds}} seconds",
@@ -780,6 +780,25 @@
       "saving": "Booking…",
       "saved": "Booked for {{date}}.",
       "error": "Could not book that. Nothing was saved."
+    }
+  },
+  "consult": {
+    "loading": "Opening the record…",
+    "error": "Could not open this consultation.",
+    "backToQueue": "Back to the queue",
+    "start": "Start consultation",
+    "starting": "Starting…",
+    "closed": "This visit is closed. Nothing further can be recorded against it.",
+    "tablist": "Consultation sections",
+    "notBuilt": "{{section}} is not built yet.",
+    "keys": "Arrow keys move between sections. Alt + 1 to 6 jumps straight to one.",
+    "tabs": {
+      "vitals": "Vitals",
+      "complaint": "Complaint",
+      "diagnosis": "Diagnosis",
+      "prescription": "Prescription",
+      "notes": "Notes",
+      "history": "History"
     }
   }
 }

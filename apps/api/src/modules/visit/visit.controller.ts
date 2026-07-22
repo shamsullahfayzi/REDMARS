@@ -21,12 +21,14 @@ import {
 } from '@redmars/shared';
 import type {
   CancelVisitResponse,
+  ConsultContext,
   QueueResponse,
   VisitHistoryResponse,
   VisitOptionsResponse,
   VisitSummary,
 } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
+import { AuditRead } from '../../audit/decorators/audit-read.decorator';
 import { AuthContext } from '../../auth/auth-context';
 import { VisitService } from './visit.service';
 
@@ -157,6 +159,26 @@ export class VisitController {
 
     const auth = this.auth(req);
     return this.visits.cancel(auth.facilityId, auth.userId, auth.permissions, id, parsed.data);
+  }
+
+  /**
+   * Task 4.1 — the consult screen's context.
+   *
+   * `patient.read_clinical` rather than `visit.read_queue`, and the difference matters:
+   * the queue is "who is waiting", which management legitimately sees, while this is the
+   * chart being opened on a named person. Gating the SHELL on the permission its contents
+   * will need means tasks 4.3 to 4.13 fill it without re-arguing who may be in the room.
+   *
+   * @AuditRead is the point of R1 — "opening the chart is a separate, audited read", as
+   * the queue contract puts it. The row records the Visit, taken from the route param.
+   * It never blocks: R1 is deterrence, not obstruction.
+   */
+  @Get(':id/consult')
+  @RequirePermission('patient.read_clinical')
+  @AuditRead('Visit')
+  consult(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string): Promise<ConsultContext> {
+    const auth = this.auth(req);
+    return this.visits.consult(auth.facilityId, auth.permissions, id);
   }
 
   /** The medico-legal trail, plus the wait and consultation durations it makes answerable. */
