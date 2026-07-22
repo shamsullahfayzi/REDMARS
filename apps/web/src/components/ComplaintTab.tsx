@@ -4,7 +4,8 @@ import { BookmarkPlus, Plus } from 'lucide-react'
 import {
   isVisitOpen,
   updateComplaintRequestSchema,
-  type Template,
+  isComplaintTemplate,
+  type ComplaintTemplate,
   type VisitSummary,
 } from '@redmars/shared'
 import { Button } from '@/components/ui/button'
@@ -113,7 +114,10 @@ export function ComplaintTab({ visit }: { visit: VisitSummary }) {
 
       {open && (
         <TemplatePicker
-          templates={templatesQuery.data?.templates ?? []}
+          // Narrowed rather than trusted: /templates?type=complaint already returns one
+          // kind, and the guard is what stops a future caller with a wrong query string
+          // handing a five-drug regimen to a component that reads content.text.
+          templates={(templatesQuery.data?.templates ?? []).filter(isComplaintTemplate)}
           loading={templatesQuery.isPending}
           onPick={append}
         />
@@ -131,7 +135,7 @@ function TemplatePicker({
   loading,
   onPick,
 }: {
-  templates: Template[]
+  templates: ComplaintTemplate[]
   loading: boolean
   onPick: (phrase: string) => void
 }) {

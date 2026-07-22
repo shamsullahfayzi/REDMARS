@@ -2,8 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
+  Param,
+  ParseUUIDPipe,
   Post,
   Query,
   Req,
@@ -61,6 +64,26 @@ export class TemplateController {
 
     const auth = this.auth(req);
     return this.templates.create(auth.facilityId, auth.userId, auth.permissions, parsed.data);
+  }
+
+  /**
+   * Gated on `template.manage.own`, with ownership decided in the service: your own goes,
+   * a shared one needs `template.manage.shared`, and a colleague's private one answers 404
+   * — whether another doctor has a template by that name is not this caller's to learn.
+   *
+   * Returns the remaining list of the same type, which is this codebase's DELETE
+   * convention and not a preference: `apiDelete` on the browser side takes a schema and
+   * parses the body unconditionally, so a 204 would throw in the client rather than
+   * resolve. The convention already decided this; the endpoint follows it.
+   */
+  @Delete(':id')
+  @RequirePermission('template.manage.own')
+  remove(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<TemplateListResponse> {
+    const auth = this.auth(req);
+    return this.templates.remove(auth.facilityId, auth.userId, auth.permissions, id);
   }
 
   private auth(req: Request): AuthContext {

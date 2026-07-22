@@ -7,7 +7,7 @@ import {
   type TemplateType,
   type UpdateComplaintRequest,
 } from '@redmars/shared'
-import { apiGet, apiPatch, apiPost } from '@/lib/api'
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api'
 import { queryClient } from '@/lib/queryClient'
 
 /**
@@ -28,6 +28,21 @@ export function useTemplates(type: TemplateType) {
 export function useCreateTemplate(type: TemplateType) {
   return useMutation({
     mutationFn: (input: CreateTemplateRequest) => apiPost('/templates', input, templateSchema),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['templates', type] }),
+  })
+}
+
+/**
+ * Task 4.12 — remove one.
+ *
+ * Your own goes; a shared one needs `template.manage.shared`; a colleague's private one is
+ * a 404. All of that is the server's, and the button is only rendered for templates the
+ * list already marked `isMine` — hiding it is courtesy, the check is there.
+ */
+export function useDeleteTemplate(type: TemplateType) {
+  return useMutation({
+    // Returns the remaining list, per this codebase's DELETE convention.
+    mutationFn: (id: string) => apiDelete(`/templates/${id}`, templateListResponseSchema),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['templates', type] }),
   })
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, Copy, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, BookmarkPlus, Copy, Plus, Trash2 } from 'lucide-react'
 import {
   DOSE_PRESETS,
   DURATION_PRESETS,
@@ -8,7 +8,9 @@ import {
   INSTRUCTION_CODES,
   INTERACTION_SEVERITY_RANK,
   ROUTE_CODES,
+  createTemplateRequestSchema,
   interactionNeedsAck,
+  isPrescriptionTemplate,
   isVisitOpen,
   matchCode,
   savePrescriptionRequestSchema,
@@ -16,6 +18,7 @@ import {
   type DrugSummary,
   type InteractionWarning,
   type LastPrescription,
+  type PrescriptionTemplate,
   type VisitSummary,
 } from '@redmars/shared'
 import { Button } from '@/components/ui/button'
@@ -25,6 +28,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useConsultSaver } from '@/hooks/useConsultSave'
+import { useCreateTemplate, useDeleteTemplate, useTemplates } from '@/hooks/useTemplates'
 import { useInteractionCheck } from '@/hooks/useInteractionCheck'
 import {
   allergyConflictsFromError,
@@ -85,6 +89,10 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
   const listQuery = usePrescription(visit.id)
   const formulary = useFormulary()
   const save = useSavePrescription(visit.id)
+  // Task 4.12. Shared plus this doctor's own — the narrowing is the server's.
+  const templatesQuery = useTemplates('prescription')
+  const createTemplate = useCreateTemplate('prescription')
+  const deleteTemplate = useDeleteTemplate('prescription')
 
   const [rows, setRows] = useState<Row[]>([])
   const [advice, setAdvice] = useState('')
@@ -94,6 +102,8 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
   const [overrides, setOverrides] = useState<Record<string, string>>({})
   /** Task 4.9 — one acknowledgement for the sheet, typed BEFORE the save is attempted. */
   const [interactionAck, setInteractionAck] = useState('')
+  /** Task 4.12 — kept apart from `error`, which is rendered by the save button far below. */
+  const [templateError, setTemplateError] = useState<string | null>(null)
 
   const open = isVisitOpen(visit.status)
   const stored = listQuery.data?.prescription ?? null
@@ -280,8 +290,101 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
     })
   }
 
+  /**
+   * Task 4.12 — a saved regimen, applied.
+   *
+   * The SAME append-and-de-duplicate as copy-last, deliberately: both drop a set of drugs
+   * onto a sheet the doctor may already have started, and the two behaving differently
+   * would be a thing to remember for no reason. A drug already present is skipped rather
+   * than doubled — a second line is a double dose reading as two separate orders.
+   *
+   * The template's advice fills the box only when it is EMPTY. Overwriting something the
+   * doctor typed for this patient with a stock sentence is the one way this feature could
+   * lose work.
+   */
+  function applyTemplate(template: PrescriptionTemplate) {
+    setRows((current) => {
+      const already = new Set(current.map((row) => row.drugId))
+      const additions = template.content.items
+        .filter((item) => !already.has(item.drugId))
+        // A drug withdrawn since the template was saved cannot be prescribed; the panel
+        // names it, and adding a row the save would refuse helps nobody.
+        .filter((item) => formulary.data?.drugs.find((drug) => drug.id === item.drugId)?.isActive)
+        .map((item) => {
+          const drug = formulary.data?.drugs.find((entry) => entry.id === item.drugId)
+          return {
+            drugId: item.drugId,
+            drugLabel: drug ? drugLabel(drug) : item.drugId,
+            dose: item.dose ?? '',
+            frequency: item.frequency,
+            duration: item.duration,
+            route: item.route,
+            quantity: item.quantity === null ? '' : String(item.quantity),
+            instructions: item.instructions ?? '',
+            allergyOverrideReason: null,
+          }
+        })
+      return [...current, ...additions]
+    })
+    if (template.content.advice && !advice.trim()) setAdvice(template.content.advice)
+  }
+
+  /**
+   * The sheet on screen, saved as a starting point.
+   *
+   * Parsed before it is sent, like the prescription save is — a half-filled row would
+   * otherwise become a template that produces an unsaveable sheet every time it is used,
+   * and the doctor would meet that error weeks later with no idea which template caused it.
+   * Never the override reasons: a template applies to everybody.
+   */
+  function saveAsTemplate(name: string) {
+    const parsed = createTemplateRequestSchema.safeParse({
+      type: 'prescription',
+      name,
+      shared: false,
+      content: {
+        items: rows.map((row) => ({
+          drugId: row.drugId,
+          dose: row.dose,
+          frequency: row.frequency,
+          duration: row.duration,
+          route: row.route,
+          quantity: row.quantity === '' ? '' : Number(row.quantity),
+          instructions: row.instructions,
+        })),
+        advice,
+      },
+    })
+
+    if (!parsed.success) {
+      setTemplateError(parsed.error.issues[0]?.message ?? t('prescription.templates.failed'))
+      return
+    }
+    setTemplateError(null)
+    createTemplate.mutate(parsed.data)
+  }
+
   return (
     <div className="space-y-4">
+      {open && (
+        <PrescriptionTemplates
+          templates={(templatesQuery.data?.templates ?? []).filter(isPrescriptionTemplate)}
+          drugs={formulary.data?.drugs ?? []}
+          onApply={applyTemplate}
+          onSave={saveAsTemplate}
+          onDelete={(id) => deleteTemplate.mutate(id)}
+          canSave={rows.length > 0}
+          busy={save.isPending || createTemplate.isPending || deleteTemplate.isPending}
+          error={
+            templateError ??
+            (createTemplate.isError || deleteTemplate.isError
+              ? (serverMessage(createTemplate.error ?? deleteTemplate.error) ??
+                t('prescription.templates.failed'))
+              : null)
+          }
+        />
+      )}
+
       {open && last && (
         <CopyLast last={last} onCopy={copyLast} disabled={save.isPending} />
       )}
@@ -474,6 +577,150 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
             </p>
           )}
         </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Task 4.12 — "Standard depression starter in one click."
+ *
+ * A whole regimen, unlike task 4.4's complaint templates which hold one phrase each and are
+ * stacked. The difference is what the two things ARE: a phrase is a building block, a
+ * starting regimen is a decision somebody already made.
+ *
+ * SHARED ONES FIRST and marked as the hospital's, because that is what a new doctor should
+ * reach for before inventing their own — and because a shared template carries more weight
+ * than a private one and the reader is entitled to know which they are applying.
+ *
+ * A DRUG NO LONGER IN THE FORMULARY IS NAMED, not silently dropped, exactly as task 4.11
+ * does for a copied sheet. The template was valid when it was saved; a drug withdrawn since
+ * makes it partly stale, and the doctor is the one who should decide what to do about that.
+ */
+function PrescriptionTemplates({
+  templates,
+  drugs,
+  onApply,
+  onSave,
+  onDelete,
+  canSave,
+  busy,
+  error,
+}: {
+  templates: PrescriptionTemplate[]
+  drugs: DrugSummary[]
+  onApply: (template: PrescriptionTemplate) => void
+  onSave: (name: string) => void
+  onDelete: (id: string) => void
+  canSave: boolean
+  busy: boolean
+  error: string | null
+}) {
+  const { t } = useTranslation()
+  const [name, setName] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const byId = useMemo(() => new Map(drugs.map((drug) => [drug.id, drug])), [drugs])
+
+  function withdrawnIn(template: PrescriptionTemplate): string[] {
+    return template.content.items
+      .map((item) => byId.get(item.drugId))
+      .filter((drug) => drug && !drug.isActive)
+      .map((drug) => drugLabel(drug as DrugSummary))
+  }
+
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+      <p className="text-sm font-medium text-foreground">{t('prescription.templates.title')}</p>
+
+      {templates.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t('prescription.templates.none')}</p>
+      ) : (
+        <ul className="flex flex-wrap gap-2">
+          {templates.map((template) => {
+            const withdrawn = withdrawnIn(template)
+            return (
+              <li key={template.id} className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onApply(template)}
+                  className="rounded-full border border-border bg-background px-3 py-1 text-sm text-foreground hover:border-primary hover:text-primary disabled:opacity-60"
+                >
+                  {template.name}
+                  <span className="ms-2 text-xs text-muted-foreground">
+                    {t('prescription.templates.drugCount', {
+                      count: template.content.items.length,
+                    })}
+                  </span>
+                  {template.isShared && (
+                    <span className="ms-2 text-xs text-primary">
+                      {t('prescription.templates.shared')}
+                    </span>
+                  )}
+                </button>
+                {/* Only your own. Hiding it is courtesy — the server refuses either way. */}
+                {template.isMine && (
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    disabled={busy}
+                    aria-label={t('prescription.templates.remove', { name: template.name })}
+                    onClick={() => onDelete(template.id)}
+                  >
+                    <Trash2 className="size-3.5 text-destructive" aria-hidden />
+                  </Button>
+                )}
+                {withdrawn.length > 0 && (
+                  <span className="text-xs text-warning">
+                    {t('prescription.templates.withdrawn', { drugs: withdrawn.join('، ') })}
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {saving ? (
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1">
+            <Label htmlFor="rxTemplateName">{t('prescription.templates.name')}</Label>
+            <Input
+              id="rxTemplateName"
+              value={name}
+              autoFocus
+              placeholder={t('prescription.templates.namePlaceholder')}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <Button
+            type="button"
+            disabled={name.trim().length < 2 || busy}
+            onClick={() => {
+              onSave(name.trim())
+              setName('')
+              setSaving(false)
+            }}
+          >
+            {t('prescription.templates.confirm')}
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => setSaving(false)}>
+            {t('prescription.templates.cancel')}
+          </Button>
+        </div>
+      ) : (
+        // Saving needs a sheet to save. Offering it against an empty table would produce a
+        // template with no drugs in it, which the contract refuses anyway.
+        canSave && (
+          <Button type="button" variant="outline" size="sm" onClick={() => setSaving(true)}>
+            <BookmarkPlus className="size-4" aria-hidden />
+            {t('prescription.templates.save')}
+          </Button>
+        )
       )}
     </div>
   )

@@ -366,9 +366,11 @@ describe('Chief complaint and templates (e2e)', () => {
     );
   });
 
-  it('refuses a type that has no content shape yet', async () => {
-    // Task 4.12 adds prescription templates, with their own shape. Until then this is a
-    // 400 rather than a row nobody can read back.
+  it('refuses content of the wrong shape for the type', async () => {
+    // Task 4.12 built prescription templates with their OWN content shape — a drug list,
+    // nothing like a phrase. Sending one type's content under the other type is a 400
+    // rather than a row nobody can read back. Task 4.12's own spec covers the shape it
+    // does accept; this pins that the discriminated union is doing its job from here.
     await createTemplate({
       type: 'prescription',
       name: `${PREFIX}soon`,

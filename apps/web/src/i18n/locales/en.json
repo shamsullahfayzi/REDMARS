@@ -941,6 +941,20 @@
       "action": "Copy last prescription — {{date}}, {{count}} medicines",
       "skipped": "Not copied, no longer in the formulary: {{drugs}}",
       "hint": "Copied into the table below. Nothing is saved until you save, and allergy and interaction checks run again."
+    },
+    "templates": {
+      "title": "Regimens",
+      "none": "No saved regimens yet. Build a sheet below and save it — one click next time.",
+      "drugCount": "{{count}} drugs",
+      "shared": "Hospital",
+      "save": "Save this sheet as a regimen",
+      "name": "Name it",
+      "namePlaceholder": "Standard depression starter",
+      "confirm": "Save regimen",
+      "cancel": "Cancel",
+      "remove": "Delete {{name}}",
+      "withdrawn": "Contains a drug no longer in the formulary: {{drugs}}",
+      "failed": "Could not save that regimen."
     }
   },
   "codes": {
