@@ -858,5 +858,26 @@
     "savingTemplate": "در حال ذخیره…",
     "cancelTemplate": "لغو",
     "templateFailed": "ذخیرهٔ آن عبارت ناکام شد."
+  },
+  "diagnosis": {
+    "label": "تشخیص",
+    "placeholder": "افسردگی",
+    "add": "افزودن تشخیص",
+    "saving": "در حال ذخیره…",
+    "certainty": "درجهٔ یقین",
+    "primary": "اصلی",
+    "makePrimary": "اصلی ساختن",
+    "remove": "حذف تشخیص",
+    "coded": "کود",
+    "clearCode": "پاک کردن کود",
+    "loading": "در حال بارگیری…",
+    "none": "هنوز تشخیصی ثبت نشده.",
+    "failed": "ذخیرهٔ آن تشخیص ناکام شد. چیزی ثبت نشد.",
+    "certainties": {
+      "provisional": "موقت",
+      "differential": "افتراقی",
+      "confirmed": "تأییدشده",
+      "refuted": "رد شده"
+    }
   }
 }

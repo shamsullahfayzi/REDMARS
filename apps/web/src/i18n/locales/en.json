@@ -858,5 +858,26 @@
     "savingTemplate": "Saving…",
     "cancelTemplate": "Cancel",
     "templateFailed": "Could not save that phrase."
+  },
+  "diagnosis": {
+    "label": "Diagnosis",
+    "placeholder": "depression",
+    "add": "Add diagnosis",
+    "saving": "Saving…",
+    "certainty": "Certainty",
+    "primary": "Primary",
+    "makePrimary": "Make primary",
+    "remove": "Remove diagnosis",
+    "coded": "Coded as",
+    "clearCode": "Clear code",
+    "loading": "Loading diagnoses…",
+    "none": "No diagnosis recorded yet.",
+    "failed": "Could not save that diagnosis. Nothing was recorded.",
+    "certainties": {
+      "provisional": "Provisional",
+      "differential": "Differential",
+      "confirmed": "Confirmed",
+      "refuted": "Ruled out"
+    }
   }
 }

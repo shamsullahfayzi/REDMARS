@@ -858,5 +858,26 @@
     "savingTemplate": "خوندي کېږي…",
     "cancelTemplate": "لغوه",
     "templateFailed": "د هغه عبارت خوندي کول ونشول."
+  },
+  "diagnosis": {
+    "label": "تشخیص",
+    "placeholder": "خپګان",
+    "add": "تشخیص زیات کړئ",
+    "saving": "خوندي کېږي…",
+    "certainty": "د باور کچه",
+    "primary": "اصلي",
+    "makePrimary": "اصلي یې کړئ",
+    "remove": "تشخیص لرې کړئ",
+    "coded": "کوډ",
+    "clearCode": "کوډ پاک کړئ",
+    "loading": "راوړل کېږي…",
+    "none": "لا هیڅ تشخیص نه دی ثبت شوی.",
+    "failed": "د دې تشخیص خوندي کول ونشول. هیڅ ثبت نشو.",
+    "certainties": {
+      "provisional": "لنډمهاله",
+      "differential": "توپیري",
+      "confirmed": "تایید شوی",
+      "refuted": "رد شوی"
+    }
   }
 }

@@ -16,6 +16,7 @@ import {
 import { isVisitOpen, type ConsultContext } from '@redmars/shared'
 import { ConsultActions } from '@/components/ConsultActions'
 import { ComplaintTab } from '@/components/ComplaintTab'
+import { DiagnosisTab } from '@/components/DiagnosisTab'
 import { VitalsTab } from '@/components/VitalsTab'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -94,6 +95,7 @@ export function ConsultPage() {
           panels={{
             vitals: <VitalsTab visit={context.visit} />,
             complaint: <ComplaintTab visit={context.visit} />,
+            diagnosis: <DiagnosisTab visit={context.visit} />,
           }}
         />
         <ConsultActions visit={context.visit} />
