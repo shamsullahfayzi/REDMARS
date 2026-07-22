@@ -837,6 +837,11 @@ model Prescription {
   practitionerId String      @map("practitioner_id")
   status         OrderStatus @default(active)
   advice         String?
+  /// Task 4.9 — why a flagged drug-drug interaction was prescribed anyway.
+  /// One per sheet, not one per pair: an interaction is a fact about two MEDICINES, not
+  /// about this patient, and the prescriber is saying "I know, and I meant it" about the
+  /// combination as a whole. NULL means nothing needing acknowledgement was flagged.
+  interactionAckReason String? @map("interaction_ack_reason")
   followUpDate   DateTime?   @map("follow_up_date") @db.Date
   printedAt      DateTime?   @map("printed_at")
   createdAt      DateTime    @default(now()) @map("created_at")

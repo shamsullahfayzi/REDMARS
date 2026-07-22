@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { interactionWarningSchema } from './drugInteraction.js'
 
 /**
  * Task 4.7 — the prescription table. "4 drugs prescribed in under 30 seconds."
@@ -80,6 +81,22 @@ export const savePrescriptionRequestSchema = z.object({
   items: z.array(prescriptionItemInputSchema).max(30, 'That is too many drugs for one sheet.'),
   /** What the patient is told to do, beyond the drugs. Printed on the sheet (task 4.10). */
   advice: optionalText(1000),
+  /**
+   * Task 4.9 — why a flagged drug-drug interaction is being prescribed anyway.
+   *
+   * ONE for the whole sheet, unlike the per-drug allergy override, and the difference is
+   * what the two things ARE. An allergy is a fact about THIS PATIENT and each override is
+   * a separate clinical judgement about them. An interaction is a fact about two
+   * MEDICINES; the prescriber is saying "I know these two interact, and I meant it" about
+   * the combination as a whole.
+   */
+  interactionAckReason: z
+    .string()
+    .trim()
+    .min(5, 'Say why this combination is intended.')
+    .max(300)
+    .nullish()
+    .transform((v) => (v ? v : null)),
 })
 export type SavePrescriptionRequest = z.infer<typeof savePrescriptionRequestSchema>
 
@@ -109,6 +126,8 @@ export const prescriptionSchema = z.object({
   visitId: z.uuid(),
   status: z.string(),
   advice: z.string().nullable(),
+  /** Non-null means a flagged interaction was shown and the prescriber went ahead. */
+  interactionAckReason: z.string().nullable(),
   practitionerId: z.string(),
   practitionerName: z.string().nullable(),
   printedAt: z.string().nullable(),
@@ -170,3 +189,36 @@ export const allergyConflictResponseSchema = z.object({
   conflicts: z.array(allergyConflictSchema),
 })
 export type AllergyConflictResponse = z.infer<typeof allergyConflictResponseSchema>
+
+// ---------------------------------------------------------------------------------
+// Task 4.9 — the soft interaction warning
+// ---------------------------------------------------------------------------------
+
+/**
+ * WHICH SEVERITIES DEMAND AN ANSWER, and why this is not a policy invented here.
+ *
+ * Task 2.11's contract already says what the four severities mean to a user: "the UI
+ * colours contraindicated/major as danger, moderate as warning, minor as info." This
+ * simply enforces the line that classification already draws. `minor` and `moderate` are
+ * shown and never stop anybody; `major` and `contraindicated` want a sentence.
+ *
+ * THIS IS WHAT MAKES 4.9 SOFT AND 4.8 HARD. A recorded allergy stops every prescription of
+ * that drug regardless of how bad the reaction was, because the alternative is deciding on
+ * a patient's behalf which of their allergies matter. An interaction is graded by whoever
+ * curated the list, and making a doctor type a sentence about every minor pairing is how
+ * you produce a prescriber who dismisses warnings without reading them — the exact failure
+ * mode the allergy check's own docblock warns about.
+ */
+export const INTERACTION_ACK_SEVERITIES = ['major', 'contraindicated'] as const
+
+export function interactionNeedsAck(severity: string): boolean {
+  return (INTERACTION_ACK_SEVERITIES as readonly string[]).includes(severity)
+}
+
+/** The 409 body when a serious pair is on the sheet and nobody has said why. */
+export const interactionWarningResponseSchema = z.object({
+  code: z.literal('interaction_warning'),
+  message: z.string(),
+  interactions: z.array(interactionWarningSchema),
+})
+export type InteractionWarningResponse = z.infer<typeof interactionWarningResponseSchema>

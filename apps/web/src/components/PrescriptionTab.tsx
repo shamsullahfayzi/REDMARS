@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
 import {
+  INTERACTION_SEVERITY_RANK,
+  interactionNeedsAck,
   isVisitOpen,
   savePrescriptionRequestSchema,
   type AllergyConflict,
   type DrugSummary,
+  type InteractionWarning,
   type VisitSummary,
 } from '@redmars/shared'
 import { Button } from '@/components/ui/button'
@@ -14,12 +17,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useConsultSaver } from '@/hooks/useConsultSave'
+import { useInteractionCheck } from '@/hooks/useInteractionCheck'
 import {
   allergyConflictsFromError,
+  interactionWarningsFromError,
   useFormulary,
   usePrescription,
   useSavePrescription,
 } from '@/hooks/usePrescription'
+import { cn } from '@/lib/utils'
 
 /**
  * Task 4.7 — the prescription table. "4 drugs prescribed in under 30 seconds."
@@ -70,6 +76,8 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
   const [error, setError] = useState<string | null>(null)
   /** Reasons typed against the block, keyed by drug. Cleared once the save goes through. */
   const [overrides, setOverrides] = useState<Record<string, string>>({})
+  /** Task 4.9 — one acknowledgement for the sheet, typed BEFORE the save is attempted. */
+  const [interactionAck, setInteractionAck] = useState('')
 
   const open = isVisitOpen(visit.status)
   const stored = listQuery.data?.prescription ?? null
@@ -92,6 +100,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
       })),
     )
     setAdvice(stored?.advice ?? '')
+    setInteractionAck(stored?.interactionAckReason ?? '')
     setLoadedFor(visit.id)
   }, [listQuery.isSuccess, stored, loadedFor, visit.id])
 
@@ -124,6 +133,17 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
   const isDirty = loadedFor === visit.id && currentSignature !== savedSignature
   const conflicts = allergyConflictsFromError(save.error)
 
+  // Task 4.9 — the "before save" half. Re-checked as the rows change, so a contraindicated
+  // pair is on screen the moment the second drug is added rather than at the moment a save
+  // is refused. The 409 is the server having the last word, not the first.
+  const interactionQuery = useInteractionCheck(rows.map((row) => row.drugId))
+  const liveInteractions = [...(interactionQuery.data?.interactions ?? [])].sort(
+    (a, b) => INTERACTION_SEVERITY_RANK[b.severity] - INTERACTION_SEVERITY_RANK[a.severity],
+  )
+  const refusedInteractions = interactionWarningsFromError(save.error)
+  const interactions = refusedInteractions ?? liveInteractions
+  const needsAck = interactions.some((warning) => interactionNeedsAck(warning.severity))
+
   const doSave = useCallback(async () => {
     const parsed = savePrescriptionRequestSchema.safeParse({
       items: rows.map((row) => ({
@@ -139,6 +159,9 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         allergyOverrideReason: overrides[row.drugId] || row.allergyOverrideReason || null,
       })),
       advice,
+      // Typed in the warning panel, or carried from the stored sheet so re-saving an
+      // already-acknowledged combination does not ask again.
+      interactionAckReason: interactionAck || stored?.interactionAckReason || null,
     })
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? t('prescription.failed'))
@@ -163,7 +186,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
       })),
     )
     setOverrides({})
-  }, [rows, advice, overrides, save, t])
+  }, [rows, advice, overrides, interactionAck, stored, save, t])
 
   useConsultSaver('prescription', { isDirty, save: doSave })
 
@@ -265,6 +288,17 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         />
       </div>
 
+      {/* Task 4.9 — on screen as soon as the pair exists, long before anyone saves. */}
+      {interactions.length > 0 && (
+        <InteractionPanel
+          interactions={interactions}
+          needsAck={needsAck}
+          reason={interactionAck}
+          onReason={setInteractionAck}
+          refused={refusedInteractions !== null}
+        />
+      )}
+
       {/* Task 4.8 — the hard block, shown where the doctor is looking. Nothing was saved,
           and the only way past is a reason per drug. */}
       {conflicts && (
@@ -285,7 +319,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
             {save.isPending ? t('prescription.saving') : t('prescription.save')}
           </Button>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          {save.isError && !conflicts && (
+          {save.isError && !conflicts && !refusedInteractions && (
             <p className="text-sm text-destructive">{t('prescription.failed')}</p>
           )}
         </div>
@@ -445,6 +479,94 @@ function AllergyBlock({
       ))}
 
       <p className="text-xs text-muted-foreground">{t('prescription.blocked.hint')}</p>
+    </div>
+  )
+}
+
+/**
+ * Task 4.9 - the soft warning.
+ *
+ * On screen as soon as the pair exists, which is the "warns BEFORE save" half of the
+ * done-when: the doctor sees "Fluoxetine + Selegiline - CONTRAINDICATED" while adding the
+ * second drug, not after being refused one.
+ *
+ * Minor and moderate pairs are shown and ask for nothing. A prescriber made to justify
+ * every lesser pairing stops reading the ones that matter, which is the failure mode the
+ * allergy check's docblock names. Major and contraindicated ask for one sentence about the
+ * combination as a whole.
+ *
+ * THE HONEST LIMIT IS PRINTED HERE, not just left in a docblock, because the schema says to
+ * say it in the UI: this is a curated seed and not a licensed interaction database, so no
+ * warning means no seeded pair matched - never "safe".
+ */
+function InteractionPanel({
+  interactions,
+  needsAck,
+  reason,
+  onReason,
+  refused,
+}: {
+  interactions: InteractionWarning[]
+  needsAck: boolean
+  reason: string
+  onReason: (reason: string) => void
+  refused: boolean
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div
+      // Only the serious ones interrupt a screen reader. A moderate pairing is information.
+      role={needsAck ? 'alert' : undefined}
+      className={cn(
+        'space-y-3 rounded-lg border p-4',
+        needsAck ? 'border-2 border-warning bg-warning/12' : 'border-border bg-muted/40',
+      )}
+    >
+      <p
+        className={cn(
+          'flex items-center gap-2 text-sm font-semibold',
+          needsAck ? 'text-warning' : 'text-muted-foreground',
+        )}
+      >
+        <AlertTriangle className="size-4 shrink-0" aria-hidden />
+        {refused ? t('prescription.interactions.refused') : t('prescription.interactions.title')}
+      </p>
+
+      <ul className="space-y-1.5">
+        {interactions.map((warning) => (
+          <li key={`${warning.drugAId}-${warning.drugBId}`} className="text-sm">
+            <span className="font-medium text-foreground">
+              {warning.drugAName} + {warning.drugBName}
+            </span>
+            <span
+              className={cn(
+                'ms-2 rounded px-1.5 py-0.5 text-xs font-medium',
+                interactionNeedsAck(warning.severity)
+                  ? 'bg-warning text-warning-foreground'
+                  : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {t(`interactions.severity.${warning.severity}`)}
+            </span>
+            <p className="text-muted-foreground">{warning.description}</p>
+          </li>
+        ))}
+      </ul>
+
+      {needsAck && (
+        <div className="space-y-1.5">
+          <Label htmlFor="interactionAck">{t('prescription.interactions.reason')}</Label>
+          <Input
+            id="interactionAck"
+            value={reason}
+            placeholder={t('prescription.interactions.reasonPlaceholder')}
+            onChange={(e) => onReason(e.target.value)}
+          />
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">{t('prescription.interactions.limit')}</p>
     </div>
   )
 }

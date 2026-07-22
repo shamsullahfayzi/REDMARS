@@ -2,8 +2,10 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   allergyConflictResponseSchema,
   drugListResponseSchema,
+  interactionWarningResponseSchema,
   prescriptionResponseSchema,
   type AllergyConflict,
+  type InteractionWarning,
   type SavePrescriptionRequest,
 } from '@redmars/shared'
 import { ApiError, apiGet, apiPut } from '@/lib/api'
@@ -19,6 +21,18 @@ export function allergyConflictsFromError(error: unknown): AllergyConflict[] | n
   if (!(error instanceof ApiError) || error.status !== 409) return null
   const parsed = allergyConflictResponseSchema.safeParse(error.body)
   return parsed.success ? parsed.data.conflicts : null
+}
+
+/**
+ * Task 4.9 — the same shape for the interaction 409.
+ *
+ * Both refusals are 409s, and each is parsed by its own schema, so a body of the wrong
+ * kind falls through to null rather than being rendered as the other one.
+ */
+export function interactionWarningsFromError(error: unknown): InteractionWarning[] | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null
+  const parsed = interactionWarningResponseSchema.safeParse(error.body)
+  return parsed.success ? parsed.data.interactions : null
 }
 
 /** Task 4.7 — this visit's prescription, or null. Null is a normal answer. */

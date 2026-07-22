@@ -6,12 +6,13 @@ import {
 } from '@nestjs/common';
 import type {
   AllergyConflict,
+  InteractionWarning,
   Prescription,
   PrescriptionResponse,
   SavePrescriptionRequest,
   VisitStatus,
 } from '@redmars/shared';
-import { isVisitOpen } from '@redmars/shared';
+import { INTERACTION_SEVERITY_RANK, interactionNeedsAck, isVisitOpen } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const prescriptionSelect = {
@@ -19,6 +20,7 @@ const prescriptionSelect = {
   visitId: true,
   status: true,
   advice: true,
+  interactionAckReason: true,
   practitionerId: true,
   printedAt: true,
   createdAt: true,
@@ -46,6 +48,7 @@ type PrescriptionRow = {
   visitId: string;
   status: string;
   advice: string | null;
+  interactionAckReason: string | null;
   practitionerId: string;
   printedAt: Date | null;
   createdAt: Date;
@@ -170,6 +173,24 @@ export class PrescriptionService {
     }
     const overriddenDrugIds = new Set(conflicts.map((conflict) => conflict.drugId));
 
+    // Task 4.9 — the SOFT warning, and the softness is in which severities it stops for.
+    // Task 2.11's contract already grades these ("contraindicated/major as danger,
+    // moderate as warning, minor as info"), so this enforces a line the data already
+    // draws rather than inventing one. Minor and moderate pairs are shown by the browser
+    // and never reach here as an obstacle.
+    if (!input.interactionAckReason) {
+      const serious = (await this.interactionsAmong(drugIds)).filter((warning) =>
+        interactionNeedsAck(warning.severity),
+      );
+      if (serious.length > 0) {
+        throw new ConflictException({
+          code: 'interaction_warning',
+          message: 'These drugs interact. Say why the combination is intended.',
+          interactions: serious,
+        });
+      }
+    }
+
     const practitionerId = await this.practitionerIdOf(facilityId, userId);
     // Prescription.practitionerId is NOT NULL, and rightly so — an unsigned drug order is
     // not a thing. Saying this beats a foreign-key error.
@@ -184,7 +205,12 @@ export class PrescriptionService {
       existing?.id ??
       (
         await this.prisma.db.prescription.create({
-          data: { visitId, practitionerId, advice: input.advice },
+          data: {
+            visitId,
+            practitionerId,
+            advice: input.advice,
+            interactionAckReason: input.interactionAckReason,
+          },
           select: { id: true },
         })
       ).id;
@@ -192,7 +218,7 @@ export class PrescriptionService {
     if (existing) {
       await this.prisma.db.prescription.update({
         where: { id: prescriptionId },
-        data: { advice: input.advice },
+        data: { advice: input.advice, interactionAckReason: input.interactionAckReason },
       });
     }
 
@@ -325,6 +351,48 @@ export class PrescriptionService {
     return found;
   }
 
+  /**
+   * The seeded pairs among these drugs, worst first.
+   *
+   * HONEST LIMIT, and it is the schema's own words: "you cannot build a comprehensive
+   * interaction database — the real ones are commercially licensed." An empty result means
+   * NO SEEDED PAIR MATCHED, not "safe". This is a warning aid; the prescriber's judgement
+   * is the control. The screen says so too, because a checker that looks complete breeds
+   * exactly the false confidence it was built to prevent.
+   */
+  private async interactionsAmong(drugIds: string[]): Promise<InteractionWarning[]> {
+    if (drugIds.length < 2) return [];
+
+    const rows = await this.prisma.db.drugInteraction.findMany({
+      // Unordered pair: the seed may have stored it either way round, so both directions
+      // are asked for. The @@unique([drugAId, drugBId]) does not normalise the order.
+      where: {
+        AND: [{ drugAId: { in: drugIds } }, { drugBId: { in: drugIds } }],
+      },
+      select: {
+        drugAId: true,
+        drugBId: true,
+        severity: true,
+        description: true,
+        drugA: { select: { genericName: true, brandName: true } },
+        drugB: { select: { genericName: true, brandName: true } },
+      },
+    });
+
+    return rows
+      .map((row) => ({
+        drugAId: row.drugAId,
+        drugAName: row.drugA.brandName ?? row.drugA.genericName,
+        drugBId: row.drugBId,
+        drugBName: row.drugB.brandName ?? row.drugB.genericName,
+        severity: row.severity as InteractionWarning['severity'],
+        description: row.description,
+      }))
+      .sort(
+        (a, b) => INTERACTION_SEVERITY_RANK[b.severity] - INTERACTION_SEVERITY_RANK[a.severity],
+      );
+  }
+
   private async requireVisit(
     facilityId: string,
     visitId: string,
@@ -352,6 +420,7 @@ export class PrescriptionService {
       visitId: row.visitId,
       status: row.status,
       advice: row.advice,
+      interactionAckReason: row.interactionAckReason,
       practitionerId: row.practitionerId,
       practitionerName: row.practitioner
         ? [row.practitioner.firstName, row.practitioner.lastName].filter(Boolean).join(' ')
