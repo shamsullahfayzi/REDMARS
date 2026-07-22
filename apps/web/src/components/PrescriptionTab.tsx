@@ -32,6 +32,7 @@ import {
   usePrescription,
   useSavePrescription,
 } from '@/hooks/usePrescription'
+import { serverMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 /**
@@ -62,6 +63,12 @@ interface Row {
   frequency: string
   duration: string
   route: string
+  /**
+   * How many to hand over. A STRING while it is being typed, a number on the wire — an
+   * empty box is not the number zero, and a half-typed "3" on the way to "30" must not
+   * become a quantity of 3 if the doctor saves mid-keystroke.
+   */
+  quantity: string
   instructions: string
   /** Already-recorded override, so re-saving does not re-prompt for the same one. */
   allergyOverrideReason: string | null
@@ -102,6 +109,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         frequency: item.frequency,
         duration: item.duration,
         route: item.route,
+        quantity: item.quantity === null ? '' : String(item.quantity),
         instructions: item.instructions ?? '',
         allergyOverrideReason: item.allergyOverrideReason,
       })),
@@ -121,6 +129,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
           frequency: item.frequency,
           duration: item.duration,
           route: item.route,
+          quantity: item.quantity === null ? '' : String(item.quantity),
           instructions: item.instructions ?? '',
         })),
         advice: stored?.advice ?? '',
@@ -160,6 +169,9 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         frequency: row.frequency,
         duration: row.duration,
         route: row.route,
+        // '' is a legal input meaning "no quantity"; the contract turns it into null.
+        // Number('') is 0, which would be a quantity of nothing rather than no quantity.
+        quantity: row.quantity === '' ? '' : Number(row.quantity),
         instructions: row.instructions,
         // A reason typed against the block, or one already stored on the row from an
         // earlier save — so pressing F2 twice does not re-prompt for the same override.
@@ -188,6 +200,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         frequency: item.frequency,
         duration: item.duration,
         route: item.route,
+        quantity: item.quantity === null ? '' : String(item.quantity),
         instructions: item.instructions ?? '',
         allergyOverrideReason: item.allergyOverrideReason,
       })),
@@ -212,6 +225,10 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         frequency: matchCode(drug.defaultFreq, FREQUENCY_CODES) ?? '',
         duration: drug.defaultDuration ?? '',
         route: matchCode(drug.defaultRoute, ROUTE_CODES) ?? '',
+        // Not derived from frequency × duration. "OD for 1 month" is 30 tablets only if the
+        // month has 30 days and the pack is tablets, and a quantity the pharmacy dispenses
+        // against is not a number to arrive at by arithmetic nobody checked.
+        quantity: '',
         instructions: '',
         allergyOverrideReason: null,
       },
@@ -249,7 +266,10 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
                   )}
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                {/* Column order follows Farhat's own prescription sheet — dose, frequency,
+                    duration, qty, route, remarks — so a doctor moving off the old system
+                    reads left to right in the order their hand already knows. */}
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
                   {/* Dose and duration are OPEN — presets over a free field, because
                       "½ tab" and "until review" are real answers no list contains. */}
                   <CodePicker
@@ -281,6 +301,29 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
                     invalid={open && !row.duration}
                     onChange={(duration) => setRow(index, { duration })}
                   />
+                  {/* Farhat fills this on every line and the pharmacy dispenses against it.
+                      Optional here because the strength and duration often say it, and a
+                      required box the prescriber does not know the answer to gets a
+                      guess typed into it. */}
+                  <div className="space-y-1">
+                    <label
+                      htmlFor={`rx-qty-${index}`}
+                      className="text-xs text-muted-foreground"
+                    >
+                      {t('prescription.quantity')}
+                    </label>
+                    <Input
+                      id={`rx-qty-${index}`}
+                      // inputMode over type="number": a spinner that changes a dispensed
+                      // quantity on a stray scroll wheel is not wanted on this screen.
+                      inputMode="numeric"
+                      value={row.quantity}
+                      disabled={!open}
+                      onChange={(e) =>
+                        setRow(index, { quantity: e.target.value.replace(/\D/g, '').slice(0, 4) })
+                      }
+                    />
+                  </div>
                   <CodePicker
                     id={`rx-route-${index}`}
                     label={t('prescription.route')}
@@ -378,7 +421,12 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
           </Button>
           {error && <p className="text-sm text-destructive">{error}</p>}
           {save.isError && !conflicts && !refusedInteractions && (
-            <p className="text-sm text-destructive">{t('prescription.failed')}</p>
+            // The server's own sentence when it wrote one — "your account is not linked to
+            // a practitioner" tells a doctor what to do, where "could not save" tells them
+            // to find someone who can read a response body.
+            <p className="text-sm text-destructive">
+              {serverMessage(save.error) ?? t('prescription.failed')}
+            </p>
           )}
         </div>
       )}

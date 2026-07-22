@@ -243,6 +243,24 @@ describe('Prescription (e2e)', () => {
     expect(prescription?.practitionerName).toBe('Hafizullah Sherzai');
   });
 
+  /**
+   * Farhat's current sheet fills Qty on every line and the pharmacy dispenses against it,
+   * so the number has to survive the round trip exactly — and an EMPTY box has to arrive as
+   * null rather than 0. "Dispense nothing" and "no quantity stated" are different
+   * instructions to a pharmacist, and Number('') is 0.
+   */
+  it('keeps the dispensed quantity, and an empty one is null rather than zero', async () => {
+    const visitId = await stageVisit();
+
+    const saved = await putRx(visitId, {
+      items: [line(drugs.DUL, { quantity: 30 }), line(drugs.OLZ, { quantity: '' })],
+    }).expect(200);
+
+    const { prescription } = saved.body as PrescriptionResponse;
+    expect(prescription?.items[0].quantity).toBe(30);
+    expect(prescription?.items[1].quantity).toBeNull();
+  });
+
   it('snapshots the drug name, so renaming the formulary does not rewrite old sheets', async () => {
     const visitId = await stageVisit();
     await putRx(visitId, { items: [line(drugs.DUL)] }).expect(200);
@@ -289,7 +307,7 @@ describe('Prescription (e2e)', () => {
     // Keep the first (edited), drop the second, keep the third, add a new one.
     const second = await putRx(visitId, {
       items: [
-        { ...line(drugs.DUL), id: items[0].id, frequency: 'BD' },
+        { ...line(drugs.DUL), id: items[0].id, frequency: 'BID' },
         { ...line(drugs.LOR), id: items[2].id },
         line(drugs.SER),
       ],
@@ -299,7 +317,7 @@ describe('Prescription (e2e)', () => {
     expect(after).toHaveLength(3);
     // The kept row is the SAME row, edited — not deleted and recreated.
     expect(after[0].id).toBe(items[0].id);
-    expect(after[0].frequency).toBe('BD');
+    expect(after[0].frequency).toBe('BID');
     expect(after.map((item) => item.drugId)).toEqual([drugs.DUL, drugs.LOR, drugs.SER]);
     expect(await prisma.prescriptionItem.count({ where: { id: items[1].id } })).toBe(0);
   });
@@ -373,8 +391,14 @@ describe('Prescription (e2e)', () => {
     expect(matchCode('injection', ROUTE_CODES)).toBe('IM');
     expect(matchCode('OD', FREQUENCY_CODES)).toBe('OD');
     expect(matchCode('daily', FREQUENCY_CODES)).toBe('OD');
-    expect(matchCode('bid', FREQUENCY_CODES)).toBe('BD');
+    // The BRITISH forms are keywords now that the codes are American, because Farhat's own
+    // sheet writes BID. A prescriber trained the other way must still land on the same code.
+    expect(matchCode('bd', FREQUENCY_CODES)).toBe('BID');
+    expect(matchCode('tds', FREQUENCY_CODES)).toBe('TID');
     expect(matchCode('nocte', FREQUENCY_CODES)).toBe('ON');
+    // Farhat writes these two as one frequency; they are ON and OM here.
+    expect(matchCode('od night', FREQUENCY_CODES)).toBe('ON');
+    expect(matchCode('od morning', FREQUENCY_CODES)).toBe('OM');
 
     // No match is null, never a guess — the picker then opens empty and the prescriber
     // chooses, which is the only safe answer for a route nobody can identify.
@@ -389,7 +413,9 @@ describe('Prescription (e2e)', () => {
     expect(byWord('injection')).toEqual(expect.arrayContaining(['IM', 'IV', 'SC']));
     expect(byWord('skin')).toEqual(expect.arrayContaining(['TOP', 'SC', 'TD']));
     expect(byWord('eye')).toContain('OPH');
-    expect(searchCodes('twice', FREQUENCY_CODES).map((e) => e.code)).toContain('BD');
+    expect(searchCodes('twice', FREQUENCY_CODES).map((e) => e.code)).toContain('BID');
+    // Typing the British abbreviation finds the American code — the transition, tested.
+    expect(searchCodes('bd', FREQUENCY_CODES).map((e) => e.code)).toContain('BID');
     expect(searchCodes('night', FREQUENCY_CODES).map((e) => e.code)).toContain('ON');
     // An empty query shows everything, so focusing the box is enough to discover the list.
     expect(searchCodes('', ROUTE_CODES)).toHaveLength(ROUTE_CODES.length);

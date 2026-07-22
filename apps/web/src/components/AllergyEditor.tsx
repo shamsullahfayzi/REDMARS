@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { useAllergies, useAllergyWriters } from '@/hooks/useAllergies'
+import { serverMessage } from '@/lib/api'
 
 /**
  * Task 4.6 — recording an allergy where it actually gets discovered.
@@ -131,7 +132,11 @@ export function AllergyEditor({ patientId }: { patientId: string }) {
             </Button>
 
             {error && <p className="w-full text-sm text-destructive">{error}</p>}
-            {add.isError && <p className="w-full text-sm text-destructive">{t('allergies.failed')}</p>}
+            {add.isError && (
+              <p className="w-full text-sm text-destructive">
+                {serverMessage(add.error) ?? t('allergies.failed')}
+              </p>
+            )}
           </form>
 
           {allergies.length > 0 && (

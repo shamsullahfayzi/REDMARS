@@ -383,7 +383,7 @@ describe('Allergy check at prescribe time (e2e)', () => {
         line(drugs.PEN, {
           id: item.id,
           allergyOverrideReason: item.allergyOverrideReason,
-          frequency: 'BD',
+          frequency: 'BID',
         }),
       ],
     }).expect(200);
@@ -399,7 +399,7 @@ describe('Allergy check at prescribe time (e2e)', () => {
     // allergies get discovered.
     await allergic(patientId, 'Penicillin');
 
-    await putRx(visitId, { items: [line(drugs.PEN, { id: item.id, frequency: 'BD' })] }).expect(
+    await putRx(visitId, { items: [line(drugs.PEN, { id: item.id, frequency: 'BID' })] }).expect(
       409,
     );
   });

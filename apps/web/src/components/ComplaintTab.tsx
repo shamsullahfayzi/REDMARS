@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useConsultSaver } from '@/hooks/useConsultSave'
 import { useCreateTemplate, useTemplates, useUpdateComplaint } from '@/hooks/useTemplates'
+import { serverMessage } from '@/lib/api'
 
 /**
  * Task 4.4 — what the patient actually came in with.
@@ -100,7 +101,11 @@ export function ComplaintTab({ visit }: { visit: VisitSummary }) {
               </Button>
               <SaveAsTemplate text={text} />
               {error && <p className="text-sm text-destructive">{error}</p>}
-              {update.isError && <p className="text-sm text-destructive">{t('complaint.failed')}</p>}
+              {update.isError && (
+                <p className="text-sm text-destructive">
+                  {serverMessage(update.error) ?? t('complaint.failed')}
+                </p>
+              )}
             </div>
           )}
         </form>

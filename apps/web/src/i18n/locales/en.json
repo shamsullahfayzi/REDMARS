@@ -908,6 +908,7 @@
     "dose": "Dose",
     "frequency": "Frequency",
     "duration": "Duration",
+    "quantity": "Qty",
     "route": "Route",
     "instructions": "Instructions",
     "advice": "Advice",

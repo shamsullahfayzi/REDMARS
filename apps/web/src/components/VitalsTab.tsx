@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useConsultSaver } from '@/hooks/useConsultSave'
 import { useRecordVitals, useVitals } from '@/hooks/useVitals'
+import { serverMessage } from '@/lib/api'
 
 /**
  * Task 4.3 — vitals, and the first tab to plug into task 4.2's keys.
@@ -151,7 +152,11 @@ export function VitalsTab({ visit }: { visit: VisitSummary }) {
                 </p>
               )}
               {errors.form && <p className="text-sm text-destructive">{errors.form}</p>}
-              {record.isError && <p className="text-sm text-destructive">{t('vitals.failed')}</p>}
+              {record.isError && (
+                <p className="text-sm text-destructive">
+                  {serverMessage(record.error) ?? t('vitals.failed')}
+                </p>
+              )}
             </div>
 
             <p className="text-xs text-muted-foreground">{t('vitals.optional')}</p>

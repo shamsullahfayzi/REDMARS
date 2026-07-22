@@ -20,6 +20,7 @@ import { useConsultSaver } from '@/hooks/useConsultSave'
 import { useDebounced } from '@/hooks/useDebounced'
 import { useDiagnoses, useDiagnosisWriters } from '@/hooks/useDiagnoses'
 import { useIcdSearch } from '@/hooks/useIcdSearch'
+import { serverMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 /**
@@ -171,7 +172,11 @@ export function DiagnosisTab({ visit }: { visit: VisitSummary }) {
                 {add.isPending ? t('diagnosis.saving') : t('diagnosis.add')}
               </Button>
               {error && <p className="text-sm text-destructive">{error}</p>}
-              {add.isError && <p className="text-sm text-destructive">{t('diagnosis.failed')}</p>}
+              {add.isError && (
+                <p className="text-sm text-destructive">
+                  {serverMessage(add.error) ?? t('diagnosis.failed')}
+                </p>
+              )}
             </div>
           </form>
         </Card>

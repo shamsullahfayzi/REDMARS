@@ -45,6 +45,34 @@ export class ApiError extends Error {
 }
 
 /**
+ * The refusal the SERVER wrote, when it wrote one for a person to read.
+ *
+ * `ApiError.message` is a developer string — "/visits/x/prescription failed" — and must
+ * never reach a user. The sentence worth showing is in the body, and this is how it gets
+ * out of there.
+ *
+ * ONLY WHEN THE BODY CARRIES A `code`, which is the line between the two kinds of error
+ * this API produces. A refusal we deliberately threw looks like
+ * `{ message: 'Your account is not linked to a practitioner…', code: 'no_practitioner' }` —
+ * authored for a user, in their language of the problem, and far more useful than any
+ * generic string a screen can offer. Everything else — Nest's own "Forbidden resource",
+ * "Cannot POST /x", the filter's flat "Internal server error" — has no `code`, is written
+ * for a log, and returns null here so the caller falls back to its own wording.
+ *
+ * The cost of not having this was measured: a prescription save refused with a precise,
+ * fixable reason showed on screen as "Could not save the prescription", and the reason sat
+ * unread in a response body.
+ */
+export function serverMessage(error: unknown): string | null {
+  if (!(error instanceof ApiError) || typeof error.body !== 'object' || error.body === null) {
+    return null
+  }
+  const body = error.body as { message?: unknown; code?: unknown }
+  if (typeof body.code !== 'string' || !body.code) return null
+  return typeof body.message === 'string' && body.message.trim() ? body.message : null
+}
+
+/**
  * Called when a refresh is refused — the session is truly over (signed in
  * elsewhere, deactivated, expired). AuthProvider registers this to drop to the
  * login screen with the reason. Kept as a bare callback rather than an import so

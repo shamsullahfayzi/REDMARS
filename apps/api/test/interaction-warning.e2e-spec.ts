@@ -358,7 +358,7 @@ describe('Drug interaction warning at prescribe time (e2e)', () => {
     // The reason travels back down with the sheet, so F2 twice does not re-prompt.
     await putRx(visitId, {
       items: [
-        line(drugs.FLUOX, { id: items[0].id, frequency: 'BD' }),
+        line(drugs.FLUOX, { id: items[0].id, frequency: 'BID' }),
         line(drugs.SELEG, { id: items[1].id }),
       ],
       interactionAckReason: 'Deliberate, under supervision.',

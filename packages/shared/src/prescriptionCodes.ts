@@ -51,20 +51,31 @@ export type RouteCode = (typeof ROUTE_CODES)[number]['code']
 export const ROUTE_VALUES = ROUTE_CODES.map((entry) => entry.code) as [RouteCode, ...RouteCode[]]
 
 /**
- * Frequencies.
+ * Frequencies, in the AMERICAN abbreviations — BID, TID, QID.
  *
- * Written in the British abbreviations — BD, TDS, QDS — because that is the convention
- * Afghan medical training follows, with the American forms (BID/TID/QID) carried as
- * keywords so either way of typing finds the same code. If Farhat turns out to write the
- * American set, this is one list to change and the keywords already cover the transition.
+ * NOT a style preference. A photograph of Farhat's current prescription sheet, taken on
+ * 2026-07-22, has "BID" printed on it. This list was first written British (BD/TDS/QDS) on
+ * the assumption that Afghan medical training follows that convention; the hospital's own
+ * paper says otherwise, and the hospital's own paper wins over an assumption about it.
+ *
+ * The British forms stay as keywords, so a prescriber trained the other way types "bd" and
+ * lands on BID. That is the whole reason the keyword list exists.
+ *
+ * Changed while ZERO prescription items existed in any database, so nothing had to be
+ * migrated. It would not be free after the pilot — the codes are stored values, and a
+ * stored "BD" would fail the contract that no longer contains it.
+ *
+ * Farhat also writes "OD night" and "OD morning" as single frequencies. Those are ON and OM
+ * here: one field holding one answer, rather than a frequency with a time of day glued onto
+ * the end of it that nothing downstream can read.
  */
 export const FREQUENCY_CODES = [
   { code: 'OD', label: 'Once a day', keywords: ['daily', 'once', 'qd', 'od', '1'] },
-  { code: 'BD', label: 'Twice a day', keywords: ['bid', 'twice', 'bd', '2'] },
-  { code: 'TDS', label: 'Three times a day', keywords: ['tid', 'thrice', 'three', 'tds', '3'] },
-  { code: 'QDS', label: 'Four times a day', keywords: ['qid', 'four', 'qds', '4'] },
-  { code: 'OM', label: 'In the morning', keywords: ['mane', 'morning', 'am', 'om'] },
-  { code: 'ON', label: 'At night', keywords: ['nocte', 'night', 'bedtime', 'hs', 'on', 'pm'] },
+  { code: 'BID', label: 'Twice a day', keywords: ['bd', 'twice', 'bid', '2'] },
+  { code: 'TID', label: 'Three times a day', keywords: ['tds', 'thrice', 'three', 'tid', '3'] },
+  { code: 'QID', label: 'Four times a day', keywords: ['qds', 'four', 'qid', '4'] },
+  { code: 'OM', label: 'In the morning', keywords: ['mane', 'morning', 'am', 'om', 'od morning'] },
+  { code: 'ON', label: 'At night', keywords: ['nocte', 'night', 'bedtime', 'hs', 'on', 'pm', 'od night'] },
   { code: 'PRN', label: 'Only when needed', keywords: ['as needed', 'as required', 'when required', 'sos', 'prn'] },
   { code: 'STAT', label: 'Immediately, once', keywords: ['now', 'once only', 'stat'] },
   { code: 'Q4H', label: 'Every 4 hours', keywords: ['4 hourly', 'q4h'] },
