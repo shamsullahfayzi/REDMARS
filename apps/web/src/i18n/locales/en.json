@@ -791,7 +791,6 @@
     "closed": "This visit is closed. Nothing further can be recorded against it.",
     "tablist": "Consultation sections",
     "notBuilt": "{{section}} is not built yet.",
-    "keys": "Arrow keys move between sections. Alt + 1 to 6 jumps straight to one.",
     "tabs": {
       "vitals": "Vitals",
       "complaint": "Complaint",
@@ -799,6 +798,28 @@
       "prescription": "Prescription",
       "notes": "Notes",
       "history": "History"
+    },
+    "separator": ", ",
+    "hint": {
+      "tabs": "Arrow keys move between sections. Alt + 1 to 6 jumps straight to one."
+    },
+    "hotkeys": {
+      "saveContinue": "Save & continue",
+      "savePrint": "Save & print",
+      "saveFinish": "Save & finish",
+      "leave": "Leave",
+      "saving": "Saving…",
+      "nothingToSave": "Nothing to save.",
+      "saveFailed": "Could not save {{sections}}. Nothing was printed and the visit was not finished.",
+      "startFirst": "Start the consultation before finishing it.",
+      "finishFailed": "Could not finish this visit. Nothing was changed.",
+      "saved": "Saved {{sections}}."
+    },
+    "unsaved": {
+      "title": "Unsaved work in {{sections}}.",
+      "saveLeave": "Save and leave",
+      "discard": "Discard and leave",
+      "stay": "Stay here"
     }
   }
 }

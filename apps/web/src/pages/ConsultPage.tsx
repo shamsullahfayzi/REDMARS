@@ -14,10 +14,12 @@ import {
   Play,
 } from 'lucide-react'
 import { isVisitOpen, type ConsultContext } from '@redmars/shared'
+import { ConsultActions } from '@/components/ConsultActions'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useConsultContext } from '@/hooks/useConsult'
+import { ConsultSaveProvider } from '@/components/ConsultSaveProvider'
 import { useChangeVisitStatus } from '@/hooks/useVisitStatus'
 import { cn } from '@/lib/utils'
 
@@ -78,11 +80,16 @@ export function ConsultPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <BackToQueue />
-      <PatientBanner context={context} />
-      <ConsultTabs active={tab} onChange={setTab} />
-    </div>
+    // The provider wraps the tabs AND the key bar, because the keys save what the tabs
+    // register (task 4.2) and neither half means anything without the other.
+    <ConsultSaveProvider>
+      <div className="space-y-4">
+        <BackToQueue />
+        <PatientBanner context={context} />
+        <ConsultTabs active={tab} onChange={setTab} />
+        <ConsultActions visit={context.visit} />
+      </div>
+    </ConsultSaveProvider>
   )
 }
 
@@ -327,7 +334,7 @@ function ConsultTabs({ active, onChange }: { active: TabKey; onChange: (tab: Tab
         </div>
       ))}
 
-      <p className="text-xs text-muted-foreground">{t('consult.keys')}</p>
+      <p className="text-xs text-muted-foreground">{t('consult.hint.tabs')}</p>
     </div>
   )
 }
