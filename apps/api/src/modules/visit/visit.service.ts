@@ -12,6 +12,7 @@ import type {
   ChangeVisitStatusRequest,
   ConsultContext,
   CreateVisitRequest,
+  UpdateComplaintRequest,
   QueueEntry,
   QueueQuery,
   QueueResponse,
@@ -24,6 +25,7 @@ import {
   VISIT_STATUS_TRANSITIONS,
   allowedStatusChanges,
   currentAgeYears,
+  isVisitOpen,
 } from '@redmars/shared';
 import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
@@ -293,6 +295,44 @@ export class VisitService {
           )
         : null,
     };
+  }
+
+  /**
+   * Task 4.4 — the doctor writes what the patient actually came in with.
+   *
+   * A REPLACE, not an append, and that is the right shape: the desk's version is what the
+   * patient managed to say at a busy window, and the doctor's is what it turned out to be.
+   * The old text is not lost — the audit extension records the before and after of every
+   * update, so "the desk wrote X and the doctor changed it to Y" stays answerable without
+   * a second column that nobody would read.
+   */
+  async updateComplaint(
+    facilityId: string,
+    id: string,
+    input: UpdateComplaintRequest,
+  ): Promise<VisitSummary> {
+    const visit = await this.prisma.db.visit.findFirst({
+      where: { id, facilityId },
+      select: { id: true, status: true },
+    });
+    if (!visit) throw new NotFoundException('Visit not found');
+
+    // Same rule as vitals: documentation belongs to the encounter it describes. A closed
+    // visit is a record of what happened, and `completed` leads nowhere in the transition
+    // map, so it cannot be reopened to allow one either.
+    if (!isVisitOpen(visit.status)) {
+      throw new BadRequestException({
+        message: 'This visit is closed. The complaint can only be written during the visit.',
+        code: 'visit_closed',
+      });
+    }
+
+    const updated = await this.prisma.db.visit.update({
+      where: { id },
+      data: { chiefComplaint: input.chiefComplaint },
+      select: visitSummarySelect,
+    });
+    return this.toSummary(updated);
   }
 
   /**

@@ -143,6 +143,17 @@ export const PERMISSION_MATRIX = {
   'panel.manage': { admin: YES },
   'template.manage.own': { admin: YES, doctor: YES },
   'template.manage.shared': { admin: YES },
+  /**
+   * Listing the templates you may pick from (task 4.4).
+   *
+   * Did not exist until templates did, and absence is denial — so nobody could read one
+   * at all. The two `manage` rows above are about WRITING them; "see the list I choose
+   * from" is not managing anything, and reading a template reveals no patient data, only
+   * a phrase somebody found worth saving. The narrowing that matters is not in this row
+   * but in the query: a doctor sees the shared templates and their own, never a
+   * colleague's private ones.
+   */
+  'template.read': { admin: YES, nurse: YES, doctor: YES },
   'setting.manage': { admin: YES },
 
   // ---- 3. Patient ----------------------------------------------------------
@@ -205,6 +216,20 @@ export const PERMISSION_MATRIX = {
     management: YES,
   },
   'visit.change_status': { receptionist: YES, nurse: YES, doctor: YES },
+  /**
+   * Writing what the patient came in with (task 4.4).
+   *
+   * The desk types a complaint at check-in under `visit.create`, and it is whatever the
+   * patient managed to say at a busy window — "not feeling well", or nothing. The doctor
+   * then writes what is actually wrong, in the words the record needs, and that is a
+   * different act by a different person on a visit that already exists.
+   *
+   * Not folded into `visit.change_status`: moving a patient along and documenting them are
+   * not the same authority, and the receptionist holds the first. Not folded into
+   * `clinical_note.write` either — that is the psychiatric note, denied even to admin
+   * (R2), and a chief complaint is not that sensitive.
+   */
+  'visit.record_complaint': { nurse: YES, doctor: YES },
   'visit.cancel': { admin: YES, receptionist: 'R5' },
   /** entered_in_error. */
   'visit.void': { admin: YES },

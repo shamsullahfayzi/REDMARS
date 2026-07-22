@@ -841,5 +841,22 @@
     "none": "No vitals recorded for this visit.",
     "loading": "Loading readings…",
     "failed": "Could not record that reading. Nothing was saved."
+  },
+  "complaint": {
+    "label": "Chief complaint",
+    "placeholder": "oliguria, frequency, nocturia",
+    "hint": "What the patient came in with, in plain words. The desk’s version is here already — replace it with yours.",
+    "save": "Save complaint",
+    "saving": "Saving…",
+    "failed": "Could not save the complaint. Nothing was changed.",
+    "templates": "Phrases",
+    "loading": "Loading phrases…",
+    "noTemplates": "No saved phrases yet. Save one below and it is one click next time.",
+    "saveTemplate": "Save as phrase",
+    "templateName": "Name it",
+    "confirmTemplate": "Save phrase",
+    "savingTemplate": "Saving…",
+    "cancelTemplate": "Cancel",
+    "templateFailed": "Could not save that phrase."
   }
 }

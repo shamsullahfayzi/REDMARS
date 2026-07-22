@@ -18,6 +18,7 @@ import {
   changeVisitStatusRequestSchema,
   createVisitRequestSchema,
   queueQuerySchema,
+  updateComplaintRequestSchema,
 } from '@redmars/shared';
 import type {
   CancelVisitResponse,
@@ -128,6 +129,32 @@ export class VisitController {
 
     const auth = this.auth(req);
     return this.visits.changeStatus(auth.facilityId, auth.userId, id, parsed.data);
+  }
+
+  /**
+   * Task 4.4 — the doctor writes what the patient actually came in with.
+   *
+   * Its own permission, `visit.record_complaint`, and not `visit.change_status`: moving a
+   * patient along and documenting them are not the same authority, and the receptionist
+   * holds the first. The desk still writes the opening complaint through `visit.create`;
+   * this replaces it with the clinical version.
+   */
+  @Patch(':id/complaint')
+  @RequirePermission('visit.record_complaint')
+  updateComplaint(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ): Promise<VisitSummary> {
+    const parsed = updateComplaintRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid complaint',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    return this.visits.updateComplaint(this.auth(req).facilityId, id, parsed.data);
   }
 
   /**

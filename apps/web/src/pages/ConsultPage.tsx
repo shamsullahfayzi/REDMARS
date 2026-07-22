@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { isVisitOpen, type ConsultContext } from '@redmars/shared'
 import { ConsultActions } from '@/components/ConsultActions'
+import { ComplaintTab } from '@/components/ComplaintTab'
 import { VitalsTab } from '@/components/VitalsTab'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -90,7 +91,10 @@ export function ConsultPage() {
         <ConsultTabs
           active={tab}
           onChange={setTab}
-          panels={{ vitals: <VitalsTab visit={context.visit} /> }}
+          panels={{
+            vitals: <VitalsTab visit={context.visit} />,
+            complaint: <ComplaintTab visit={context.visit} />,
+          }}
         />
         <ConsultActions visit={context.visit} />
       </div>

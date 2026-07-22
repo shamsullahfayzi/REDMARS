@@ -237,6 +237,23 @@ export const changeVisitStatusRequestSchema = z.object({
 export type ChangeVisitStatusRequest = z.infer<typeof changeVisitStatusRequestSchema>
 
 // ---------------------------------------------------------------------------------
+// Task 4.4 — what the patient actually came in with
+// ---------------------------------------------------------------------------------
+
+/**
+ * The doctor's version of the complaint, replacing whatever the desk managed to type.
+ *
+ * Nullable, because a doctor may clear a complaint the desk guessed at — an empty box is
+ * more honest than "not feeling well" sitting in the record as though someone meant it.
+ * Free text, deliberately, for the reason the visit contract already gives: a coded
+ * complaint list is over-modelling, and the coded conclusion is the Diagnosis.
+ */
+export const updateComplaintRequestSchema = z.object({
+  chiefComplaint: z.string().trim().max(500).nullish().transform((v) => (v ? v : null)),
+})
+export type UpdateComplaintRequest = z.infer<typeof updateComplaintRequestSchema>
+
+// ---------------------------------------------------------------------------------
 // Task 3.11 — cancelling a visit, and giving the money back
 // ---------------------------------------------------------------------------------
 
