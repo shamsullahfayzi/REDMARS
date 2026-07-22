@@ -80,8 +80,10 @@ export function ConsultActions({ visit }: { visit: VisitSummary }) {
 
   const saveAndPrint = useCallback(async () => {
     if (!(await save())) return
-    // Task 4.10 replaces this with the prescription sheet. Until then it prints what is
-    // on screen, which is the header — honest, and already styled for paper by 3.6.
+    // Task 4.10's sheet is mounted on the consult page and visible only to print media, so
+    // there is nothing to navigate to and nothing to fetch — the save above already waited
+    // for every invalidated query to come back, which is what makes this line safe to be
+    // the whole of it.
     window.print()
   }, [save])
 

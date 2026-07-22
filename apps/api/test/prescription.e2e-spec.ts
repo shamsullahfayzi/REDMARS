@@ -10,7 +10,9 @@ import {
   FREQUENCY_VALUES,
   ROUTE_CODES,
   ROUTE_VALUES,
+  defaultPrintSettings,
   matchCode,
+  printSettingsSchema,
   searchCodes,
 } from '@redmars/shared';
 import type { DrugListResponse, LoginResponse, PrescriptionResponse } from '@redmars/shared';
@@ -419,6 +421,34 @@ describe('Prescription (e2e)', () => {
     expect(searchCodes('night', FREQUENCY_CODES).map((e) => e.code)).toContain('ON');
     // An empty query shows everything, so focusing the box is enough to discover the list.
     expect(searchCodes('', ROUTE_CODES)).toHaveLength(ROUTE_CODES.length);
+  });
+
+  /**
+   * Task 4.10 rests on ONE property: every print setting has a default, so the sheet ships
+   * and works before the admin screen that will write these per facility exists. A field
+   * added later without a default turns `parse({})` into a throw at print time — on the one
+   * action that happens while a patient is standing up to leave.
+   */
+  it('every print setting has a default, so an unconfigured facility still prints', () => {
+    const settings = defaultPrintSettings();
+
+    // Farhat's sheet, as photographed: pre-printed letterhead and route spelled out.
+    expect(settings.topMarginMm).toBe(55);
+    expect(settings.paperSize).toBe('A4');
+    expect(settings.routeAsWord).toBe(true);
+
+    // Allergies print by DEFAULT even though their current sheet has no such section.
+    // Tasks 4.6 and 4.8 exist to make a recorded allergy impossible to miss, and a
+    // prescription that leaves the building without it undoes both at the last step.
+    expect(settings.showAllergies).toBe(true);
+
+    // A partial stored value fills its gaps rather than failing — which is what makes
+    // adding a setting later a safe change for facilities that saved the old shape.
+    expect(printSettingsSchema.parse({ topMarginMm: 20 })).toMatchObject({
+      topMarginMm: 20,
+      showAllergies: true,
+      paperSize: 'A4',
+    });
   });
 
   it('refuses a route or frequency that is not a code', async () => {

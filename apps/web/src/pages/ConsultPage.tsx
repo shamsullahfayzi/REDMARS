@@ -13,12 +13,13 @@ import {
   Pill,
   Play,
 } from 'lucide-react'
-import { isVisitOpen, type ConsultContext } from '@redmars/shared'
+import { defaultPrintSettings, isVisitOpen, type ConsultContext } from '@redmars/shared'
 import { AllergyBanner } from '@/components/AllergyBanner'
 import { AllergyEditor } from '@/components/AllergyEditor'
 import { ConsultActions } from '@/components/ConsultActions'
 import { ComplaintTab } from '@/components/ComplaintTab'
 import { DiagnosisTab } from '@/components/DiagnosisTab'
+import { PrescriptionSheet } from '@/components/PrescriptionSheet'
 import { PrescriptionTab } from '@/components/PrescriptionTab'
 import { VitalsTab } from '@/components/VitalsTab'
 import { Badge } from '@/components/ui/badge'
@@ -89,7 +90,10 @@ export function ConsultPage() {
     // The provider wraps the tabs AND the key bar, because the keys save what the tabs
     // register (task 4.2) and neither half means anything without the other.
     <ConsultSaveProvider>
-      <div className="space-y-4">
+      {/* The whole working screen disappears on paper. What prints is the sheet below it,
+          and nothing else — a printed screenshot of a consulting-room UI is not a document
+          anybody can be handed. */}
+      <div className="space-y-4 print:hidden">
         <BackToQueue />
         {/* ABOVE the patient header, not below it (task 4.6). It is the first thing on the
             screen because it is the first thing that should stop a doctor, and it came in
@@ -109,6 +113,17 @@ export function ConsultPage() {
         />
         <ConsultActions visit={context.visit} />
       </div>
+
+      {/*
+        Task 4.10 — mounted always, visible only on paper.
+
+        Kept here rather than on a route of its own because everything it needs is already
+        in this screen's cache, which makes F4 a save followed by window.print() with no
+        navigation, no second round of fetches and no spinner between the doctor and the
+        page. Settings come from the shared defaults — Farhat's sheet — until the admin
+        screen that writes them per facility exists.
+      */}
+      <PrescriptionSheet context={context} settings={defaultPrintSettings()} />
     </ConsultSaveProvider>
   )
 }

@@ -942,5 +942,29 @@
     "placeholder": "Type or choose…",
     "noMatch": "No match.",
     "freeHint": "Press Enter to use what you typed."
+  },
+  "print": {
+    "uhid": "UHID",
+    "name": "Name",
+    "ageSex": "Age/Sex",
+    "regNo": "Reg No",
+    "regDate": "Reg Date",
+    "printDate": "Print Date",
+    "consultant": "Consultant",
+    "years": "{{count}} Yrs",
+    "allergies": "Allergies",
+    "noAllergies": "None recorded. This is not the same as none.",
+    "vitals": "Vital Signs",
+    "complaint": "Chief Complaints",
+    "diagnosis": "Diagnosis",
+    "treatment": "Treatment",
+    "advice": "Advice",
+    "sno": "S.No",
+    "rx": "Rx.",
+    "remarks": "Remarks",
+    "noDrugs": "No medicines prescribed.",
+    "signature": "Prescriber signature",
+    "overrideTitle": "Prescribed despite a recorded allergy:",
+    "interactionTitle": "Interaction acknowledged:"
   }
 }

@@ -207,4 +207,39 @@
   dl {
     break-inside: avoid;
   }
+
+  /*
+   * Task 4.10 — the prescription sheet.
+   *
+   * `break-inside: avoid` above is right for a one-page receipt and wrong for a
+   * prescription: a sheet with twenty drugs on it MUST be allowed to break, and a table
+   * that refuses to would be pushed whole onto page two leaving page one blank. The rule
+   * moves down to the row, which is the unit that must not split — a dose read off two
+   * sheets of paper is the failure this prevents.
+   */
+  .rx-sheet table {
+    break-inside: auto;
+  }
+
+  .rx-sheet tr {
+    break-inside: avoid;
+  }
+
+  /* The table head repeats on every page. A continuation sheet whose columns are unlabelled
+     asks a pharmacist to count across and guess which one is the quantity. */
+  .rx-sheet thead {
+    display: table-header-group;
+  }
+
+  /*
+   * Black on white, not the theme.
+   *
+   * The screen palette is tuned for contrast on a backlit display; muted greys that read
+   * fine there come out of a tired clinic laser printer as almost nothing. A prescription
+   * is read under bad light by people who did not write it.
+   */
+  .rx-sheet {
+    color: #000;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
 }
