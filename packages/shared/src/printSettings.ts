@@ -60,6 +60,14 @@ export const printSettingsSchema = z.object({
   showComplaint: z.boolean().default(true),
   showDiagnosis: z.boolean().default(true),
   showAdvice: z.boolean().default(true),
+  /**
+   * Task 4.15 — "come back on the fifth", on the paper the patient carries home.
+   *
+   * A toggle rather than always-on because a hospital that books every review into the
+   * appointment book (task 3.10) hands the patient a card instead, and two dates on two
+   * pieces of paper is how they end up disagreeing. Farhat does not, so it defaults on.
+   */
+  showFollowUp: z.boolean().default(true),
   /** The line the prescriber signs. Their sheet has none; a drug order should.  */
   showSignature: z.boolean().default(true),
 

@@ -36,6 +36,29 @@ const optionalText = (max: number) =>
 const requiredText = (max: number, message: string) =>
   z.string().trim().min(1, message).max(max)
 
+/**
+ * Task 4.15 — a follow-up date, as a plain calendar day.
+ *
+ * YYYY-MM-DD and never a timestamp, matching the `@db.Date` column. "Come back on the
+ * fifth" is a day at the hospital; storing it as an instant means it becomes the fourth
+ * for anyone whose machine is on the other side of midnight, and a recall list that is
+ * off by one is a recall list nobody trusts.
+ *
+ * Only the SHAPE is checked here. Both bounds — not before the visit, not more than
+ * `FOLLOW_UP_MAX_MONTHS` ahead — are enforced by the server, because both are questions
+ * about which day it is at the hospital and the browser's clock is not that. The upper one
+ * catches the typo, a year keyed as 2062 rather than 2026; it is not a clinical opinion
+ * about how far ahead a review may be set.
+ */
+export const FOLLOW_UP_MAX_MONTHS = 24
+
+export const followUpDateSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a date like 2026-08-15.')
+  .nullish()
+  .transform((v) => (v ? v : null))
+
 export const prescriptionItemInputSchema = z.object({
   /** Present means "this row already exists"; absent means a new one. */
   id: z.uuid().optional(),
@@ -105,6 +128,22 @@ export const savePrescriptionRequestSchema = z.object({
     .max(300)
     .nullish()
     .transform((v) => (v ? v : null)),
+  /**
+   * Task 4.15 — when to come back. A calendar day at the hospital, never an instant.
+   *
+   * IT IS NOT AN APPOINTMENT, and the difference is the whole feature. Task 3.10 books a
+   * slot: the patient is expected at a time and the desk has a row for them. This is
+   * clinical INTENT — "review in four weeks" — recorded whether or not anything is booked,
+   * because most psychiatric outpatients here do not book, they simply come back. Keeping
+   * the two apart is what makes "who was due in September and never came" answerable at
+   * all; an appointment book only knows about the people who made an appointment.
+   *
+   * On the prescription because that is where the schema put it and because that is where
+   * the decision is made — the interval is the drug course. A consequence worth stating:
+   * a visit with no prescription cannot carry one, and for those the booking in task 3.10
+   * is the tool.
+   */
+  followUpDate: followUpDateSchema,
 })
 export type SavePrescriptionRequest = z.infer<typeof savePrescriptionRequestSchema>
 
@@ -136,6 +175,8 @@ export const prescriptionSchema = z.object({
   advice: z.string().nullable(),
   /** Non-null means a flagged interaction was shown and the prescriber went ahead. */
   interactionAckReason: z.string().nullable(),
+  /** Task 4.15 — YYYY-MM-DD, or null when no review was set. */
+  followUpDate: z.string().nullable(),
   practitionerId: z.string(),
   practitionerName: z.string().nullable(),
   printedAt: z.string().nullable(),

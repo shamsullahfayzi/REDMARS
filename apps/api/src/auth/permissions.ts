@@ -310,6 +310,24 @@ export const PERMISSION_MATRIX = {
    * catalog drugs interact — so no clinical-confidentiality rule gates it.
    */
   'interaction.check': { admin: YES, doctor: YES, pharmacist: YES },
+  /**
+   * The recall list (task 4.15) — who was told to come back, and by when.
+   *
+   * Its own permission rather than a second use of `appointment.read`, because it is a
+   * different list about different people. The book knows who made an appointment; this
+   * knows who was told to return, which at Farhat is most of them and overlaps the book
+   * hardly at all. Overloading `appointment.read` would make this file — the one document
+   * that answers "who can see what" — quietly untrue.
+   *
+   * THE RECEPTIONIST HOLDS IT, and that is the point of the feature: the desk is who rings
+   * a patient who did not come back. The doctor holds it because the plan was theirs. Admin
+   * under R2, read and never write.
+   *
+   * MANAGEMENT DOES NOT. Every other list they hold is counts and money; this is named
+   * patients with phone numbers and the name of the psychiatrist who saw them, and there is
+   * no operational question that needs the names to answer it.
+   */
+  'follow_up.read': { admin: 'R2', receptionist: YES, doctor: YES },
 
   // ---- 7. Laboratory -------------------------------------------------------
   'lab_order.create': { doctor: YES },

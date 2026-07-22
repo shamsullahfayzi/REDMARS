@@ -103,6 +103,21 @@ export function PrescriptionSheet({
         <Section title={t('print.advice')}>{rx.advice}</Section>
       )}
 
+      {/*
+        Task 4.15 — the one line on this page the PATIENT is meant to act on.
+
+        A follow-up recorded in the system and absent from the paper somebody carries home
+        is a recall the hospital knows about and the patient does not. It prints boxed and
+        near the bottom, where the eye ends up, and the date is LTR-isolated like every
+        other number here.
+      */}
+      {settings.showFollowUp && rx?.followUpDate && (
+        <div className="mt-4 border border-black px-3 py-2 text-[11pt] font-semibold">
+          {t('print.followUp')}{' '}
+          <span dir="ltr">{formatDay(rx.followUpDate)}</span>
+        </div>
+      )}
+
       {settings.showSignature && (
         <div className="mt-10 flex justify-end">
           <div className="w-56 border-t border-black pt-1 text-center text-[10pt]">
@@ -435,4 +450,22 @@ function formatDateTime(iso: string): string {
     hour12: true,
     timeZone: 'Asia/Kabul',
   }).format(date)
+}
+
+/**
+ * A follow-up is a DAY, not an instant — "22-Jul-2026", same face as the dates above it.
+ *
+ * Parsed as UTC noon rather than midnight: a YYYY-MM-DD is a calendar day, and midnight
+ * shifted into any negative offset lands on the day before. Noon is inside the intended day
+ * for every real-world zone.
+ */
+function formatDay(date: string): string {
+  const at = new Date(`${date}T12:00:00Z`)
+  if (Number.isNaN(at.getTime())) return date
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(at)
 }

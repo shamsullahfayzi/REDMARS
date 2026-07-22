@@ -15,7 +15,13 @@ import type {
   SavePrescriptionRequest,
   VisitStatus,
 } from '@redmars/shared';
-import { INTERACTION_SEVERITY_RANK, interactionNeedsAck, isVisitOpen } from '@redmars/shared';
+import {
+  FOLLOW_UP_MAX_MONTHS,
+  INTERACTION_SEVERITY_RANK,
+  interactionNeedsAck,
+  isVisitOpen,
+} from '@redmars/shared';
+import { facilityDateString } from '../../common/facility-time';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const prescriptionSelect = {
@@ -24,6 +30,7 @@ const prescriptionSelect = {
   status: true,
   advice: true,
   interactionAckReason: true,
+  followUpDate: true,
   practitionerId: true,
   printedAt: true,
   createdAt: true,
@@ -52,6 +59,7 @@ type PrescriptionRow = {
   status: string;
   advice: string | null;
   interactionAckReason: string | null;
+  followUpDate: Date | null;
   practitionerId: string;
   printedAt: Date | null;
   createdAt: Date;
@@ -204,6 +212,8 @@ export class PrescriptionService {
       });
     }
 
+    const followUpDate = this.resolveFollowUpDate(input.followUpDate, visit.startedAt);
+
     const prescriptionId =
       existing?.id ??
       (
@@ -213,6 +223,7 @@ export class PrescriptionService {
             practitionerId,
             advice: input.advice,
             interactionAckReason: input.interactionAckReason,
+            followUpDate,
           },
           select: { id: true },
         })
@@ -221,7 +232,11 @@ export class PrescriptionService {
     if (existing) {
       await this.prisma.db.prescription.update({
         where: { id: prescriptionId },
-        data: { advice: input.advice, interactionAckReason: input.interactionAckReason },
+        data: {
+          advice: input.advice,
+          interactionAckReason: input.interactionAckReason,
+          followUpDate,
+        },
       });
     }
 
@@ -491,13 +506,51 @@ export class PrescriptionService {
     };
   }
 
+  /**
+   * The follow-up date, checked against the day the VISIT happened rather than against
+   * today (task 4.15).
+   *
+   * The visit is the anchor because it is the fixed thing: a prescription re-saved at
+   * 00:05 must not start refusing a date that was legal at 23:55, and a visit being
+   * corrected the morning after must not have its follow-up rejected for being "yesterday".
+   *
+   * Both bounds live here rather than in the contract because both are questions about
+   * which day it is at the HOSPITAL, and a browser's clock is not that.
+   */
+  private resolveFollowUpDate(date: string | null, visitStartedAt: Date): Date | null {
+    if (!date) return null;
+
+    const visitDay = facilityDateString(visitStartedAt);
+    if (date < visitDay) {
+      throw new BadRequestException({
+        message: 'A follow-up cannot be before the visit it was decided in.',
+        code: 'follow_up_in_past',
+      });
+    }
+
+    const ceiling = new Date(`${visitDay}T12:00:00Z`);
+    ceiling.setUTCMonth(ceiling.getUTCMonth() + FOLLOW_UP_MAX_MONTHS);
+    if (date > ceiling.toISOString().slice(0, 10)) {
+      // The typo, not a clinical opinion: a year keyed as 2062 rather than 2026.
+      throw new BadRequestException({
+        message: `A follow-up cannot be more than ${FOLLOW_UP_MAX_MONTHS} months ahead.`,
+        code: 'follow_up_too_far',
+      });
+    }
+
+    // Midnight UTC into an @db.Date column, so the day that goes in is the day that comes
+    // back out. Storing an instant is how "the fifth" becomes the fourth for whoever reads
+    // it from the other side of midnight.
+    return new Date(`${date}T00:00:00.000Z`);
+  }
+
   private async requireVisit(
     facilityId: string,
     visitId: string,
-  ): Promise<{ status: VisitStatus; patientId: string }> {
+  ): Promise<{ status: VisitStatus; patientId: string; startedAt: Date }> {
     const visit = await this.prisma.db.visit.findFirst({
       where: { id: visitId, facilityId },
-      select: { status: true, patientId: true },
+      select: { status: true, patientId: true, startedAt: true },
     });
     // 404, not 403 — whether a visit exists in another facility is not this one's to learn.
     if (!visit) throw new NotFoundException('Visit not found');
@@ -519,6 +572,9 @@ export class PrescriptionService {
       status: row.status,
       advice: row.advice,
       interactionAckReason: row.interactionAckReason,
+      // The DAY, not an instant. @db.Date comes back as UTC midnight and the wire carries
+      // YYYY-MM-DD, so nobody downstream has to decide what time zone "the fifth" was in.
+      followUpDate: row.followUpDate?.toISOString().slice(0, 10) ?? null,
       practitionerId: row.practitionerId,
       practitionerName: row.practitioner
         ? [row.practitioner.firstName, row.practitioner.lastName].filter(Boolean).join(' ')

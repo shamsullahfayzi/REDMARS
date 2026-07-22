@@ -65,7 +65,8 @@
       "administration": "Administration"
     },
     "reception": "Reception",
-    "appointments": "Appointments"
+    "appointments": "Appointments",
+    "followUps": "Follow-ups"
   },
   "theme": {
     "toLight": "Switch to light mode",
@@ -795,6 +796,25 @@
       "error": "Could not book that. Nothing was saved."
     }
   },
+  "followUps": {
+    "description": "Patients who were told to come back — and who has not.",
+    "from": "From",
+    "to": "To",
+    "previousWindow": "Earlier window",
+    "nextWindow": "Later window",
+    "onlyMissed": "Only those not seen",
+    "refresh": "Refresh",
+    "due": "Due in this window",
+    "missed": "Not seen",
+    "window": "Window",
+    "empty": "Nobody is due in these days.",
+    "error": "Could not load the recall list.",
+    "truncated": "There are more than can be shown. Narrow the dates.",
+    "seen": "Seen",
+    "notSeen": "Not seen",
+    "noPhone": "No phone number",
+    "openVisit": "Open the visit"
+  },
   "consult": {
     "loading": "Opening the record…",
     "error": "Could not open this consultation.",
@@ -968,6 +988,15 @@
       "remove": "Delete {{name}}",
       "withdrawn": "Contains a drug no longer in the formulary: {{drugs}}",
       "failed": "Could not save that regimen."
+    },
+    "followUp": {
+      "label": "Come back on",
+      "week1": "1 week",
+      "week2": "2 weeks",
+      "week4": "4 weeks",
+      "month3": "3 months",
+      "clear": "No review",
+      "hint": "Records the plan to review. It does not book an appointment."
     }
   },
   "notes": {
@@ -1085,6 +1114,7 @@
     "noDrugs": "No medicines prescribed.",
     "signature": "Prescriber signature",
     "overrideTitle": "Prescribed despite a recorded allergy:",
-    "interactionTitle": "Interaction acknowledged:"
+    "interactionTitle": "Interaction acknowledged:",
+    "followUp": "Come back on:"
   }
 }

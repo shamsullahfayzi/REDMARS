@@ -96,6 +96,8 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
 
   const [rows, setRows] = useState<Row[]>([])
   const [advice, setAdvice] = useState('')
+  /** Task 4.15 — YYYY-MM-DD, or '' for no review set. */
+  const [followUpDate, setFollowUpDate] = useState('')
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   /** Reasons typed against the block, keyed by drug. Cleared once the save goes through. */
@@ -131,6 +133,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
       })),
     )
     setAdvice(stored?.advice ?? '')
+    setFollowUpDate(stored?.followUpDate ?? '')
     setInteractionAck(stored?.interactionAckReason ?? '')
     setLoadedFor(visit.id)
   }, [listQuery.isSuccess, stored, loadedFor, visit.id])
@@ -149,6 +152,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
           instructions: item.instructions ?? '',
         })),
         advice: stored?.advice ?? '',
+        followUpDate: stored?.followUpDate ?? '',
       }),
     [stored],
   )
@@ -158,8 +162,9 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
       JSON.stringify({
         items: rows.map(({ drugLabel: _label, allergyOverrideReason: _reason, ...rest }) => rest),
         advice,
+        followUpDate,
       }),
-    [rows, advice],
+    [rows, advice, followUpDate],
   )
 
   const isDirty = loadedFor === visit.id && currentSignature !== savedSignature
@@ -197,6 +202,9 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
       // Typed in the warning panel, or carried from the stored sheet so re-saving an
       // already-acknowledged combination does not ask again.
       interactionAckReason: interactionAck || stored?.interactionAckReason || null,
+      // '' means no review set. Sent as null so clearing the box actually removes the
+      // recall rather than leaving yesterday's date on the sheet.
+      followUpDate: followUpDate || null,
     })
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? t('prescription.failed'))
@@ -222,7 +230,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
       })),
     )
     setOverrides({})
-  }, [rows, advice, overrides, interactionAck, stored, save, t])
+  }, [rows, advice, followUpDate, overrides, interactionAck, stored, save, t])
 
   useConsultSaver('prescription', { isDirty, save: doSave })
 
@@ -537,6 +545,8 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         />
       </div>
 
+      <FollowUp value={followUpDate} disabled={!open} onChange={setFollowUpDate} />
+
       {/* Task 4.9 — on screen as soon as the pair exists, long before anyone saves. */}
       {interactions.length > 0 && (
         <InteractionPanel
@@ -578,6 +588,83 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Task 4.15 — when to come back.
+ *
+ * THE QUICK BUTTONS ARE THE FEATURE, not the date box. A doctor seeing forty patients does
+ * not open a calendar widget and count weeks forty times; "in 4 weeks" is one click, and a
+ * follow-up that takes one click is a follow-up that actually gets recorded. The intervals
+ * are the ones a psychiatric clinic uses — a fortnight after starting an antidepressant, a
+ * month or three once someone is stable.
+ *
+ * It is NOT an appointment. Task 3.10 books a slot; this records the intent to review,
+ * which is what most outpatients here actually have. Setting one does not put the patient
+ * in the book, and the screen says so rather than letting a doctor believe the desk has
+ * been told.
+ */
+function FollowUp({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string
+  disabled: boolean
+  onChange: (date: string) => void
+}) {
+  const { t } = useTranslation()
+
+  // Whole weeks from today, in UTC — these are calendar days at the hospital, not instants,
+  // and shifting them in the browser's zone is how "in 4 weeks" lands a day out for anyone
+  // near midnight.
+  function inDays(days: number): string {
+    const at = new Date()
+    at.setUTCDate(at.getUTCDate() + days)
+    return at.toISOString().slice(0, 10)
+  }
+
+  const PRESETS = [
+    { days: 7, key: 'week1' },
+    { days: 14, key: 'week2' },
+    { days: 28, key: 'week4' },
+    { days: 84, key: 'month3' },
+  ] as const
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor="followUpDate">{t('prescription.followUp.label')}</Label>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          id="followUpDate"
+          type="date"
+          dir="ltr"
+          className="w-44"
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {!disabled &&
+          PRESETS.map((preset) => (
+            <Button
+              key={preset.key}
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => onChange(inDays(preset.days))}
+            >
+              {t(`prescription.followUp.${preset.key}`)}
+            </Button>
+          ))}
+        {!disabled && value && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => onChange('')}>
+            {t('prescription.followUp.clear')}
+          </Button>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">{t('prescription.followUp.hint')}</p>
     </div>
   )
 }

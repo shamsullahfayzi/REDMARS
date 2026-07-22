@@ -8,6 +8,7 @@ import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { AppointmentsPage } from '@/pages/AppointmentsPage'
 import { ConsultPage } from '@/pages/ConsultPage'
 import { MyConsultationsPage } from '@/pages/MyConsultationsPage'
+import { FollowUpsPage } from '@/pages/FollowUpsPage'
 import { CreatePatientPage } from '@/pages/CreatePatientPage'
 import { DepartmentPage } from '@/pages/DepartmentsPage'
 import { DrugsPage } from '@/pages/DrugsPage'
@@ -58,6 +59,9 @@ export const router = createBrowserRouter([
           // occasion, and the same patient has many. /consult/:patientId would have no
           // answer to "which visit am I writing this prescription against".
           { path: 'consult/:visitId', element: <ConsultPage /> },
+          // Task 4.15 — who was told to come back. Beside the appointment book rather than
+          // inside it, because they are lists of different people.
+          { path: 'follow-ups', element: <FollowUpsPage /> },
           { path: 'icd', element: <IcdLookupPage /> },
           { path: 'interactions', element: <InteractionCheckerPage /> },
           { path: 'lab', element: <PlaceholderPage sectionKey="lab" /> },
