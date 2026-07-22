@@ -1026,6 +1026,25 @@
       }
     }
   },
+  "history": {
+    "denied": "Only a doctor or an administrator may read a patient's history.",
+    "loading": "Opening the record…",
+    "error": "Could not open the history.",
+    "window": "Show",
+    "months": "Last {{count}} months",
+    "empty": "No previous visits recorded in this window.",
+    "count": "{{count}} previous visits",
+    "older": "{{count}} more before this window",
+    "truncated": "Only the most recent are shown.",
+    "open": "Open",
+    "diagnoses": "Diagnosis",
+    "primary": "Primary",
+    "prescribed": "Prescribed",
+    "drug": "Drug",
+    "dose": "Dose",
+    "frequency": "Frequency",
+    "duration": "Duration"
+  },
   "codes": {
     "placeholder": "Type or choose…",
     "noMatch": "No match.",

@@ -19,6 +19,7 @@ import { AllergyEditor } from '@/components/AllergyEditor'
 import { ConsultActions } from '@/components/ConsultActions'
 import { ComplaintTab } from '@/components/ComplaintTab'
 import { DiagnosisTab } from '@/components/DiagnosisTab'
+import { HistoryTab } from '@/components/HistoryTab'
 import { NotesTab } from '@/components/NotesTab'
 import { PrescriptionSheet } from '@/components/PrescriptionSheet'
 import { PrescriptionTab } from '@/components/PrescriptionTab'
@@ -111,6 +112,7 @@ export function ConsultPage() {
             diagnosis: <DiagnosisTab visit={context.visit} />,
             prescription: <PrescriptionTab visit={context.visit} />,
             notes: <NotesTab visit={context.visit} />,
+            history: <HistoryTab patientId={context.patient.id} currentVisitId={context.visit.id} />,
           }}
         />
         <ConsultActions visit={context.visit} />
