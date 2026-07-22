@@ -879,5 +879,27 @@
       "confirmed": "تأییدشده",
       "refuted": "رد شده"
     }
+  },
+  "allergies": {
+    "noneRecorded": "حساسیتی ثبت نشده. از مریض بپرسید — سابقهٔ خالی به معنای نبودن نیست.",
+    "record": "ثبت حساسیت",
+    "substance": "ماده",
+    "substancePlaceholder": "پنسلین",
+    "severity": "شدت",
+    "chooseSeverity": "انتخاب کنید…",
+    "reaction": "واکنش",
+    "reactionPlaceholder": "دانه، ورم، انافیلاکسی…",
+    "save": "ذخیرهٔ حساسیت",
+    "saving": "در حال ذخیره…",
+    "failed": "ذخیرهٔ آن حساسیت ناکام شد. چیزی ثبت نشد.",
+    "retract": "پس‌گرفتن",
+    "restore": "بازگرداندن",
+    "severities": {
+      "mild": "خفیف",
+      "moderate": "متوسط",
+      "severe": "شدید"
+    },
+    "banner": "حساسیت‌ها",
+    "retractedCount": "پس‌گرفته‌شده"
   }
 }

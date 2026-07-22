@@ -879,5 +879,27 @@
       "confirmed": "تایید شوی",
       "refuted": "رد شوی"
     }
+  },
+  "allergies": {
+    "noneRecorded": "هیڅ حساسیت نه دی ثبت شوی. له ناروغ وپوښتئ — خالي ریکارډ د نشتوالي معنا نه لري.",
+    "record": "حساسیت ثبت کړئ",
+    "substance": "ماده",
+    "substancePlaceholder": "پنسلین",
+    "severity": "شدت",
+    "chooseSeverity": "وټاکئ…",
+    "reaction": "غبرګون",
+    "reactionPlaceholder": "دانې، پړسوب، انافیلاکسي…",
+    "save": "حساسیت خوندي کړئ",
+    "saving": "خوندي کېږي…",
+    "failed": "د دې حساسیت خوندي کول ونشول. هیڅ ثبت نشو.",
+    "retract": "بېرته اخیستل",
+    "restore": "بیا راوستل",
+    "severities": {
+      "mild": "سپک",
+      "moderate": "منځنی",
+      "severe": "سخت"
+    },
+    "banner": "حساسیتونه",
+    "retractedCount": "بېرته اخیستل شوي"
   }
 }

@@ -28,6 +28,7 @@ import {
   isVisitOpen,
 } from '@redmars/shared';
 import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
+import { allergySelect, compareAllergies, toAllergy } from '../allergy/allergy.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
 import {
   facilityDateString,
@@ -274,6 +275,26 @@ export class VisitService {
     const arrivedAt = visit.statusHistory.find((row) => row.status === 'arrived')?.changedAt;
     const calledAt = visit.statusHistory.find((row) => row.status === 'in_progress')?.changedAt;
 
+    // Task 4.6 — ACTIVE allergies, in the same request as the header so the banner paints
+    // with it. Fetching them separately would mean waiting for this response to learn the
+    // patient id and only then asking, leaving a named patient on screen with no warning
+    // for a beat — on the screen whose whole job is to stop a wrong prescription.
+    const allergyRows = await this.prisma.db.allergy.findMany({
+      where: { patientId: visit.patientId, isActive: true },
+      select: allergySelect,
+    });
+    const noters = [
+      ...new Set(allergyRows.map((row) => row.notedBy).filter((id): id is string => !!id)),
+    ];
+    const noterNames = new Map(
+      (
+        await this.prisma.db.appUser.findMany({
+          where: { id: { in: noters } },
+          select: { id: true, fullName: true },
+        })
+      ).map((user) => [user.id, user.fullName]),
+    );
+
     return {
       visit: this.toSummary(visit),
       patient: {
@@ -294,6 +315,11 @@ export class VisitService {
             Math.round(((calledAt ?? new Date()).getTime() - arrivedAt.getTime()) / 60_000),
           )
         : null,
+      // Worst first, by the same comparator the allergy screen uses — a banner ordered
+      // differently from the list behind it is a banner people learn to distrust.
+      allergies: allergyRows
+        .sort(compareAllergies)
+        .map((row) => toAllergy(row, row.notedBy ? (noterNames.get(row.notedBy) ?? null) : null)),
     };
   }
 

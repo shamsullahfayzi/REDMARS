@@ -225,16 +225,20 @@ describe('Consult context (e2e)', () => {
     expect(body.waitedMinutes).toBe(12);
   });
 
-  it('carries NOTHING clinical — every one of those has its own task and its own permission', async () => {
+  it('carries nothing clinical EXCEPT allergies — everything else has its own permission', async () => {
     const { visitId } = await stageVisit();
 
     const res = await open(visitId).expect(200);
     const body = res.body as Record<string, unknown>;
 
-    // A context endpoint that quietly returned all of these would hand a nurse the
-    // psych note that `clinical_note.read` denies even to the admin.
-    expect(Object.keys(body).sort()).toEqual(['patient', 'visit', 'waitedMinutes']);
-    for (const leaked of ['vitals', 'diagnoses', 'prescriptions', 'notes', 'allergies']) {
+    // Allergies joined at task 4.6, and the exception is argued in the contract: every
+    // role that can reach this endpoint already holds `allergy.read` UNCONDITIONALLY, so
+    // it leaks nothing, and fetching them separately would leave a named patient on screen
+    // with no warning banner for a beat.
+    expect(Object.keys(body).sort()).toEqual(['allergies', 'patient', 'visit', 'waitedMinutes']);
+    // The rest stay out. A context endpoint that quietly returned all of these would hand
+    // a nurse the psych note that `clinical_note.read` denies even to the admin.
+    for (const leaked of ['vitals', 'diagnoses', 'prescriptions', 'notes']) {
       expect(body[leaked]).toBeUndefined();
     }
   });

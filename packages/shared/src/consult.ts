@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { allergySchema } from './allergy.js'
 import { genderSchema } from './referenceRange.js'
 import { visitSummarySchema } from './visit.js'
 
@@ -7,10 +8,27 @@ import { visitSummarySchema } from './visit.js'
  *
  * One request, because this is the screen a doctor opens between two patients and the
  * header has to be right before anything else renders. It carries who the patient is,
- * which occasion this is, and how long they have been waiting — and NOTHING clinical
- * yet. Vitals, diagnoses, prescriptions and notes each arrive with their own task and
- * their own permission; folding them in here would mean one endpoint that a nurse,
+ * which occasion this is, how long they have been waiting — and ALLERGIES.
+ *
+ * Nothing else clinical. Vitals, diagnoses, prescriptions and notes each arrive with their
+ * own task and their own permission; folding them in would mean one endpoint that a nurse,
  * a doctor and an admin all need but none of them may read in full.
+ *
+ * ALLERGIES ARE THE DELIBERATE EXCEPTION (task 4.6), for two reasons that both have to
+ * hold:
+ *
+ *  1. It leaks nothing. Every role that can reach this endpoint — admin under R2, nurse
+ *     under R7, doctor outright — already holds `allergy.read` UNCONDITIONALLY. R6 makes
+ *     the point in the other direction: the allergy list is the one clinical thing the
+ *     rules go out of their way to spread, because "dispensing without allergies is
+ *     dangerous". There is no confidentiality argument against carrying it here.
+ *  2. The alternative is unsafe. Fetching them separately means waiting for this response
+ *     to learn the patient id and only then asking — so the screen would show a named
+ *     patient with no allergy banner for a beat. On the screen whose entire job is to stop
+ *     a wrong prescription, that beat is the failure mode.
+ *
+ * The full list, retracted rows included, lives at /patients/:id/allergies. This carries
+ * only the ACTIVE ones, because a banner is a warning and a retracted allergy is history.
  *
  * The visit rides along whole rather than flattened: the queue already speaks
  * `VisitSummary`, and a consult screen opened from a queue row should be describing the
@@ -46,5 +64,11 @@ export const consultContextSchema = z.object({
    * in an operational report.
    */
   waitedMinutes: z.number().int().nullable(),
+  /**
+   * ACTIVE allergies only, worst first. An empty array means none are RECORDED, which is
+   * not the same as none existing — the screen has to say that difference out loud, because
+   * a blank space reads as "safe" and it is not.
+   */
+  allergies: z.array(allergySchema),
 })
 export type ConsultContext = z.infer<typeof consultContextSchema>

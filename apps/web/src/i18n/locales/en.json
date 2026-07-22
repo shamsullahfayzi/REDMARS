@@ -879,5 +879,27 @@
       "confirmed": "Confirmed",
       "refuted": "Ruled out"
     }
+  },
+  "allergies": {
+    "noneRecorded": "No allergies recorded. Ask the patient — a blank record is not the same as none.",
+    "record": "Record an allergy",
+    "substance": "Substance",
+    "substancePlaceholder": "Penicillin",
+    "severity": "Severity",
+    "chooseSeverity": "Choose…",
+    "reaction": "Reaction",
+    "reactionPlaceholder": "Rash, swelling, anaphylaxis…",
+    "save": "Save allergy",
+    "saving": "Saving…",
+    "failed": "Could not save that allergy. Nothing was recorded.",
+    "retract": "Retract",
+    "restore": "Restore",
+    "severities": {
+      "mild": "Mild",
+      "moderate": "Moderate",
+      "severe": "Severe"
+    },
+    "banner": "Allergies",
+    "retractedCount": "Retracted"
   }
 }

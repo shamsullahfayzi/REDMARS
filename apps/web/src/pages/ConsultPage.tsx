@@ -14,6 +14,8 @@ import {
   Play,
 } from 'lucide-react'
 import { isVisitOpen, type ConsultContext } from '@redmars/shared'
+import { AllergyBanner } from '@/components/AllergyBanner'
+import { AllergyEditor } from '@/components/AllergyEditor'
 import { ConsultActions } from '@/components/ConsultActions'
 import { ComplaintTab } from '@/components/ComplaintTab'
 import { DiagnosisTab } from '@/components/DiagnosisTab'
@@ -88,7 +90,12 @@ export function ConsultPage() {
     <ConsultSaveProvider>
       <div className="space-y-4">
         <BackToQueue />
+        {/* ABOVE the patient header, not below it (task 4.6). It is the first thing on the
+            screen because it is the first thing that should stop a doctor, and it came in
+            the same request as the header so it paints at the same moment. */}
+        <AllergyBanner allergies={context.allergies} />
         <PatientBanner context={context} />
+        <AllergyEditor patientId={context.patient.id} />
         <ConsultTabs
           active={tab}
           onChange={setTab}
