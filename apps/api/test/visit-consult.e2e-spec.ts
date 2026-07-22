@@ -26,6 +26,21 @@ const prisma = new PrismaClient();
 const PREFIX = 'e2e_consult_';
 const PASSWORD = 'e2e-test-password-not-a-secret';
 
+/**
+ * The R1 read row is written FIRE-AND-FORGET by the audit interceptor, because R1 says a
+ * clinical read is never blocked — including by its own logging. So a test that asserts it
+ * has to wait for it rather than assume it has landed, or it passes alone and fails under
+ * load, which is the worst kind of test.
+ */
+async function eventually<T>(read: () => Promise<T[]>, tries = 40): Promise<T[]> {
+  for (let attempt = 0; attempt < tries; attempt += 1) {
+    const rows = await read();
+    if (rows.length > 0) return rows;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return read();
+}
+
 describe('Consult context (e2e)', () => {
   let app: INestApplication<App>;
   let server: App;
@@ -281,9 +296,11 @@ describe('Consult context (e2e)', () => {
     const { visitId } = await stageVisit();
     await open(visitId).expect(200);
 
-    const rows = await prisma.auditLog.findMany({
-      where: { action: AuditAction.read, entity: 'Visit', entityId: visitId },
-    });
+    const rows = await eventually(() =>
+      prisma.auditLog.findMany({
+        where: { action: AuditAction.read, entity: 'Visit', entityId: visitId },
+      }),
+    );
     expect(rows).toHaveLength(1);
     expect(rows[0].userId).toBe(doctorId);
     // A read changed nothing.

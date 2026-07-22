@@ -1,11 +1,25 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
+  allergyConflictResponseSchema,
   drugListResponseSchema,
   prescriptionResponseSchema,
+  type AllergyConflict,
   type SavePrescriptionRequest,
 } from '@redmars/shared'
-import { apiGet, apiPut } from '@/lib/api'
+import { ApiError, apiGet, apiPut } from '@/lib/api'
 import { queryClient } from '@/lib/queryClient'
+
+/**
+ * Task 4.8 — the allergy conflicts the server refused on, pulled out of a 409.
+ *
+ * Returns null for every other failure, so the screen can tell "this needs a decision"
+ * from "this broke" — the same shape as openVisitsFromError and duplicateMatchesFromError.
+ */
+export function allergyConflictsFromError(error: unknown): AllergyConflict[] | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null
+  const parsed = allergyConflictResponseSchema.safeParse(error.body)
+  return parsed.success ? parsed.data.conflicts : null
+}
 
 /** Task 4.7 — this visit's prescription, or null. Null is a normal answer. */
 export function usePrescription(visitId: string | undefined) {

@@ -49,6 +49,25 @@ export const prescriptionItemInputSchema = z.object({
     .optional()
     .transform((v) => (typeof v === 'number' ? v : null)),
   instructions: optionalText(200),
+  /**
+   * Task 4.8 — why this drug is being given to a patient recorded as allergic to it.
+   *
+   * Null is the normal case. Sending a reason is how a doctor gets PAST the hard block,
+   * and it is stored on the prescription item rather than only in the audit log, because
+   * "why was this prescribed?" is a question asked of the prescription by people who do
+   * not read audit tables.
+   *
+   * Long enough to be a sentence and short enough that nobody pastes a chart into it. The
+   * server ignores it when there is no conflict — a reason attached to a drug nobody was
+   * warned about is noise that makes the real ones harder to find.
+   */
+  allergyOverrideReason: z
+    .string()
+    .trim()
+    .min(5, 'Say why this is safe to prescribe.')
+    .max(300)
+    .nullish()
+    .transform((v) => (v ? v : null)),
 })
 export type PrescriptionItemInput = z.infer<typeof prescriptionItemInputSchema>
 
@@ -79,6 +98,8 @@ export const prescriptionItemSchema = z.object({
   route: z.string(),
   quantity: z.number().int().nullable(),
   instructions: z.string().nullable(),
+  /** Non-null means the prescriber was stopped, was shown the allergy, and went ahead. */
+  allergyOverrideReason: z.string().nullable(),
   sequence: z.number().int(),
 })
 export type PrescriptionItem = z.infer<typeof prescriptionItemSchema>
@@ -101,3 +122,51 @@ export const prescriptionResponseSchema = z.object({
   prescription: prescriptionSchema.nullable(),
 })
 export type PrescriptionResponse = z.infer<typeof prescriptionResponseSchema>
+
+// ---------------------------------------------------------------------------------
+// Task 4.8 — the hard block
+// ---------------------------------------------------------------------------------
+
+/**
+ * HOW A CONFLICT WAS FOUND, and this field exists so the doctor can judge it.
+ *
+ *  - `drug`  — the allergy names this exact formulary drug. Certain.
+ *  - `name`  — the recorded substance and the drug's name contain one another, case
+ *              insensitively: "Penicillin" against "Benzylpenicillin 600mg". Strong, but
+ *              it is string matching and the doctor is entitled to know that.
+ *
+ * WHAT IS NOT COVERED, stated here because a doctor who believes this catches more than it
+ * does is worse off than one who knows its edges: CLASS CROSS-REACTIVITY. An allergy
+ * recorded as "Penicillin" does NOT block amoxicillin, because nothing in the data says
+ * they are related — Drug.atcCode exists but Allergy has no ATC, and inferring a drug class
+ * from a free-text substance is guesswork that would either miss quietly or block wrongly.
+ * Blocking wrongly is the worse failure: an override people click through fifty times a day
+ * is not a safety feature, it is a speed bump that trains doctors to ignore warnings.
+ *
+ * The mitigation is task 4.6's banner, which is on screen the whole time and says
+ * "Penicillin — severe" whatever is being prescribed. The block is a second net, not the
+ * only one.
+ */
+export const ALLERGY_MATCH_KINDS = ['drug', 'name'] as const
+export const allergyMatchKindSchema = z.enum(ALLERGY_MATCH_KINDS)
+export type AllergyMatchKind = z.infer<typeof allergyMatchKindSchema>
+
+export const allergyConflictSchema = z.object({
+  /** Which line of the prescription is blocked, so the screen can point at it. */
+  drugId: z.uuid(),
+  drugName: z.string(),
+  allergyId: z.uuid(),
+  substance: z.string(),
+  severity: z.string(),
+  reaction: z.string().nullable(),
+  matchedOn: allergyMatchKindSchema,
+})
+export type AllergyConflict = z.infer<typeof allergyConflictSchema>
+
+/** The 409 body. Nothing was saved — not the safe lines either. */
+export const allergyConflictResponseSchema = z.object({
+  code: z.literal('allergy_conflict'),
+  message: z.string(),
+  conflicts: z.array(allergyConflictSchema),
+})
+export type AllergyConflictResponse = z.infer<typeof allergyConflictResponseSchema>

@@ -1,5 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type {
+  AllergyConflict,
   Prescription,
   PrescriptionResponse,
   SavePrescriptionRequest,
@@ -28,6 +34,7 @@ const prescriptionSelect = {
       route: true,
       quantity: true,
       instructions: true,
+      allergyOverrideReason: true,
       sequence: true,
     },
     orderBy: { sequence: 'asc' },
@@ -53,6 +60,7 @@ type PrescriptionRow = {
     route: string;
     quantity: number | null;
     instructions: string | null;
+    allergyOverrideReason: string | null;
     sequence: number;
   }>;
 };
@@ -87,8 +95,8 @@ export class PrescriptionService {
     visitId: string,
     input: SavePrescriptionRequest,
   ): Promise<PrescriptionResponse> {
-    const status = await this.requireVisit(facilityId, visitId);
-    if (!isVisitOpen(status)) {
+    const visit = await this.requireVisit(facilityId, visitId);
+    if (!isVisitOpen(visit.status)) {
       throw new BadRequestException({
         message: 'This visit is closed. A prescription can only be written during the visit.',
         code: 'visit_closed',
@@ -137,6 +145,31 @@ export class PrescriptionService {
       }
     }
 
+    // Task 4.8 — the hard block. Computed BEFORE anything is written, and it refuses the
+    // whole save rather than the offending lines: a partial prescription is a worse
+    // outcome than none, because the doctor would be looking at a sheet that is missing a
+    // drug they believe they prescribed.
+    const conflicts = await this.allergyConflicts(visit.patientId, input.items, byId);
+    const unresolved = conflicts.filter((conflict) => !conflict.overridden);
+    if (unresolved.length > 0) {
+      throw new ConflictException({
+        code: 'allergy_conflict',
+        message: 'This patient is recorded as allergic to a drug on this prescription.',
+        // Listed explicitly rather than by spreading minus a key: `overridden` is internal
+        // bookkeeping and must not leak into a response the browser parses.
+        conflicts: unresolved.map((conflict) => ({
+          drugId: conflict.drugId,
+          drugName: conflict.drugName,
+          allergyId: conflict.allergyId,
+          substance: conflict.substance,
+          severity: conflict.severity,
+          reaction: conflict.reaction,
+          matchedOn: conflict.matchedOn,
+        })),
+      });
+    }
+    const overriddenDrugIds = new Set(conflicts.map((conflict) => conflict.drugId));
+
     const practitionerId = await this.practitionerIdOf(facilityId, userId);
     // Prescription.practitionerId is NOT NULL, and rightly so — an unsigned drug order is
     // not a thing. Saying this beats a foreign-key error.
@@ -177,6 +210,12 @@ export class PrescriptionService {
         route: item.route,
         quantity: item.quantity,
         instructions: item.instructions,
+        // Kept only where there was actually something to override. A reason attached to a
+        // drug nobody was warned about is noise that makes the real ones harder to find —
+        // and on this column, the real ones are the whole point.
+        allergyOverrideReason: overriddenDrugIds.has(item.drugId)
+          ? item.allergyOverrideReason
+          : null,
         // The order the doctor put them in, which is the order they will print in.
         sequence: index,
       };
@@ -206,14 +245,97 @@ export class PrescriptionService {
     return this.find(facilityId, visitId);
   }
 
-  private async requireVisit(facilityId: string, visitId: string): Promise<VisitStatus> {
+  /**
+   * Task 4.8 — does anything on this sheet collide with a recorded allergy?
+   *
+   * Two ways to match, and the KIND travels back so the doctor can weigh it:
+   *
+   *  - `drug`: the allergy names this exact formulary drug. Certain.
+   *  - `name`: the substance and the drug's name contain one another, case-insensitively.
+   *    "Penicillin" catches "Benzylpenicillin 600mg". Strong, but it is string matching.
+   *
+   * WHAT THIS DOES NOT DO is class cross-reactivity: an allergy recorded as "Penicillin"
+   * does not block amoxicillin. Nothing in the data relates them — Drug.atcCode exists but
+   * Allergy has no ATC, and inferring a drug class from free text is guesswork that either
+   * misses quietly or blocks wrongly. Blocking wrongly is the worse failure: an override
+   * clicked through fifty times a day is not a safety feature, it is a speed bump that
+   * teaches doctors to dismiss warnings. Task 4.6's banner is on screen throughout and
+   * says "Penicillin — severe" regardless; this is the second net, not the only one.
+   *
+   * Retracted allergies do not block. That is what retracting is for.
+   */
+  private async allergyConflicts(
+    patientId: string,
+    items: SavePrescriptionRequest['items'],
+    drugs: Map<string, { genericName: string; brandName: string | null; strength: string | null }>,
+  ): Promise<Array<AllergyConflict & { overridden: boolean }>> {
+    const allergies = await this.prisma.db.allergy.findMany({
+      where: { patientId, isActive: true },
+      select: {
+        id: true,
+        drugId: true,
+        substance: true,
+        severity: true,
+        reaction: true,
+      },
+    });
+    if (allergies.length === 0) return [];
+
+    const found: Array<AllergyConflict & { overridden: boolean }> = [];
+
+    for (const item of items) {
+      const drug = drugs.get(item.drugId);
+      if (!drug) continue;
+      const names = [drug.genericName, drug.brandName]
+        .filter((name): name is string => !!name)
+        .map((name) => name.toLowerCase());
+
+      for (const allergy of allergies) {
+        const substance = allergy.substance.trim().toLowerCase();
+        let matchedOn: AllergyConflict['matchedOn'] | null = null;
+
+        if (allergy.drugId && allergy.drugId === item.drugId) {
+          matchedOn = 'drug';
+        } else if (
+          substance.length >= 3 &&
+          // Both directions: the allergy may be broader than the drug name
+          // ("Penicillin" vs "Benzylpenicillin") or narrower ("Amoxicillin trihydrate"
+          // recorded against a drug called "Amoxicillin"). A two-character substance is
+          // not matched at all — "K" would collide with half the formulary.
+          names.some((name) => name.includes(substance) || substance.includes(name))
+        ) {
+          matchedOn = 'name';
+        }
+
+        if (!matchedOn) continue;
+
+        found.push({
+          drugId: item.drugId,
+          drugName: [drug.brandName ?? drug.genericName, drug.strength].filter(Boolean).join(' '),
+          allergyId: allergy.id,
+          substance: allergy.substance,
+          severity: allergy.severity,
+          reaction: allergy.reaction,
+          matchedOn,
+          overridden: item.allergyOverrideReason !== null,
+        });
+      }
+    }
+
+    return found;
+  }
+
+  private async requireVisit(
+    facilityId: string,
+    visitId: string,
+  ): Promise<{ status: VisitStatus; patientId: string }> {
     const visit = await this.prisma.db.visit.findFirst({
       where: { id: visitId, facilityId },
-      select: { status: true },
+      select: { status: true, patientId: true },
     });
     // 404, not 403 — whether a visit exists in another facility is not this one's to learn.
     if (!visit) throw new NotFoundException('Visit not found');
-    return visit.status;
+    return visit;
   }
 
   private async practitionerIdOf(facilityId: string, userId: string): Promise<string | null> {

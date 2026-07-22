@@ -867,6 +867,13 @@ model PrescriptionItem {
   route          String // oral | IV | IM
   quantity       Int?
   instructions   String? // "after food"
+  /// Task 4.8 — why this drug was prescribed to a patient recorded as allergic to it.
+  /// NULL is the normal case and means there was no conflict. Non-null is medico-legal:
+  /// the doctor was stopped, was shown the allergy, and said why they went ahead anyway.
+  /// The override has to live on the RECORD and not only in the audit log, because the
+  /// question "why was this prescribed?" is asked of the prescription, by people who are
+  /// not reading audit tables.
+  allergyOverrideReason String? @map("allergy_override_reason")
   sequence       Int      @default(0)
   createdAt      DateTime @default(now()) @map("created_at")
 

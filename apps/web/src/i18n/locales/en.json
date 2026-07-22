@@ -916,6 +916,18 @@
     "saving": "Saving…",
     "removeRow": "Remove this drug",
     "none": "No drugs on this prescription yet.",
-    "failed": "Could not save the prescription. Nothing was changed."
+    "failed": "Could not save the prescription. Nothing was changed.",
+    "blocked": {
+      "title": "Blocked — allergy on record",
+      "nothingSaved": "Nothing was saved. Give a reason for each drug below, or remove it.",
+      "allergicTo": "patient is recorded as allergic to {{substance}}",
+      "reasonPlaceholder": "Why is this safe to prescribe?",
+      "reasonFor": "Reason for prescribing {{drug}}",
+      "hint": "The reason is kept on the prescription, not just in the log.",
+      "matchedOn": {
+        "drug": "matched to this exact drug",
+        "name": "matched by name"
+      }
+    }
   }
 }

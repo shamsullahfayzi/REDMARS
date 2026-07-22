@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
 import {
   isVisitOpen,
   savePrescriptionRequestSchema,
+  type AllergyConflict,
   type DrugSummary,
   type VisitSummary,
 } from '@redmars/shared'
@@ -13,7 +14,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useConsultSaver } from '@/hooks/useConsultSave'
-import { useFormulary, usePrescription, useSavePrescription } from '@/hooks/usePrescription'
+import {
+  allergyConflictsFromError,
+  useFormulary,
+  usePrescription,
+  useSavePrescription,
+} from '@/hooks/usePrescription'
 
 /**
  * Task 4.7 — the prescription table. "4 drugs prescribed in under 30 seconds."
@@ -44,6 +50,8 @@ interface Row {
   duration: string
   route: string
   instructions: string
+  /** Already-recorded override, so re-saving does not re-prompt for the same one. */
+  allergyOverrideReason: string | null
 }
 
 function drugLabel(drug: DrugSummary): string {
@@ -60,6 +68,8 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
   const [advice, setAdvice] = useState('')
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /** Reasons typed against the block, keyed by drug. Cleared once the save goes through. */
+  const [overrides, setOverrides] = useState<Record<string, string>>({})
 
   const open = isVisitOpen(visit.status)
   const stored = listQuery.data?.prescription ?? null
@@ -78,6 +88,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         duration: item.duration,
         route: item.route,
         instructions: item.instructions ?? '',
+        allergyOverrideReason: item.allergyOverrideReason,
       })),
     )
     setAdvice(stored?.advice ?? '')
@@ -104,13 +115,14 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
   const currentSignature = useMemo(
     () =>
       JSON.stringify({
-        items: rows.map(({ drugLabel: _label, ...rest }) => rest),
+        items: rows.map(({ drugLabel: _label, allergyOverrideReason: _reason, ...rest }) => rest),
         advice,
       }),
     [rows, advice],
   )
 
   const isDirty = loadedFor === visit.id && currentSignature !== savedSignature
+  const conflicts = allergyConflictsFromError(save.error)
 
   const doSave = useCallback(async () => {
     const parsed = savePrescriptionRequestSchema.safeParse({
@@ -122,6 +134,9 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         duration: row.duration,
         route: row.route,
         instructions: row.instructions,
+        // A reason typed against the block, or one already stored on the row from an
+        // earlier save — so pressing F2 twice does not re-prompt for the same override.
+        allergyOverrideReason: overrides[row.drugId] || row.allergyOverrideReason || null,
       })),
       advice,
     })
@@ -144,9 +159,11 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         duration: item.duration,
         route: item.route,
         instructions: item.instructions ?? '',
+        allergyOverrideReason: item.allergyOverrideReason,
       })),
     )
-  }, [rows, advice, save, t])
+    setOverrides({})
+  }, [rows, advice, overrides, save, t])
 
   useConsultSaver('prescription', { isDirty, save: doSave })
 
@@ -162,6 +179,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         duration: drug.defaultDuration ?? '',
         route: drug.defaultRoute ?? '',
         instructions: '',
+        allergyOverrideReason: null,
       },
     ])
   }
@@ -247,6 +265,16 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         />
       </div>
 
+      {/* Task 4.8 — the hard block, shown where the doctor is looking. Nothing was saved,
+          and the only way past is a reason per drug. */}
+      {conflicts && (
+        <AllergyBlock
+          conflicts={conflicts}
+          reasons={overrides}
+          onReason={(drugId, reason) => setOverrides((current) => ({ ...current, [drugId]: reason }))}
+        />
+      )}
+
       {open && (
         <div className="flex flex-wrap items-center gap-3">
           <Button
@@ -257,7 +285,9 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
             {save.isPending ? t('prescription.saving') : t('prescription.save')}
           </Button>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          {save.isError && <p className="text-sm text-destructive">{t('prescription.failed')}</p>}
+          {save.isError && !conflicts && (
+            <p className="text-sm text-destructive">{t('prescription.failed')}</p>
+          )}
         </div>
       )}
     </div>
@@ -357,6 +387,64 @@ function Field({
         aria-label={label}
         onChange={(e) => onChange(e.target.value)}
       />
+    </div>
+  )
+}
+
+/**
+ * Task 4.8 — the hard block, on the screen.
+ *
+ * Nothing was saved and the screen says so first, because the dangerous misreading of a
+ * warning is "it went through but with a note". Each blocked drug gets its OWN reason box:
+ * overriding penicillin and overriding aspirin are separate clinical decisions and one
+ * sentence covering both is one sentence nobody wrote.
+ *
+ * `matchedOn` is shown because the doctor is entitled to judge the match. "Matched by
+ * name" is a string comparison and sometimes it is wrong; hiding that would make the
+ * system look more certain than it is.
+ */
+function AllergyBlock({
+  conflicts,
+  reasons,
+  onReason,
+}: {
+  conflicts: AllergyConflict[]
+  reasons: Record<string, string>
+  onReason: (drugId: string, reason: string) => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div role="alert" className="space-y-3 rounded-lg border-2 border-destructive bg-destructive/12 p-4">
+      <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-destructive">
+        <AlertTriangle className="size-5 shrink-0" aria-hidden />
+        {t('prescription.blocked.title')}
+      </p>
+      <p className="text-sm text-foreground">{t('prescription.blocked.nothingSaved')}</p>
+
+      {conflicts.map((conflict) => (
+        <div key={`${conflict.drugId}-${conflict.allergyId}`} className="space-y-1.5">
+          <p className="text-sm">
+            <span className="font-semibold text-foreground">{conflict.drugName}</span>
+            {' — '}
+            {t('prescription.blocked.allergicTo', { substance: conflict.substance })}
+            <span className="ms-2 text-xs text-muted-foreground">
+              {t(`allergies.severities.${conflict.severity}`)}
+              {conflict.reaction ? ` · ${conflict.reaction}` : ''}
+              {' · '}
+              {t(`prescription.blocked.matchedOn.${conflict.matchedOn}`)}
+            </span>
+          </p>
+          <Input
+            value={reasons[conflict.drugId] ?? ''}
+            placeholder={t('prescription.blocked.reasonPlaceholder')}
+            aria-label={t('prescription.blocked.reasonFor', { drug: conflict.drugName })}
+            onChange={(e) => onReason(conflict.drugId, e.target.value)}
+          />
+        </div>
+      ))}
+
+      <p className="text-xs text-muted-foreground">{t('prescription.blocked.hint')}</p>
     </div>
   )
 }
