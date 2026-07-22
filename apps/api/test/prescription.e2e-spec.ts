@@ -15,7 +15,12 @@ import {
   printSettingsSchema,
   searchCodes,
 } from '@redmars/shared';
-import type { DrugListResponse, LoginResponse, PrescriptionResponse } from '@redmars/shared';
+import type {
+  DrugListResponse,
+  LastPrescriptionResponse,
+  LoginResponse,
+  PrescriptionResponse,
+} from '@redmars/shared';
 import { AppModule } from './../src/app.module';
 
 /**
@@ -122,6 +127,38 @@ describe('Prescription (e2e)', () => {
       .set('Authorization', `Bearer ${tokens[as]}`)
       .send(body);
 
+  /**
+   * Task 4.11 — a SECOND visit for the patient an existing visit belongs to.
+   *
+   * Copy-last is entirely about one patient across two occasions, so the fixture has to be
+   * able to build that. `stageVisit` makes a fresh patient every time, which is right for
+   * every other test here and useless for this one.
+   */
+  async function stageFollowUp(previousVisitId: string): Promise<string> {
+    counter += 1;
+    const previous = await prisma.visit.findUniqueOrThrow({
+      where: { id: previousVisitId },
+      select: { patientId: true, departmentId: true, facilityId: true },
+    });
+    const visit = await prisma.visit.create({
+      data: {
+        facilityId: previous.facilityId,
+        patientId: previous.patientId,
+        departmentId: previous.departmentId,
+        visitNo: `${PREFIX}V${counter}`,
+        type: 'opd_consult',
+        status: 'in_progress',
+        statusHistory: { create: { status: 'arrived', changedBy: doctorId } },
+      },
+    });
+    return visit.id;
+  }
+
+  const getLast = (visitId: string, as = 'doctor') =>
+    request(server)
+      .get(`/visits/${visitId}/prescription/last`)
+      .set('Authorization', `Bearer ${tokens[as]}`);
+
   const line = (drugId: string, over: Record<string, unknown> = {}) => ({
     drugId,
     frequency: 'OD',
@@ -139,6 +176,8 @@ describe('Prescription (e2e)', () => {
     await prisma.prescription.deleteMany({ where: { visit: facilityFilter } });
     await prisma.visitStatusHistory.deleteMany({ where: { visit: facilityFilter } });
     await prisma.visit.deleteMany({ where: facilityFilter });
+    // Task 4.11's override test records one. Patients cannot go while it points at them.
+    await prisma.allergy.deleteMany({ where: { patient: facilityFilter } });
     await prisma.patient.deleteMany({ where: facilityFilter });
     await prisma.drug.deleteMany({ where: { code: { startsWith: PREFIX } } });
     await prisma.practitioner.deleteMany({ where: { code: { startsWith: PREFIX } } });
@@ -212,6 +251,10 @@ describe('Prescription (e2e)', () => {
     await seedDrug('LOR', 'Lorazepam');
     await seedDrug('SER', 'Sertraline');
     await seedDrug('OLD', 'Withdrawn Drug', { isActive: false });
+    // Starts ACTIVE and is withdrawn by task 4.11's test. OLD cannot serve: a prescription
+    // naming it could never have been saved in the first place, and the case being proved
+    // is a drug that was legitimately prescribed and has been withdrawn since.
+    await seedDrug('WDR', 'Withdrawable Drug');
   });
 
   afterAll(async () => {
@@ -421,6 +464,132 @@ describe('Prescription (e2e)', () => {
     expect(searchCodes('night', FREQUENCY_CODES).map((e) => e.code)).toContain('ON');
     // An empty query shows everything, so focusing the box is enough to discover the list.
     expect(searchCodes('', ROUTE_CODES)).toHaveLength(ROUTE_CODES.length);
+  });
+
+  // --- Task 4.11, copy last prescription ----------------------------------------
+
+  it('the done-when: last visit’s drugs come back for this one', async () => {
+    const first = await stageVisit();
+    await putRx(first, {
+      items: [
+        line(drugs.DUL, { dose: '1 tab', quantity: 30, instructions: 'AC' }),
+        line(drugs.OLZ, { frequency: 'ON' }),
+      ],
+    }).expect(200);
+
+    const follow = await stageFollowUp(first);
+    const res = await getLast(follow).expect(200);
+    const { last } = res.body as LastPrescriptionResponse;
+
+    expect(last?.visitId).toBe(first);
+    expect(last?.items).toHaveLength(2);
+    expect(last?.items[0]).toMatchObject({
+      drugId: drugs.DUL,
+      dose: '1 tab',
+      quantity: 30,
+      instructions: 'AC',
+      frequency: 'OD',
+      route: 'PO',
+    });
+    // The order they were written in is the order they come back in.
+    expect(last?.items[1].drugId).toBe(drugs.OLZ);
+    expect(last?.practitionerName).toBe('Hafizullah Sherzai');
+  });
+
+  /**
+   * THE SAFETY PROPERTY OF THIS FEATURE, and the reason the response has its own shape
+   * rather than reusing the stored item.
+   *
+   * An item id belongs to the visit it was written in. If one travelled up here the browser
+   * could forward it into THIS visit's PUT, and the diff in save() would read it as "update
+   * the row I already have" — silently editing a drug order on a consultation that closed
+   * weeks ago. It is not filtered out; it is never selected.
+   *
+   * The allergy override is the same shape of danger and worse in consequence. A reason
+   * carried forward by a copy would satisfy task 4.8's hard block on a sheet nobody looked
+   * at: one click, no warning shown, block not applied.
+   */
+  it('carries neither the item id nor a previous allergy override', async () => {
+    const first = await stageVisit();
+    // Record the allergy first so the original save has to be overridden to go through.
+    const patient = await prisma.visit.findUniqueOrThrow({
+      where: { id: first },
+      select: { patientId: true },
+    });
+    await prisma.allergy.create({
+      data: {
+        patientId: patient.patientId,
+        substance: 'Duloxetine',
+        drugId: drugs.DUL,
+        severity: 'severe',
+        notedBy: doctorId,
+      },
+    });
+
+    await putRx(first, {
+      items: [line(drugs.DUL, { allergyOverrideReason: 'Tolerated at this dose before.' })],
+    }).expect(200);
+
+    const follow = await stageFollowUp(first);
+    const { last } = (await getLast(follow).expect(200)).body as LastPrescriptionResponse;
+
+    expect(last?.items).toHaveLength(1);
+    expect(last?.items[0]).not.toHaveProperty('id');
+    expect(last?.items[0]).not.toHaveProperty('allergyOverrideReason');
+
+    // And the block fires again on the copy, which is the point of not carrying it.
+    await putRx(follow, { items: [line(drugs.DUL)] }).expect(409);
+  });
+
+  /**
+   * A withdrawn drug cannot be saved — save() refuses it with `inactive_drug` — so copying
+   * one forward would produce a sheet that fails on an error naming a drug the doctor never
+   * chose. Dropping it in silence is worse: the doctor's memory becomes the only thing that
+   * would notice, and not needing that memory is why the button exists.
+   */
+  it('does not offer a drug that has been withdrawn since, and names it', async () => {
+    const first = await stageVisit();
+    await putRx(first, { items: [line(drugs.DUL), line(drugs.WDR)] }).expect(200);
+    await prisma.drug.update({ where: { id: drugs.WDR }, data: { isActive: false } });
+
+    const follow = await stageFollowUp(first);
+    const { last } = (await getLast(follow).expect(200)).body as LastPrescriptionResponse;
+
+    expect(last?.items.map((item) => item.drugId)).toEqual([drugs.DUL]);
+    expect(last?.skipped).toHaveLength(1);
+    expect(last?.skipped[0].reason).toBe('withdrawn');
+    // Named, so the doctor knows the patient is a medicine short rather than finding out
+    // at the next visit.
+    expect(last?.skipped[0].drugName).toContain('Withdrawable');
+  });
+
+  it('never offers this visit’s own sheet back', async () => {
+    const visitId = await stageVisit();
+    await putRx(visitId, { items: [line(drugs.SER)] }).expect(200);
+
+    const { last } = (await getLast(visitId).expect(200)).body as LastPrescriptionResponse;
+    // A copy that returned the sheet already on screen would duplicate every line.
+    expect(last).toBeNull();
+  });
+
+  it('is null for a patient who has never been prescribed anything', async () => {
+    const visitId = await stageVisit();
+    const { last } = (await getLast(visitId).expect(200)).body as LastPrescriptionResponse;
+    expect(last).toBeNull();
+  });
+
+  it('refuses everyone who cannot write a prescription', async () => {
+    const visitId = await stageVisit();
+    // It prepares a prescription, so it is gated on writing one — not on reading one, which
+    // a pharmacist and (conditionally) a nurse and an admin all hold.
+    await getLast(visitId, 'pharmacist').expect(403);
+    await getLast(visitId, 'nurse').expect(403);
+    await getLast(visitId, 'admin').expect(403);
+  });
+
+  it('does not reach across facilities for a previous sheet', async () => {
+    const visitId = await stageVisit({ facility: otherFacilityId });
+    await getLast(visitId).expect(404);
   });
 
   /**

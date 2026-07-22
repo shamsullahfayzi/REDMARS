@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { savePrescriptionRequestSchema } from '@redmars/shared';
-import type { PrescriptionResponse } from '@redmars/shared';
+import type { LastPrescriptionResponse, PrescriptionResponse } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuditRead } from '../../audit/decorators/audit-read.decorator';
 import { AuthContext } from '../../auth/auth-context';
@@ -42,6 +42,28 @@ export class PrescriptionController {
     @Param('id', ParseUUIDPipe) visitId: string,
   ): Promise<PrescriptionResponse> {
     return this.prescriptions.find(this.auth(req).facilityId, visitId);
+  }
+
+  /**
+   * Task 4.11 — the patient's previous drugs, for dropping into this visit's form.
+   *
+   * Gated on `prescription.write`, not `prescription.read`, even though it reads.
+   *
+   * The endpoint exists to PREPARE a prescription, and only someone who may write one has
+   * any use for it. `prescription.read` is much wider — a pharmacist and, under R2 and R7,
+   * an admin and a nurse — and none of them are going to fill in a drug table. Gating a
+   * doctor-only affordance on the doctor-only permission also sidesteps a conditional check
+   * that would otherwise have to be right here, and a condition that does not exist cannot
+   * be got wrong.
+   */
+  @Get('last')
+  @RequirePermission('prescription.write')
+  @AuditRead('Prescription')
+  copyLast(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) visitId: string,
+  ): Promise<LastPrescriptionResponse> {
+    return this.prescriptions.copyLast(this.auth(req).facilityId, visitId);
   }
 
   @Put()

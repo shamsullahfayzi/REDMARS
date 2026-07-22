@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, Copy, Plus, Trash2 } from 'lucide-react'
 import {
   DOSE_PRESETS,
   DURATION_PRESETS,
@@ -15,6 +15,7 @@ import {
   type AllergyConflict,
   type DrugSummary,
   type InteractionWarning,
+  type LastPrescription,
   type VisitSummary,
 } from '@redmars/shared'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ import {
   allergyConflictsFromError,
   interactionWarningsFromError,
   useFormulary,
+  useLastPrescription,
   usePrescription,
   useSavePrescription,
 } from '@/hooks/usePrescription'
@@ -95,6 +97,10 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
 
   const open = isVisitOpen(visit.status)
   const stored = listQuery.data?.prescription ?? null
+  // Doctor-only endpoint on an open visit — see the hook. Asking for it from a closed visit
+  // or a nurse's screen would be a request that can only 403.
+  const lastQuery = useLastPrescription(visit.id, open)
+  const last = lastQuery.data?.last ?? null
 
   // Load the saved sheet once. Not on every refetch — that would overwrite a half-typed
   // row while the doctor is looking at it.
@@ -239,8 +245,47 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)))
   }
 
+  /**
+   * Task 4.11 — the previous sheet, dropped into this one.
+   *
+   * APPENDS AND DE-DUPLICATES rather than replacing. A doctor who has already typed two
+   * drugs and then remembers the repeat should not lose them, and a drug already on the
+   * sheet should not arrive twice — the second line would be a double dose that reads as
+   * two separate orders.
+   *
+   * Codes are re-mapped on the way in for the same reason the formulary autofill maps
+   * them: an old sheet may hold a value written before route and frequency were closed
+   * sets, and a row arriving with something the contract now refuses would fail the save
+   * with an error about a drug the doctor did not type.
+   */
+  function copyLast() {
+    const items = lastQuery.data?.last?.items ?? []
+    setRows((current) => {
+      const already = new Set(current.map((row) => row.drugId))
+      const additions = items
+        .filter((item) => !already.has(item.drugId))
+        .map((item) => ({
+          drugId: item.drugId,
+          drugLabel: item.drugNameAtTime,
+          dose: item.dose ?? '',
+          frequency: matchCode(item.frequency, FREQUENCY_CODES) ?? '',
+          duration: item.duration,
+          route: matchCode(item.route, ROUTE_CODES) ?? '',
+          quantity: item.quantity === null ? '' : String(item.quantity),
+          instructions: item.instructions ?? '',
+          // Never carried. Task 4.8's block must fire again on a sheet nobody has read.
+          allergyOverrideReason: null,
+        }))
+      return [...current, ...additions]
+    })
+  }
+
   return (
     <div className="space-y-4">
+      {open && last && (
+        <CopyLast last={last} onCopy={copyLast} disabled={save.isPending} />
+      )}
+
       {open && <DrugPicker drugs={formulary.data?.drugs ?? []} onPick={addDrug} />}
 
       {rows.length === 0 ? (
@@ -430,6 +475,57 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Task 4.11 — "one click reloads last visit's drugs."
+ *
+ * The date and the drug count are ON the button, not behind it. A repeat prescription from
+ * last month and one from three years ago deserve different amounts of thought, and a
+ * doctor should know which they are about to copy before they copy it rather than after.
+ *
+ * WITHDRAWN DRUGS ARE NAMED HERE. The server leaves them out — they cannot be saved — and
+ * saying which ones is the difference between the doctor noticing the patient is short a
+ * medicine and finding out at the next visit. Silence would make their own memory the only
+ * safety net, and not needing it is the reason the button exists.
+ */
+function CopyLast({
+  last,
+  onCopy,
+  disabled,
+}: {
+  last: LastPrescription
+  onCopy: () => void
+  disabled: boolean
+}) {
+  const { t, i18n } = useTranslation()
+
+  const written = new Date(last.writtenAt)
+  const when = Number.isNaN(written.getTime())
+    ? ''
+    : new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(written)
+
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+      <Button type="button" variant="outline" disabled={disabled} onClick={onCopy}>
+        <Copy className="size-4" aria-hidden />
+        {t('prescription.copyLast.action', { count: last.items.length, date: when })}
+      </Button>
+
+      {last.skipped.length > 0 && (
+        <p className="text-sm text-warning">
+          {t('prescription.copyLast.skipped', {
+            drugs: last.skipped.map((entry) => entry.drugName).join('، '),
+          })}
+        </p>
+      )}
+
+      {/* An override is a judgement made with a patient in the room; it does not travel.
+          Said out loud so a doctor copying a sheet that needed one is not surprised by the
+          block firing again. */}
+      <p className="text-xs text-muted-foreground">{t('prescription.copyLast.hint')}</p>
     </div>
   )
 }

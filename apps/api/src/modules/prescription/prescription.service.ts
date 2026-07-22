@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import type {
   AllergyConflict,
+  CopiedPrescriptionItem,
   InteractionWarning,
+  LastPrescriptionResponse,
+  SkippedPrescriptionItem,
   Prescription,
   PrescriptionResponse,
   SavePrescriptionRequest,
@@ -391,6 +394,101 @@ export class PrescriptionService {
       .sort(
         (a, b) => INTERACTION_SEVERITY_RANK[b.severity] - INTERACTION_SEVERITY_RANK[a.severity],
       );
+  }
+
+  /**
+   * Task 4.11 — the patient's previous drugs, ready to drop into this visit's form.
+   *
+   * A PSYCHIATRIC OUTPATIENT CLINIC IS WHY THIS EXISTS. The same four drugs are re-issued
+   * month after month for years at Farhat, and retyping them is both the slowest part of
+   * the consultation and the part where a dose gets mistyped.
+   *
+   * IT RETURNS DATA, IT DOES NOT WRITE ANYTHING. Nothing here creates a prescription. The
+   * rows land in the table the doctor is looking at and are saved by the same F2 as
+   * anything else, which means the allergy block (4.8) and the interaction check (4.9) run
+   * against them exactly as they would against typed rows. A one-click that wrote drugs
+   * straight to the record would be a prescription nobody read.
+   *
+   * FROM AN EARLIER VISIT, never this one. This visit's own sheet is already loaded; a
+   * "copy" that offered it back would duplicate every line.
+   *
+   * WITHDRAWN DRUGS ARE NOT OFFERED, AND ARE NAMED. `save()` refuses an inactive drug with
+   * `inactive_drug`, so copying one forward would produce a sheet that cannot be saved and
+   * an error naming a drug the doctor never chose. Dropping them silently is worse still:
+   * "copy last prescription" quietly returning three drugs where the patient was on four
+   * leaves the doctor's own memory as the only thing that would catch it, and not having to
+   * rely on that memory is the entire reason the button was pressed.
+   */
+  async copyLast(facilityId: string, visitId: string): Promise<LastPrescriptionResponse> {
+    const visit = await this.requireVisit(facilityId, visitId);
+
+    const row = await this.prisma.db.prescription.findFirst({
+      where: {
+        visitId: { not: visitId },
+        visit: { patientId: visit.patientId, facilityId },
+      },
+      // Most recent first. Not "most recent that still has drugs on it" — a doctor who
+      // deliberately cleared a sheet last month meant that, and reaching further back to
+      // find something to offer would undo a decision.
+      orderBy: { createdAt: 'desc' },
+      select: {
+        visitId: true,
+        createdAt: true,
+        practitioner: { select: { firstName: true, lastName: true } },
+        visit: { select: { visitNo: true } },
+        items: {
+          select: {
+            drugId: true,
+            drugNameAtTime: true,
+            dose: true,
+            frequency: true,
+            duration: true,
+            route: true,
+            quantity: true,
+            instructions: true,
+          },
+          orderBy: { sequence: 'asc' },
+        },
+      },
+    });
+
+    if (!row) return { last: null };
+
+    // isActive is read now rather than trusted from the old sheet: a drug withdrawn since
+    // that prescription was written is exactly the case this has to catch.
+    const drugs = await this.prisma.db.drug.findMany({
+      where: { id: { in: [...new Set(row.items.map((item) => item.drugId))] }, facilityId },
+      select: { id: true, isActive: true },
+    });
+    const active = new Map(drugs.map((drug) => [drug.id, drug.isActive]));
+
+    const items: CopiedPrescriptionItem[] = [];
+    const skipped: SkippedPrescriptionItem[] = [];
+    for (const item of row.items) {
+      // Absent from the formulary counts as withdrawn: whatever happened to the row, it
+      // cannot be prescribed today and the doctor needs to be told the same thing either way.
+      if (active.get(item.drugId) === true) {
+        items.push(item);
+      } else {
+        skipped.push({ drugName: item.drugNameAtTime, reason: 'withdrawn' as const });
+      }
+    }
+
+    return {
+      last: {
+        visitId: row.visitId,
+        visitNo: row.visit.visitNo,
+        writtenAt: row.createdAt.toISOString(),
+        practitionerName: row.practitioner
+          ? [row.practitioner.firstName, row.practitioner.lastName].filter(Boolean).join(' ')
+          : null,
+        // No id and no allergyOverrideReason on these — see the contract. Neither is
+        // omitted by filtering; neither was selected in the first place, so neither can
+        // reach the browser by accident.
+        items,
+        skipped,
+      },
+    };
   }
 
   private async requireVisit(

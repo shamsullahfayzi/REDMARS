@@ -151,6 +151,75 @@ export const prescriptionResponseSchema = z.object({
 export type PrescriptionResponse = z.infer<typeof prescriptionResponseSchema>
 
 // ---------------------------------------------------------------------------------
+// Task 4.11 — copy last prescription
+// ---------------------------------------------------------------------------------
+
+/**
+ * A drug off the patient's previous sheet, in a shape that can only be DROPPED INTO A FORM.
+ *
+ * NO `id`, and that is the point rather than an omission. A prescription item's id belongs
+ * to the visit it was written in; if one travelled up here the browser could forward it
+ * into this visit's PUT, and the diff in `save()` would treat it as "update the row I
+ * already have" — silently editing a drug order on a consultation that closed weeks ago.
+ * Not sending it makes that impossible rather than merely discouraged.
+ *
+ * NO `allergyOverrideReason` EITHER, and this one is a safety decision, not a modelling
+ * one. Task 4.8 stops a prescription of a drug the patient is recorded as allergic to and
+ * demands a typed reason to get past. A reason carried forward by a copy would satisfy that
+ * block on a sheet the prescriber has not looked at — one click, no warning shown, and the
+ * hard block quietly not applied. The override was a judgement about a past prescription
+ * made with a patient in front of the doctor; it does not transfer. The copy arrives
+ * conflicted and the block fires again, which is the correct behaviour and is tested.
+ *
+ * `drugNameAtTime` rides along so the form can label the row before the formulary is
+ * consulted, exactly as a stored item does.
+ */
+export const copiedPrescriptionItemSchema = z.object({
+  drugId: z.uuid(),
+  drugNameAtTime: z.string(),
+  dose: z.string().nullable(),
+  frequency: z.string(),
+  duration: z.string(),
+  route: z.string(),
+  quantity: z.number().int().nullable(),
+  instructions: z.string().nullable(),
+})
+export type CopiedPrescriptionItem = z.infer<typeof copiedPrescriptionItemSchema>
+
+/**
+ * A drug on the old sheet that is NOT being offered, and why.
+ *
+ * Named rather than dropped in silence. "Copy last prescription" that quietly returns three
+ * drugs where the patient was on four is the worst possible behaviour for this feature: the
+ * doctor's own memory of what they prescribed is the only thing that would catch it, and
+ * the whole reason they pressed the button was to not have to rely on that.
+ */
+export const skippedPrescriptionItemSchema = z.object({
+  drugName: z.string(),
+  /** `withdrawn` — the drug is still in the formulary but is no longer dispensed. */
+  reason: z.literal('withdrawn'),
+})
+export type SkippedPrescriptionItem = z.infer<typeof skippedPrescriptionItemSchema>
+
+export const lastPrescriptionSchema = z.object({
+  /** The visit it was written in — an EARLIER one, never this consultation's own sheet. */
+  visitId: z.uuid(),
+  visitNo: z.string(),
+  /** So the button can say "from 12 Jun 2026" and the doctor knows how stale it is. */
+  writtenAt: z.string(),
+  practitionerName: z.string().nullable(),
+  items: z.array(copiedPrescriptionItemSchema),
+  skipped: z.array(skippedPrescriptionItemSchema),
+})
+export type LastPrescription = z.infer<typeof lastPrescriptionSchema>
+
+/** Null when this patient has never been prescribed anything before. A normal answer. */
+export const lastPrescriptionResponseSchema = z.object({
+  last: lastPrescriptionSchema.nullable(),
+})
+export type LastPrescriptionResponse = z.infer<typeof lastPrescriptionResponseSchema>
+
+// ---------------------------------------------------------------------------------
 // Task 4.8 — the hard block
 // ---------------------------------------------------------------------------------
 

@@ -936,6 +936,11 @@
       "reason": "Why is this combination intended?",
       "reasonPlaceholder": "e.g. supervised cross-taper, washout complete",
       "limit": "A curated list of the most dangerous pairs, not a complete interaction database. No warning means no seeded pair matched — it does not mean safe."
+    },
+    "copyLast": {
+      "action": "Copy last prescription — {{date}}, {{count}} medicines",
+      "skipped": "Not copied, no longer in the formulary: {{drugs}}",
+      "hint": "Copied into the table below. Nothing is saved until you save, and allergy and interaction checks run again."
     }
   },
   "codes": {

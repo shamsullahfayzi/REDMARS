@@ -3,6 +3,7 @@ import {
   allergyConflictResponseSchema,
   drugListResponseSchema,
   interactionWarningResponseSchema,
+  lastPrescriptionResponseSchema,
   prescriptionResponseSchema,
   type AllergyConflict,
   type InteractionWarning,
@@ -51,6 +52,31 @@ export function useSavePrescription(visitId: string) {
       apiPut(`/visits/${visitId}/prescription`, input, prescriptionResponseSchema),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['visits', 'prescription', visitId] }),
+  })
+}
+
+/**
+ * Task 4.11 — the patient's previous drugs.
+ *
+ * Fetched when the consult screen opens rather than when the button is clicked, so the
+ * button can say WHICH sheet it will copy and its date before it is pressed, and can be
+ * absent entirely for a patient who has never been prescribed anything. A button that has
+ * to be clicked to find out whether it does anything is a button that gets clicked to find
+ * out.
+ *
+ * Cached for the visit and not beyond it: the answer changes only when a previous visit's
+ * prescription is edited, which is not something happening while this consultation is open.
+ */
+export function useLastPrescription(visitId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['visits', 'prescription', 'last', visitId],
+    queryFn: () => apiGet(`/visits/${visitId}/prescription/last`, lastPrescriptionResponseSchema),
+    // Only a prescriber may call it, and only an open visit can receive a copy — so a
+    // closed visit or a nurse looking at the screen never fires a request that would 403.
+    enabled: Boolean(visitId) && enabled,
+    staleTime: 5 * 60 * 1000,
+    // A patient with no history is the normal case for a new registration, not a fault.
+    retry: false,
   })
 }
 
