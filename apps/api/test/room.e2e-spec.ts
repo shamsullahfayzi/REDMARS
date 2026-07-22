@@ -64,6 +64,11 @@ describe('Room master data (e2e)', () => {
 
     await prisma.room.deleteMany({ where: { code: { startsWith: PREFIX } } });
     await prisma.department.deleteMany({ where: { code: { startsWith: PREFIX } } });
+    // Again, and deliberately. The R1 read row is written fire-and-forget, so one can
+    // land AFTER the sweep above and before the facility goes — and then the facility
+    // delete fails on a foreign key, inside afterAll, which Jest reports as a failed suite
+    // with no failed tests. Cheap to repeat, miserable to debug.
+    await prisma.auditLog.deleteMany({ where: { facility: { code: { startsWith: PREFIX } } } });
     await prisma.appUser.deleteMany({ where: { username: { startsWith: PREFIX } } });
 
     adminId = await seedActor('admin', 'admin');

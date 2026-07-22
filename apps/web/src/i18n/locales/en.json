@@ -936,5 +936,10 @@
       "reasonPlaceholder": "e.g. supervised cross-taper, washout complete",
       "limit": "A curated list of the most dangerous pairs, not a complete interaction database. No warning means no seeded pair matched — it does not mean safe."
     }
+  },
+  "codes": {
+    "placeholder": "Type or choose…",
+    "noMatch": "No match.",
+    "freeHint": "Press Enter to use what you typed."
   }
 }

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { interactionWarningSchema } from './drugInteraction.js'
+import { FREQUENCY_VALUES, ROUTE_VALUES } from './prescriptionCodes.js'
 
 /**
  * Task 4.7 — the prescription table. "4 drugs prescribed in under 30 seconds."
@@ -41,9 +42,16 @@ export const prescriptionItemInputSchema = z.object({
   drugId: z.uuid('Choose a drug.'),
   /** "1 tab", "5 ml". Optional because the strength on the drug often says it already. */
   dose: optionalText(60),
-  frequency: requiredText(40, 'How often?'),
+  /**
+   * CODED, not free text. "oral", "Oral" and "by mouth" are one route typed three ways,
+   * and a column holding all three cannot be printed consistently (task 4.10), dispensed
+   * against (Phase 6), or counted. Route and frequency are genuinely closed sets in
+   * practice, so the contract closes them.
+   */
+  frequency: z.enum(FREQUENCY_VALUES, { message: 'Choose how often.' }),
+  /** Open, deliberately: "until review" and "3 days" are both real answers. */
   duration: requiredText(40, 'For how long?'),
-  route: requiredText(40, 'By what route?'),
+  route: z.enum(ROUTE_VALUES, { message: 'Choose a route.' }),
   /** How many to hand over. Optional — the pharmacy often works it out from the rest. */
   quantity: z
     .union([z.number().int().min(1).max(9999), z.literal(''), z.null()])

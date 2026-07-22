@@ -2,9 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
 import {
+  DOSE_PRESETS,
+  DURATION_PRESETS,
+  FREQUENCY_CODES,
+  INSTRUCTION_CODES,
   INTERACTION_SEVERITY_RANK,
+  ROUTE_CODES,
   interactionNeedsAck,
   isVisitOpen,
+  matchCode,
   savePrescriptionRequestSchema,
   type AllergyConflict,
   type DrugSummary,
@@ -13,6 +19,7 @@ import {
 } from '@redmars/shared'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { CodePicker } from '@/components/ui/code-picker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -197,10 +204,14 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         drugId: drug.id,
         drugLabel: drugLabel(drug),
         dose: '',
-        // THE AUTOFILL. Starters from the formulary, every one of them editable below.
-        frequency: drug.defaultFreq ?? '',
+        // THE AUTOFILL. The formulary stores its defaults as free text from task 2.6
+        // ("oral", "OD"), so they are mapped onto codes on the way in — otherwise every
+        // autofilled row would arrive holding a value the contract now refuses, and the
+        // feature that exists to save time would cost it. No match leaves the field empty
+        // for the prescriber to choose, rather than guessing.
+        frequency: matchCode(drug.defaultFreq, FREQUENCY_CODES) ?? '',
         duration: drug.defaultDuration ?? '',
-        route: drug.defaultRoute ?? '',
+        route: matchCode(drug.defaultRoute, ROUTE_CODES) ?? '',
         instructions: '',
         allergyOverrideReason: null,
       },
@@ -239,36 +250,83 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                  <Field
+                  {/* Dose and duration are OPEN — presets over a free field, because
+                      "½ tab" and "until review" are real answers no list contains. */}
+                  <CodePicker
+                    id={`rx-dose-${index}`}
                     label={t('prescription.dose')}
                     value={row.dose}
+                    codes={DOSE_PRESETS}
+                    allowFree
                     disabled={!open}
                     onChange={(dose) => setRow(index, { dose })}
                   />
-                  <Field
+                  {/* Frequency and route are CLOSED — the contract refuses anything else. */}
+                  <CodePicker
+                    id={`rx-freq-${index}`}
                     label={t('prescription.frequency')}
                     value={row.frequency}
+                    codes={FREQUENCY_CODES}
                     disabled={!open}
+                    invalid={open && !row.frequency}
                     onChange={(frequency) => setRow(index, { frequency })}
                   />
-                  <Field
+                  <CodePicker
+                    id={`rx-duration-${index}`}
                     label={t('prescription.duration')}
                     value={row.duration}
+                    codes={DURATION_PRESETS}
+                    allowFree
                     disabled={!open}
+                    invalid={open && !row.duration}
                     onChange={(duration) => setRow(index, { duration })}
                   />
-                  <Field
+                  <CodePicker
+                    id={`rx-route-${index}`}
                     label={t('prescription.route')}
                     value={row.route}
+                    codes={ROUTE_CODES}
                     disabled={!open}
+                    invalid={open && !row.route}
                     onChange={(route) => setRow(index, { route })}
                   />
-                  <Field
-                    label={t('prescription.instructions')}
-                    value={row.instructions}
-                    disabled={!open}
-                    onChange={(instructions) => setRow(index, { instructions })}
-                  />
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">
+                      {t('prescription.instructions')}
+                    </span>
+                    <Input
+                      value={row.instructions}
+                      disabled={!open}
+                      aria-label={t('prescription.instructions')}
+                      onChange={(e) => setRow(index, { instructions: e.target.value })}
+                    />
+                    {/* AC and PC change whether a drug works, so they are one click. The
+                        box stays free text because "with plenty of water" has no code and
+                        never will. */}
+                    {open && (
+                      <div className="flex flex-wrap gap-1">
+                        {INSTRUCTION_CODES.map((entry) => (
+                          <button
+                            key={entry.code}
+                            type="button"
+                            title={entry.label}
+                            onClick={() =>
+                              setRow(index, {
+                                instructions: row.instructions.includes(entry.code)
+                                  ? row.instructions
+                                  : [row.instructions.trim(), entry.code]
+                                      .filter(Boolean)
+                                      .join(' '),
+                              })
+                            }
+                            className="rounded border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            {entry.code}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </Card>
             </li>
@@ -401,29 +459,6 @@ function DrugPicker({ drugs, onPick }: { drugs: DrugSummary[]; onPick: (drug: Dr
   )
 }
 
-function Field({
-  label,
-  value,
-  disabled,
-  onChange,
-}: {
-  label: string
-  value: string
-  disabled: boolean
-  onChange: (value: string) => void
-}) {
-  return (
-    <div className="space-y-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <Input
-        value={value}
-        disabled={disabled}
-        aria-label={label}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </div>
-  )
-}
 
 /**
  * Task 4.8 — the hard block, on the screen.

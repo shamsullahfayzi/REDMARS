@@ -62,6 +62,11 @@ describe('Facility modules (e2e)', () => {
     // Logins and the toggle writes leave audit_log rows on the facility; clear them
     // before the facility (which cascades its module rows) and users.
     await prisma.auditLog.deleteMany({ where: { facility: { code: { startsWith: PREFIX } } } });
+    // Again, and deliberately. The R1 read row is written fire-and-forget, so one can
+    // land AFTER the sweep above and before the facility goes — and then the facility
+    // delete fails on a foreign key, inside afterAll, which Jest reports as a failed suite
+    // with no failed tests. Cheap to repeat, miserable to debug.
+    await prisma.auditLog.deleteMany({ where: { facility: { code: { startsWith: PREFIX } } } });
     await prisma.appUser.deleteMany({ where: { username: { startsWith: PREFIX } } });
     await prisma.facility.deleteMany({ where: { code: { startsWith: PREFIX } } });
   }

@@ -32,6 +32,11 @@ describe('GET /auth/me (e2e)', () => {
     await app.init();
     server = app.getHttpServer();
 
+    // Again, and deliberately. The R1 read row is written fire-and-forget, so one can
+    // land AFTER the sweep above and before the facility goes — and then the facility
+    // delete fails on a foreign key, inside afterAll, which Jest reports as a failed suite
+    // with no failed tests. Cheap to repeat, miserable to debug.
+    await prisma.auditLog.deleteMany({ where: { facility: { code: { startsWith: PREFIX } } } });
     await prisma.appUser.deleteMany({ where: { username: { startsWith: PREFIX } } });
 
     const facility = await prisma.facility.findFirstOrThrow();

@@ -5,6 +5,14 @@ import { hash } from '@node-rs/argon2';
 import { AuditAction, PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import {
+  FREQUENCY_CODES,
+  FREQUENCY_VALUES,
+  ROUTE_CODES,
+  ROUTE_VALUES,
+  matchCode,
+  searchCodes,
+} from '@redmars/shared';
 import type { DrugListResponse, LoginResponse, PrescriptionResponse } from '@redmars/shared';
 import { AppModule } from './../src/app.module';
 
@@ -116,7 +124,7 @@ describe('Prescription (e2e)', () => {
     drugId,
     frequency: 'OD',
     duration: '1 month',
-    route: 'oral',
+    route: 'PO',
     ...over,
   });
 
@@ -133,6 +141,11 @@ describe('Prescription (e2e)', () => {
     await prisma.drug.deleteMany({ where: { code: { startsWith: PREFIX } } });
     await prisma.practitioner.deleteMany({ where: { code: { startsWith: PREFIX } } });
     await prisma.department.deleteMany({ where: { code: { startsWith: PREFIX } } });
+    // Again, and deliberately. The R1 read row is written fire-and-forget, so one can
+    // land AFTER the sweep above and before the facility goes — and then the facility
+    // delete fails on a foreign key, inside afterAll, which Jest reports as a failed suite
+    // with no failed tests. Cheap to repeat, miserable to debug.
+    await prisma.auditLog.deleteMany({ where: { facility: { code: { startsWith: PREFIX } } } });
     await prisma.appUser.deleteMany({ where: { username: { startsWith: PREFIX } } });
     await prisma.facility.deleteMany({ where: { code: { startsWith: PREFIX } } });
   }
@@ -338,10 +351,87 @@ describe('Prescription (e2e)', () => {
       items: [{ drugId: drugs.DUL, frequency: 'OD', duration: '1 month' }],
     }).expect(400);
     await putRx(visitId, {
-      items: [{ drugId: drugs.DUL, route: 'oral', duration: '1 month' }],
+      items: [{ drugId: drugs.DUL, route: 'PO', duration: '1 month' }],
     }).expect(400);
-    await putRx(visitId, { items: [{ drugId: drugs.DUL, route: 'oral', frequency: 'OD' }] }).expect(
+    await putRx(visitId, { items: [{ drugId: drugs.DUL, route: 'PO', frequency: 'OD' }] }).expect(
       400,
+    );
+  });
+
+  /**
+   * Pure-function checks, living in an e2e spec because packages/shared has no test runner
+   * of its own and this seam is worth more than its awkward home. `matchCode` is what maps
+   * the formulary's free-text defaults (task 2.6 stored "oral", "OD") onto the codes the
+   * contract now demands. If it stops working, every autofilled row arrives with an empty
+   * route and the feature that exists to save time costs it instead — silently.
+   */
+  it('maps the formulary’s free-text defaults onto codes', () => {
+    expect(matchCode('oral', ROUTE_CODES)).toBe('PO');
+    expect(matchCode('Oral', ROUTE_CODES)).toBe('PO');
+    expect(matchCode('by mouth', ROUTE_CODES)).toBe('PO');
+    expect(matchCode('PO', ROUTE_CODES)).toBe('PO');
+    expect(matchCode('injection', ROUTE_CODES)).toBe('IM');
+    expect(matchCode('OD', FREQUENCY_CODES)).toBe('OD');
+    expect(matchCode('daily', FREQUENCY_CODES)).toBe('OD');
+    expect(matchCode('bid', FREQUENCY_CODES)).toBe('BD');
+    expect(matchCode('nocte', FREQUENCY_CODES)).toBe('ON');
+
+    // No match is null, never a guess — the picker then opens empty and the prescriber
+    // chooses, which is the only safe answer for a route nobody can identify.
+    expect(matchCode('somehow', ROUTE_CODES)).toBeNull();
+    expect(matchCode('', ROUTE_CODES)).toBeNull();
+    expect(matchCode(null, ROUTE_CODES)).toBeNull();
+  });
+
+  it('finds a code by the word a doctor would actually type', () => {
+    // The keyword lists are the difference between a dropdown and a ten-second hunt.
+    const byWord = (query: string) => searchCodes(query, ROUTE_CODES).map((entry) => entry.code);
+    expect(byWord('injection')).toEqual(expect.arrayContaining(['IM', 'IV', 'SC']));
+    expect(byWord('skin')).toEqual(expect.arrayContaining(['TOP', 'SC', 'TD']));
+    expect(byWord('eye')).toContain('OPH');
+    expect(searchCodes('twice', FREQUENCY_CODES).map((e) => e.code)).toContain('BD');
+    expect(searchCodes('night', FREQUENCY_CODES).map((e) => e.code)).toContain('ON');
+    // An empty query shows everything, so focusing the box is enough to discover the list.
+    expect(searchCodes('', ROUTE_CODES)).toHaveLength(ROUTE_CODES.length);
+  });
+
+  it('refuses a route or frequency that is not a code', async () => {
+    const visitId = await stageVisit();
+    // "oral", "Oral" and "by mouth" are one route typed three ways, and a column holding
+    // all three cannot be printed consistently, dispensed against, or counted. The picker
+    // offers the codes; the contract is what makes them the only possibility.
+    await putRx(visitId, {
+      items: [{ ...line(drugs.DUL), route: 'oral' }],
+    }).expect(400);
+    await putRx(visitId, {
+      items: [{ ...line(drugs.DUL), route: 'by mouth' }],
+    }).expect(400);
+    await putRx(visitId, {
+      items: [{ ...line(drugs.DUL), frequency: 'once daily' }],
+    }).expect(400);
+  });
+
+  it('takes every code the picker offers', async () => {
+    const visitId = await stageVisit();
+    // If the shared list and the contract ever drift, this is where it shows up rather
+    // than in a doctor's face at the moment they try to save.
+    for (const route of ROUTE_VALUES) {
+      await putRx(visitId, { items: [{ ...line(drugs.DUL), route }] }).expect(200);
+    }
+    for (const frequency of FREQUENCY_VALUES) {
+      await putRx(visitId, { items: [{ ...line(drugs.DUL), frequency }] }).expect(200);
+    }
+  });
+
+  it('keeps duration open — "until review" is a real answer', async () => {
+    const visitId = await stageVisit();
+    // Long-term psychiatric medication is the normal case at Farhat, so a closed duration
+    // list would push the commonest answer into the instructions box.
+    const saved = await putRx(visitId, {
+      items: [{ ...line(drugs.DUL), duration: 'Until review' }],
+    }).expect(200);
+    expect((saved.body as PrescriptionResponse).prescription!.items[0].duration).toBe(
+      'Until review',
     );
   });
 
