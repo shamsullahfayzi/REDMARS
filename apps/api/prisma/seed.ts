@@ -37,6 +37,11 @@ const FACILITY = {
   name: 'Farhat Hospital',
   nameLocalPrs: 'شفاخانه فرحت',
   nameLocalPs: 'د فرحت روغتون',
+  // From Farhat's own printed bill footer — the address and contact that head/foot the
+  // invoice. Real values so the printed bill looks like the one the hospital hands out.
+  address: 'Kolola Pushta Bus Stop, Kabul, Afghanistan',
+  phone: '+93 788 991 144',
+  email: 'farhathsp.af@gmail.com',
   timezone: 'Asia/Kabul',
   currency: 'AFN',
 };
@@ -84,7 +89,13 @@ const DEPARTMENTS: Array<{
 async function seedFacility() {
   const facility = await prisma.facility.upsert({
     where: { code: FACILITY.code },
-    update: {},
+    // Sync the letterhead fields onto an existing facility — they were added after the
+    // row first existed, so create alone would never reach a database already seeded.
+    update: {
+      address: FACILITY.address,
+      phone: FACILITY.phone,
+      email: FACILITY.email,
+    },
     create: FACILITY,
   });
 

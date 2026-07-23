@@ -181,7 +181,7 @@ export function ReceptionPage() {
           <PageHeader title={t('reception.done.title')} />
         </div>
 
-        <Card className="max-w-2xl p-6 print:border-0 print:shadow-none">
+        <Card className="max-w-2xl p-6 print:max-w-none print:border-0 print:p-0 print:shadow-none">
           <div className="mb-4 flex items-center gap-2 text-success print:hidden">
             <Check className="size-5" aria-hidden />
             <p className="font-medium">{t('reception.done.saved')}</p>

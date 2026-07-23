@@ -215,7 +215,7 @@
    */
   @page receiptBill {
     size: A5 landscape;
-    margin: 5mm;
+    margin: 4mm;
   }
 
   .receipt-bill {
@@ -230,7 +230,7 @@
   /* Collapse the screen's generous vertical rhythm; on paper it only pushes the foot off
      the page. Overrides Tailwind's space-y / padding utilities, hence !important. */
   .receipt-bill > * + * {
-    margin-top: 4px !important;
+    margin-top: 3px !important;
   }
 
   .receipt-bill hr {

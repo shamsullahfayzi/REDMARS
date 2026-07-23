@@ -61,15 +61,19 @@ export function CheckInReceipt({ result }: { result: CheckInResponse }) {
 
       <hr className="border-border" />
 
-      {/* Who and when — two columns, the way the old bill read. */}
-      <div className="grid grid-cols-1 gap-x-10 gap-y-1 sm:grid-cols-2">
-        <BillLine label={t('reception.receipt.receiptNo')} value={invoice.invoiceNo} mono />
-        <BillLine label={t('reception.receipt.patientId')} value={patient.mrn} mono />
-        <BillLine label={t('reception.receipt.name')} value={patient.name} />
-        <BillLine label={t('reception.receipt.ageSex')} value={ageSex} />
-        <BillLine label={t('reception.receipt.receiptDate')} value={dateTime(visit.startedAt)} />
-        <BillLine label={t('visits.fields.visitNo')} value={visit.visitNo} mono />
-        <BillLine label={t('reception.receipt.doctor')} value={doctor} />
+      {/* The six short fields across ONE row, so a bill with many charge lines still has
+          them side by side rather than stacked down half the page. Address and mobile —
+          the long ones — go beneath, on their own lines where they have room to run. */}
+      <div className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3 md:grid-cols-6">
+        <Cell label={t('reception.receipt.receiptNo')} value={invoice.invoiceNo} mono />
+        <Cell label={t('reception.receipt.patientId')} value={patient.mrn} mono />
+        <Cell label={t('reception.receipt.name')} value={patient.name} />
+        <Cell label={t('reception.receipt.ageSex')} value={ageSex} />
+        <Cell label={t('reception.receipt.receiptDate')} value={dateTime(visit.startedAt)} />
+        <Cell label={t('reception.receipt.doctor')} value={doctor} />
+      </div>
+
+      <div className="space-y-0.5">
         <BillLine label={t('patients.fields.address')} value={patient.address} />
         <BillLine label={t('reception.receipt.mobile')} value={patient.phone} mono />
       </div>
@@ -174,6 +178,18 @@ const CURRENCY_WORDS: Record<string, string> = {
   USD: 'Dollars',
   PKR: 'Rupees',
   EUR: 'Euros',
+}
+
+/** One field of the top row: a small caption above its value. Blank values keep the caption. */
+function Cell({ label, value, mono }: { label: string; value: string | null; mono?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={mono ? 'font-mono break-words' : 'break-words'} dir={mono ? 'ltr' : undefined}>
+        {value || '—'}
+      </div>
+    </div>
+  )
 }
 
 /** One "Label : value" detail row. Blank values still print the label, as the old bill did. */
