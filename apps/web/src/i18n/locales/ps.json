@@ -553,7 +553,8 @@
     },
     "ageUnit": {
       "years": "کاله",
-      "months": "میاشتې"
+      "months": "میاشتې",
+      "days": "ورځې"
     },
     "guardianRelation": {
       "son_of": "زوی",
@@ -698,7 +699,30 @@
       "item": "توکی",
       "qty": "شمېر",
       "amount": "اندازه",
-      "nothingDue": "د تادیې لپاره څه نشته"
+      "nothingDue": "د تادیې لپاره څه نشته",
+      "billTitle": "د سرپایي بل",
+      "receiptNo": "د رسید شمېره",
+      "patientId": "د ناروغ شمېره",
+      "name": "نوم",
+      "ageSex": "عمر / جنس",
+      "receiptDate": "د رسید نېټه",
+      "doctor": "ډاکټر",
+      "mobile": "موبایل",
+      "email": "بریښنالیک",
+      "description": "تفصیل",
+      "total": "ټول",
+      "paid": "تادیه شوی",
+      "yrs": "کاله",
+      "receivedFrom": "له {{name}} څخه د {{currency}} {{words}} مبلغ په ډاډ سره ترلاسه شو.",
+      "paymentBy": "د {{method}} په بڼه تادیه",
+      "authSign": "مجاز لاسلیک",
+      "runDate": "د چاپ نېټه",
+      "sex": {
+        "male": "نارینه",
+        "female": "ښځینه",
+        "other": "نور",
+        "unknown": "نامعلوم"
+      }
     },
     "done": {
       "title": "پذیرش وشو",

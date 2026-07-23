@@ -209,6 +209,50 @@
   }
 
   /*
+   * The out-patient bill prints A5 LANDSCAPE — Farhat's request, to save paper against the
+   * A4 the browser defaults to. A named page so this size applies only to the bill; the
+   * prescription sheet keeps the printer's own default and is not dragged onto A5.
+   */
+  @page receiptBill {
+    size: A5 landscape;
+    margin: 5mm;
+  }
+
+  .receipt-bill {
+    page: receiptBill;
+    color: #000;
+    /* Small and tight so the whole bill — down to the signature line — lands on ONE A5
+       sheet. Two sheets for one bill is the paper waste the A5 request was meant to end. */
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  /* Collapse the screen's generous vertical rhythm; on paper it only pushes the foot off
+     the page. Overrides Tailwind's space-y / padding utilities, hence !important. */
+  .receipt-bill > * + * {
+    margin-top: 4px !important;
+  }
+
+  .receipt-bill hr {
+    margin: 3px 0 !important;
+  }
+
+  .receipt-bill h2 {
+    font-size: 13px;
+  }
+
+  .receipt-bill td,
+  .receipt-bill th {
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+  }
+
+  .receipt-bill .pt-2,
+  .receipt-bill .pt-3 {
+    padding-top: 3px !important;
+  }
+
+  /*
    * Task 4.10 — the prescription sheet.
    *
    * `break-inside: avoid` above is right for a one-page receipt and wrong for a

@@ -1,52 +1,98 @@
 import { useTranslation } from 'react-i18next'
 import type { CheckInResponse } from '@redmars/shared'
+import { amountInWords } from '@/lib/amountInWords'
 
 /**
- * The slip the patient walks away with (task 3.6).
+ * The out-patient bill (task 3.6, reshaped to Farhat's Medi-Pro layout).
  *
- * Three numbers matter and they are the three the patient will be asked for later: the
- * MRN that finds them next time, the visit number the queue is called from, and the
- * invoice number that proves they paid. Everything else on the page is context.
+ * Modelled on the paper the hospital has handed out for years: a centred letterhead, a
+ * two-column block of who-and-when, the charges, the total in figures and then in words,
+ * and the hospital's own address, signature line and run time at the foot. The fields
+ * their old system had but this one does not — token number, OPD card number, a separate
+ * registration number — are simply left out rather than printed blank.
  *
- * Styled for paper as well as screen — see the `print:` utilities and the @media print
- * block in index.css. A receipt that only exists on a monitor is not a receipt.
+ * NOT a `<header>`/`<footer>`: the print stylesheet hides those as page chrome (they are
+ * the app's top bar and nav), which is exactly why the hospital name vanished on the first
+ * printed copy. Plain divs survive.
+ *
+ * Prints A5 landscape to save paper — see `.receipt-bill` / `@page` in index.css. Dates
+ * render in the hospital's zone with Latin digits; a bill dated to the wrong day, or in
+ * numerals half the staff misread, is a bill nobody trusts.
  */
 export function CheckInReceipt({ result }: { result: CheckInResponse }) {
-  const { t } = useTranslation()
-  const { patient, visit, invoice } = result
+  const { t, i18n } = useTranslation()
+  const { facility, patient, visit, invoice } = result
+
+  const localName =
+    i18n.language === 'ps'
+      ? (facility.nameLocalPs ?? facility.nameLocalPrs)
+      : (facility.nameLocalPrs ?? facility.nameLocalPs)
+
+  const dateTime = (iso: string) =>
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Kabul',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(iso))
+
+  const sexLetter = t(`reception.receipt.sex.${patient.gender}`, {
+    defaultValue: patient.gender.charAt(0).toUpperCase(),
+  })
+  const ageSex =
+    patient.ageYears != null
+      ? `${patient.ageYears} ${t('reception.receipt.yrs')} / ${sexLetter}`
+      : sexLetter
+
+  const currencyWord = CURRENCY_WORDS[invoice.currency] ?? invoice.currency
+  const doctor = visit.practitionerName ?? visit.departmentName
 
   return (
-    <div className="space-y-5 print:space-y-3">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Figure label={t('patients.create.mrn')} value={patient.mrn} />
-        <Figure label={t('visits.fields.visitNo')} value={visit.visitNo} />
-        <Figure label={t('reception.receipt.invoiceNo')} value={invoice.invoiceNo} />
+    <div className="receipt-bill space-y-3 text-sm text-foreground">
+      {/* Letterhead */}
+      <div className="text-center">
+        <h2 className="text-lg font-bold">{facility.name}</h2>
+        {localName && localName !== facility.name && <p className="text-base">{localName}</p>}
+        <p className="font-semibold uppercase tracking-wide">{t('reception.receipt.billTitle')}</p>
       </div>
 
-      <div className="text-sm">
-        <p className="text-base font-semibold text-foreground">{patient.name}</p>
-        <p className="text-muted-foreground">
-          {visit.departmentName}
-          {visit.practitionerName ? ` · ${visit.practitionerName}` : ''}
-        </p>
+      <hr className="border-border" />
+
+      {/* Who and when — two columns, the way the old bill read. */}
+      <div className="grid grid-cols-1 gap-x-10 gap-y-1 sm:grid-cols-2">
+        <BillLine label={t('reception.receipt.receiptNo')} value={invoice.invoiceNo} mono />
+        <BillLine label={t('reception.receipt.patientId')} value={patient.mrn} mono />
+        <BillLine label={t('reception.receipt.name')} value={patient.name} />
+        <BillLine label={t('reception.receipt.ageSex')} value={ageSex} />
+        <BillLine label={t('reception.receipt.receiptDate')} value={dateTime(visit.startedAt)} />
+        <BillLine label={t('visits.fields.visitNo')} value={visit.visitNo} mono />
+        <BillLine label={t('reception.receipt.doctor')} value={doctor} />
+        <BillLine label={t('patients.fields.address')} value={patient.address} />
+        <BillLine label={t('reception.receipt.mobile')} value={patient.phone} mono />
       </div>
 
-      <table className="w-full text-sm">
+      <hr className="border-border" />
+
+      {/* Charges */}
+      <table className="w-full">
         <thead className="border-b border-border text-muted-foreground">
           <tr>
-            <th className="py-2 text-start font-medium">{t('reception.receipt.item')}</th>
-            <th className="py-2 text-end font-medium">{t('reception.receipt.qty')}</th>
-            <th className="py-2 text-end font-medium">{t('reception.receipt.amount')}</th>
+            <th className="py-1 text-start font-medium">{t('reception.receipt.description')}</th>
+            <th className="py-1 text-end font-medium">{t('reception.receipt.qty')}</th>
+            <th className="py-1 text-end font-medium">{t('reception.receipt.amount')}</th>
           </tr>
         </thead>
         <tbody>
           {invoice.items.map((item) => (
-            <tr key={item.id} className="border-b border-border last:border-0">
-              <td className="py-2 text-foreground">{item.description}</td>
-              <td className="py-2 text-end text-muted-foreground" dir="ltr">
+            <tr key={item.id}>
+              <td className="py-1">{item.description}</td>
+              <td className="py-1 text-end text-muted-foreground" dir="ltr">
                 {item.quantity}
               </td>
-              <td className="py-2 text-end font-mono text-foreground" dir="ltr">
+              <td className="py-1 text-end font-mono" dir="ltr">
                 {item.total}
               </td>
             </tr>
@@ -54,55 +100,113 @@ export function CheckInReceipt({ result }: { result: CheckInResponse }) {
         </tbody>
       </table>
 
-      <dl className="space-y-1 text-sm">
-        <Row label={t('reception.bill.subtotal')} value={invoice.subtotal} />
+      {/* Totals, aligned right like the old bill's TOTAL / PAID block. */}
+      <div className="ms-auto max-w-xs space-y-1 border-t border-border pt-2">
         {invoice.discount !== '0.00' && (
-          <Row
+          <TotalLine
             label={
               invoice.discountReason
                 ? `${t('reception.bill.discount')} — ${invoice.discountReason}`
                 : t('reception.bill.discount')
             }
             value={`−${invoice.discount}`}
+            currency={invoice.currency}
           />
         )}
-        <div className="flex items-baseline justify-between border-t border-border pt-2">
-          <dt className="font-semibold text-foreground">{t('reception.bill.total')}</dt>
-          <dd className="font-mono text-lg font-bold text-foreground" dir="ltr">
-            {invoice.total} {invoice.currency}
-          </dd>
+        <TotalLine
+          label={t('reception.receipt.total')}
+          value={invoice.total}
+          currency={invoice.currency}
+          strong
+        />
+        <TotalLine
+          label={t('reception.receipt.paid')}
+          value={invoice.paidAmount}
+          currency={invoice.currency}
+        />
+      </div>
+
+      {/* In words, then how it was settled. */}
+      <div className="space-y-0.5 border-t border-border pt-2">
+        <p>
+          {t('reception.receipt.receivedFrom', {
+            name: patient.name,
+            currency: currencyWord,
+            words: amountInWords(invoice.paidAmount),
+          })}
+        </p>
+        <p className="uppercase">
+          {invoice.paymentMethod
+            ? t('reception.receipt.paymentBy', {
+                method: t(`reception.payment.method.${invoice.paymentMethod}`),
+              })
+            : t('reception.receipt.nothingDue')}
+        </p>
+      </div>
+
+      {/* The hospital's own footer: address, contact, signature, and when this was run. */}
+      <div className="space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
+        {facility.address && <p>{facility.address}</p>}
+        {(facility.phone || facility.email) && (
+          <p dir="ltr">
+            {[
+              facility.phone && `${t('reception.receipt.mobile')}: ${facility.phone}`,
+              facility.email && `${t('reception.receipt.email')}: ${facility.email}`,
+            ]
+              .filter(Boolean)
+              .join('   ')}
+          </p>
+        )}
+        <div className="flex items-end justify-between pt-3">
+          <span>
+            {t('reception.receipt.runDate')} {dateTime(new Date().toISOString())}
+          </span>
+          <span className="text-foreground">{t('reception.receipt.authSign')}</span>
         </div>
-        <div className="flex items-baseline justify-between">
-          <dt className="text-muted-foreground">{t('reception.payment.paid')}</dt>
-          <dd className="text-foreground">
-            {invoice.paymentMethod
-              ? t(`reception.payment.method.${invoice.paymentMethod}`)
-              : t('reception.receipt.nothingDue')}
-          </dd>
-        </div>
-      </dl>
+      </div>
     </div>
   )
 }
 
-function Figure({ label, value }: { label: string; value: string }) {
+/** English currency words for the "a sum of …" line. Falls back to the code. */
+const CURRENCY_WORDS: Record<string, string> = {
+  AFN: 'Afghani',
+  USD: 'Dollars',
+  PKR: 'Rupees',
+  EUR: 'Euros',
+}
+
+/** One "Label : value" detail row. Blank values still print the label, as the old bill did. */
+function BillLine({ label, value, mono }: { label: string; value: string | null; mono?: boolean }) {
   return (
-    <div className="rounded-lg bg-muted p-3 print:bg-transparent print:p-0">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      {/* Always LTR: an identifier reads left-to-right even on an RTL page. */}
-      <p dir="ltr" className="font-mono text-lg font-bold text-foreground">
-        {value}
-      </p>
+    <div className="flex gap-2">
+      <span className="w-28 shrink-0 text-muted-foreground">{label}</span>
+      <span className={mono ? 'font-mono' : undefined} dir={mono ? 'ltr' : undefined}>
+        : {value || ''}
+      </span>
     </div>
   )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function TotalLine({
+  label,
+  value,
+  currency,
+  strong,
+}: {
+  label: string
+  value: string
+  currency: string
+  strong?: boolean
+}) {
   return (
     <div className="flex items-baseline justify-between">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-mono text-foreground" dir="ltr">
-        {value}
+      <dt className={strong ? 'font-semibold' : 'text-muted-foreground'}>{label}</dt>
+      <dd
+        className={strong ? 'font-mono text-base font-bold' : 'font-mono'}
+        dir="ltr"
+      >
+        {value} {currency}
       </dd>
     </div>
   )

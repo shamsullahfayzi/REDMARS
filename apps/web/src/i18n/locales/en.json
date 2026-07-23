@@ -553,7 +553,8 @@
     },
     "ageUnit": {
       "years": "Years",
-      "months": "Months"
+      "months": "Months",
+      "days": "Days"
     },
     "guardianRelation": {
       "son_of": "Son of",
@@ -698,7 +699,30 @@
       "item": "Item",
       "qty": "Qty",
       "amount": "Amount",
-      "nothingDue": "Nothing to pay"
+      "nothingDue": "Nothing to pay",
+      "billTitle": "Out patient bill",
+      "receiptNo": "Receipt no",
+      "patientId": "Patient ID",
+      "name": "Name",
+      "ageSex": "Age / Sex",
+      "receiptDate": "Receipt date",
+      "doctor": "Doctor",
+      "mobile": "Mobile",
+      "email": "Email",
+      "description": "Description",
+      "total": "Total",
+      "paid": "Paid",
+      "yrs": "Yrs",
+      "receivedFrom": "Received with thanks from {{name}} a sum of {{currency}} {{words}} only.",
+      "paymentBy": "Payment by {{method}}",
+      "authSign": "Auth. signature",
+      "runDate": "Run date",
+      "sex": {
+        "male": "M",
+        "female": "F",
+        "other": "O",
+        "unknown": "U"
+      }
     },
     "done": {
       "title": "Checked in",

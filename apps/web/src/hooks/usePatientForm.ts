@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import type { AgeUnit, PatientDetail } from '@redmars/shared'
+import type { PatientDetail } from '@redmars/shared'
 
 /**
  * The registration/edit form's state, in one place.
@@ -15,8 +15,12 @@ export interface PatientFormValues {
   lastName: string
   prefix: string
   gender: 'male' | 'female' | 'other' | 'unknown'
-  ageValue: string
-  ageUnit: AgeUnit
+  // Age as three separate boxes — years, months, days — filled in as far as it is known.
+  // Farhat asked for this after running a real day: an infant is "1 year 2 months", not a
+  // single number behind a unit toggle. The wire has always carried all three columns.
+  ageYears: string
+  ageMonths: string
+  ageDays: string
   phone: string
   dateOfBirth: string
   guardianName: string
@@ -37,8 +41,9 @@ const EMPTY: PatientFormValues = {
   lastName: '',
   prefix: '',
   gender: 'male',
-  ageValue: '',
-  ageUnit: 'years',
+  ageYears: '',
+  ageMonths: '',
+  ageDays: '',
   phone: '',
   dateOfBirth: '',
   guardianName: '',
@@ -67,9 +72,14 @@ export function toWesternDigits(value: string): string {
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
 }
 
-/** Form values -> the wire contract. One number and a unit become the right column. */
+/** A box holding whole digits, or null when blank. */
+function orNumber(value: string): number | null {
+  const trimmed = value.trim()
+  return trimmed === '' ? null : Number(trimmed)
+}
+
+/** Form values -> the wire contract. The three age boxes map straight to their columns. */
 export function toPayload(values: PatientFormValues, acknowledgeDuplicate = false) {
-  const age = values.ageValue.trim() === '' ? null : Number(values.ageValue)
   return {
     firstName: values.firstName.trim(),
     lastName: orNull(values.lastName),
@@ -78,9 +88,9 @@ export function toPayload(values: PatientFormValues, acknowledgeDuplicate = fals
     phone: values.phone.trim(),
     altPhone: orNull(values.altPhone),
     dateOfBirth: orNull(values.dateOfBirth),
-    estimatedAgeYears: values.ageUnit === 'years' ? age : null,
-    estimatedAgeMonths: values.ageUnit === 'months' ? age : null,
-    estimatedAgeDays: null,
+    estimatedAgeYears: orNumber(values.ageYears),
+    estimatedAgeMonths: orNumber(values.ageMonths),
+    estimatedAgeDays: orNumber(values.ageDays),
     guardianName: orNull(values.guardianName),
     guardianRelation: orNull(values.guardianRelation),
     address: orNull(values.address),
@@ -97,20 +107,16 @@ export function toPayload(values: PatientFormValues, acknowledgeDuplicate = fals
 
 /** A saved patient -> form values, for repopulating the edit form. */
 export function fromDetail(patient: PatientDetail): PatientFormValues {
-  // Months only when there is no year — the form shows one number, so pick the one the
-  // record was actually stated in.
-  const useMonths = patient.estimatedAgeYears == null && patient.estimatedAgeMonths != null
+  // Each box shows exactly what the record holds — a blank column stays a blank box.
+  const box = (value: number | null) => (value == null ? '' : String(value))
   return {
     firstName: patient.firstName,
     lastName: patient.lastName ?? '',
     prefix: patient.prefix ?? '',
     gender: patient.gender,
-    ageValue: useMonths
-      ? String(patient.estimatedAgeMonths)
-      : patient.estimatedAgeYears != null
-        ? String(patient.estimatedAgeYears)
-        : '',
-    ageUnit: useMonths ? 'months' : 'years',
+    ageYears: box(patient.estimatedAgeYears),
+    ageMonths: box(patient.estimatedAgeMonths),
+    ageDays: box(patient.estimatedAgeDays),
     phone: patient.phone ?? '',
     dateOfBirth: patient.dateOfBirth ?? '',
     guardianName: patient.guardianName ?? '',

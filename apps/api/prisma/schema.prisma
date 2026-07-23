@@ -194,6 +194,9 @@ model Facility {
   nameLocalPs  String?  @map("name_local_ps")
   address      String?
   phone        String?
+  // Printed at the foot of the invoice when set (task: Farhat field changes). Optional —
+  // a hospital without an email address simply prints no footer line for it.
+  email        String?
   logoPath     String?  @map("logo_path")
   timezone     String   @default("Asia/Kabul")
   currency     String   @default("AFN")

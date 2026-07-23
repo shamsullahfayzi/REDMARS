@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { AGE_UNITS, GUARDIAN_RELATIONS, type AgeUnit } from '@redmars/shared'
+import { GUARDIAN_RELATIONS } from '@redmars/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,11 +10,14 @@ import { toWesternDigits, type PatientFormValues } from '@/hooks/usePatientForm'
 /**
  * The patient field set, shared by registration (3.1) and edit (3.4).
  *
- * The layout is the speed decision: the FOUR fields the desk actually asks — name,
- * gender, age, phone — and the other twelve behind a disclosure. Optional fields you must
- * tab past cost time on every single registration; optional fields behind a toggle cost
- * nothing. Age is one number plus a unit, never three boxes, because the receptionist is
- * told "thirty" or "six months".
+ * The layout is the speed decision: the fields the desk actually asks — name, gender,
+ * age, phone, address — up front, and the rest behind a disclosure. Optional fields you
+ * must tab past cost time on every single registration; optional fields behind a toggle
+ * cost nothing.
+ *
+ * Age is three boxes — years, months, days — after Farhat ran a real day and asked for it:
+ * a child is "1 year 2 months", and forcing that through a single number and a unit toggle
+ * loses half of it. Any box left blank stays blank; only what is typed is sent.
  */
 
 const GENDERS = ['male', 'female', 'other', 'unknown'] as const
@@ -41,6 +44,39 @@ function Field({ id, label, error, required, children }: FieldProps) {
   )
 }
 
+/** One small age box: a tiny caption above a narrow numeric input. Digits only. */
+function AgeBox({
+  id,
+  label,
+  value,
+  invalid,
+  onChange,
+}: {
+  id: string
+  label: string
+  value: string
+  invalid?: boolean
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="space-y-1">
+      <label htmlFor={id} className="block text-xs text-muted-foreground">
+        {label}
+      </label>
+      <Input
+        id={id}
+        value={value}
+        inputMode="numeric"
+        dir="ltr"
+        className="w-16 text-center"
+        autoComplete="off"
+        aria-invalid={invalid}
+        onChange={(e) => onChange(toWesternDigits(e.target.value).replace(/[^\d]/g, ''))}
+      />
+    </div>
+  )
+}
+
 interface PatientFormFieldsProps {
   values: PatientFormValues
   set: <K extends keyof PatientFormValues>(key: K, value: PatientFormValues[K]) => void
@@ -62,7 +98,8 @@ export function PatientFormFields({
 }: PatientFormFieldsProps) {
   const { t } = useTranslation()
   const [showMore, setShowMore] = useState(defaultShowMore)
-  const ageError = errors.estimatedAgeYears ?? errors.estimatedAgeMonths
+  const ageError =
+    errors.estimatedAgeYears ?? errors.estimatedAgeMonths ?? errors.estimatedAgeDays
 
   // A fault inside the drawer cannot be corrected while the drawer is shut.
   if (errors.dateOfBirth && !showMore) setShowMore(true)
@@ -107,31 +144,31 @@ export function PatientFormFields({
         </div>
       </Field>
 
-      <Field id="age" label={t('patients.fields.age')} error={ageError} required>
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            id="age"
-            value={values.ageValue}
-            inputMode="numeric"
-            dir="ltr"
-            className="w-24"
-            autoComplete="off"
-            aria-invalid={Boolean(ageError)}
-            onChange={(e) => set('ageValue', toWesternDigits(e.target.value).replace(/[^\d]/g, ''))}
+      {/* Three boxes in a fixed year-month-day order (dir="ltr" holds it under RTL). One
+          label and one error for the group — an age is one fact told in three parts. */}
+      <Field id="ageYears" label={t('patients.fields.age')} error={ageError} required>
+        <div className="flex items-end gap-2" dir="ltr">
+          <AgeBox
+            id="ageYears"
+            label={t('patients.ageUnit.years')}
+            value={values.ageYears}
+            invalid={Boolean(ageError)}
+            onChange={(value) => set('ageYears', value)}
           />
-          <div className="flex gap-1.5" role="group">
-            {AGE_UNITS.map((unit: AgeUnit) => (
-              <Button
-                key={unit}
-                type="button"
-                variant={values.ageUnit === unit ? 'default' : 'outline'}
-                aria-pressed={values.ageUnit === unit}
-                onClick={() => set('ageUnit', unit)}
-              >
-                {t(`patients.ageUnit.${unit}`)}
-              </Button>
-            ))}
-          </div>
+          <AgeBox
+            id="ageMonths"
+            label={t('patients.ageUnit.months')}
+            value={values.ageMonths}
+            invalid={Boolean(ageError)}
+            onChange={(value) => set('ageMonths', value)}
+          />
+          <AgeBox
+            id="ageDays"
+            label={t('patients.ageUnit.days')}
+            value={values.ageDays}
+            invalid={Boolean(ageError)}
+            onChange={(value) => set('ageDays', value)}
+          />
         </div>
       </Field>
 
@@ -148,6 +185,16 @@ export function PatientFormFields({
           onChange={(e) => set('phone', toWesternDigits(e.target.value))}
         />
         {belowPhone}
+      </Field>
+
+      {/* Up front, not in the drawer — Farhat's desk asks for it on every registration. */}
+      <Field id="address" label={t('patients.fields.address')} error={errors.address}>
+        <Input
+          id="address"
+          value={values.address}
+          autoComplete="off"
+          onChange={(e) => set('address', e.target.value)}
+        />
       </Field>
 
       <div className="border-t border-border pt-4">
@@ -220,15 +267,6 @@ export function PatientFormFields({
                 dir="ltr"
                 autoComplete="off"
                 onChange={(e) => set('altPhone', toWesternDigits(e.target.value))}
-              />
-            </Field>
-
-            <Field id="address" label={t('patients.fields.address')}>
-              <Input
-                id="address"
-                value={values.address}
-                autoComplete="off"
-                onChange={(e) => set('address', e.target.value)}
               />
             </Field>
 

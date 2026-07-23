@@ -145,7 +145,11 @@ describe('Reception check-in (e2e)', () => {
 
     facilityId = (
       await prisma.facility.create({
-        data: { code: `${PREFIX}fac`, name: 'E2E Reception Facility' },
+        data: {
+          code: `${PREFIX}fac`,
+          name: 'E2E Reception Facility',
+          email: 'e2e-reception@example.test',
+        },
       })
     ).id;
     otherFacilityId = (
@@ -279,11 +283,17 @@ describe('Reception check-in (e2e)', () => {
     // Registered — with a medical record number the patient keeps.
     expect(out.patient.mrn).toMatch(/^MRN-\d{6}$/);
     expect(out.patient.isNew).toBe(true);
+    // Age for the bill's "Age/Sex" line — 30 as registered, aged forward from just now.
+    expect(out.patient.ageYears).toBe(30);
 
     // In the queue.
     expect(out.visit.visitNo).toMatch(/^V-\d{4}-\d{4}$/);
     expect(out.visit.status).toBe('arrived');
     expect(out.visit.departmentName).toBe('E2E OPD');
+
+    // The letterhead the invoice prints on.
+    expect(out.facility.name).toBe('E2E Reception Facility');
+    expect(out.facility.email).toBe('e2e-reception@example.test');
 
     // Billed.
     expect(out.invoice.invoiceNo).toMatch(/^INV-\d{4}-\d{4}$/);
@@ -307,6 +317,13 @@ describe('Reception check-in (e2e)', () => {
     const invoice = await prisma.invoice.findUniqueOrThrow({ where: { id: out.invoice.id } });
     expect(invoice.visitId).toBe(out.visit.id);
     expect(invoice.patientId).toBe(out.patient.id);
+  });
+
+  it('carries the patient address onto the invoice', async () => {
+    const res = await post(body({ patient: newPatient({ address: 'House 4, Karte Se' }) })).expect(
+      201,
+    );
+    expect((res.body as CheckInResponse).patient.address).toBe('House 4, Karte Se');
   });
 
   it('checks in a returning patient without registering a second one', async () => {

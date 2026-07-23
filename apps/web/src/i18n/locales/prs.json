@@ -553,7 +553,8 @@
     },
     "ageUnit": {
       "years": "سال",
-      "months": "ماه"
+      "months": "ماه",
+      "days": "روز"
     },
     "guardianRelation": {
       "son_of": "ولد",
@@ -698,7 +699,30 @@
       "item": "مورد",
       "qty": "تعداد",
       "amount": "مبلغ",
-      "nothingDue": "چیزی قابل پرداخت نیست"
+      "nothingDue": "چیزی قابل پرداخت نیست",
+      "billTitle": "بل سرپایی",
+      "receiptNo": "شماره رسید",
+      "patientId": "شناسه مریض",
+      "name": "نام",
+      "ageSex": "سن / جنس",
+      "receiptDate": "تاریخ رسید",
+      "doctor": "داکتر",
+      "mobile": "موبایل",
+      "email": "ایمیل",
+      "description": "شرح",
+      "total": "مجموع",
+      "paid": "پرداخت شده",
+      "yrs": "سال",
+      "receivedFrom": "با تشکر از {{name}} مبلغ {{currency}} {{words}} فقط دریافت گردید.",
+      "paymentBy": "پرداخت به شکل {{method}}",
+      "authSign": "امضای مجاز",
+      "runDate": "تاریخ چاپ",
+      "sex": {
+        "male": "مرد",
+        "female": "زن",
+        "other": "سایر",
+        "unknown": "نامعلوم"
+      }
     },
     "done": {
       "title": "پذیرش شد",

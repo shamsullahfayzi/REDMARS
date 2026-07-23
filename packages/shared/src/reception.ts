@@ -158,12 +158,27 @@ export type InvoiceSummary = z.infer<typeof invoiceSummarySchema>
  * the queue is called from.
  */
 export const checkInResponseSchema = z.object({
+  // The hospital the invoice is printed on. Name is always present; the local names,
+  // address, phone and email are filled in as far as the facility record has them, and
+  // the printed invoice simply omits whichever lines are blank.
+  facility: z.object({
+    name: z.string(),
+    nameLocalPrs: z.string().nullable(),
+    nameLocalPs: z.string().nullable(),
+    address: z.string().nullable(),
+    phone: z.string().nullable(),
+    email: z.string().nullable(),
+  }),
   patient: z.object({
     id: z.uuid(),
     mrn: z.string(),
     name: z.string(),
     gender: z.string(),
+    // Age in whole years for the bill's "Age/Sex" line, aged forward from the estimate —
+    // null when neither a birth date nor an estimate was ever recorded.
+    ageYears: z.number().int().nullable(),
     phone: z.string().nullable(),
+    address: z.string().nullable(),
     isNew: z.boolean(),
   }),
   visit: z.object({

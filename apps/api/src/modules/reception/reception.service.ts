@@ -7,7 +7,7 @@ import type {
   PatientSummary,
   VisitSummary,
 } from '@redmars/shared';
-import { DISCOUNT_CEILING_PCT } from '@redmars/shared';
+import { currentAgeYears, DISCOUNT_CEILING_PCT } from '@redmars/shared';
 import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
 import { AppointmentService } from '../appointment/appointment.service';
@@ -71,6 +71,20 @@ export class ReceptionService {
     // carries a serviceId and a quantity and nothing else about money: a price that
     // travelled through the browser is a price anyone with devtools sets to 1.
     const services = await this.loadServices(facilityId, input.items);
+
+    // The letterhead for the printed invoice. Read once, outside the transaction — it is
+    // reference data that this save does not change.
+    const facility = await this.prisma.db.facility.findUniqueOrThrow({
+      where: { id: facilityId },
+      select: {
+        name: true,
+        nameLocalPrs: true,
+        nameLocalPs: true,
+        address: true,
+        phone: true,
+        email: true,
+      },
+    });
 
     return this.prisma.db.$transaction(
       async (tx) => {
@@ -181,6 +195,7 @@ export class ReceptionService {
         }
 
         return {
+          facility,
           patient: {
             id: patient.id,
             mrn: patient.mrn,
@@ -188,7 +203,9 @@ export class ReceptionService {
               .filter((part) => part != null && part.trim().length > 0)
               .join(' '),
             gender: patient.gender,
+            ageYears: currentAgeYears(patient),
             phone: patient.phone,
+            address: patient.address,
             isNew: input.patient != null,
           },
           visit: {
