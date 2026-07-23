@@ -79,6 +79,25 @@ export class LabTestService {
     return { tests: tests.map(toSummary) };
   }
 
+  /**
+   * The catalog a doctor may ORDER from — active tests only.
+   *
+   * Kept apart from `list()` because the two answer different questions for different
+   * people: the manage screen lists everything, withdrawn tests included, so an admin can
+   * bring one back; the order picker lists only what can actually be ordered today, so a
+   * doctor is never offered a test the save would refuse. It is gated on `lab_order.create`
+   * rather than `labtest.manage` for the same reason — the right to order implies the right
+   * to see what is orderable, and the doctor holds the former, not the latter.
+   */
+  async listOrderable(facilityId: string): Promise<LabTestListResponse> {
+    const tests = await this.prisma.db.labTest.findMany({
+      where: { facilityId, isActive: true },
+      orderBy: { name: 'asc' },
+      select: LAB_TEST_SELECT,
+    });
+    return { tests: tests.map(toSummary) };
+  }
+
   async create(facilityId: string, input: CreateLabTestRequest): Promise<LabTestSummary> {
     const clash = await this.prisma.db.labTest.findUnique({
       where: { facilityId_code: { facilityId, code: input.code } },

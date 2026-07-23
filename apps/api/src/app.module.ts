@@ -15,6 +15,7 @@ import { ServiceModule } from './modules/service/service.module';
 import { DrugModule } from './modules/drug/drug.module';
 import { LabTestModule } from './modules/lab-test/lab-test.module';
 import { LabPanelModule } from './modules/lab-panel/lab-panel.module';
+import { LabOrderModule } from './modules/lab-order/lab-order.module';
 import { ReferenceRangeModule } from './modules/reference-range/reference-range.module';
 import { IcdModule } from './modules/icd/icd.module';
 import { DrugInteractionModule } from './modules/drug-interaction/drug-interaction.module';
@@ -53,6 +54,7 @@ import { FollowUpModule } from './modules/follow-up/follow-up.module';
     DrugModule,
     LabTestModule,
     LabPanelModule,
+    LabOrderModule,
     ReferenceRangeModule,
     IcdModule,
     DrugInteractionModule,

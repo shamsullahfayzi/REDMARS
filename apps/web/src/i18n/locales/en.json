@@ -853,12 +853,13 @@
       "complaint": "Complaint",
       "diagnosis": "Diagnosis",
       "prescription": "Prescription",
+      "labs": "Labs",
       "notes": "Notes",
       "history": "History"
     },
     "separator": ", ",
     "hint": {
-      "tabs": "Arrow keys move between sections. Alt + 1 to 6 jumps straight to one."
+      "tabs": "Arrow keys move between sections. Alt + a number jumps straight to one."
     },
     "hotkeys": {
       "saveContinue": "Save & continue",
@@ -1022,6 +1023,21 @@
       "clear": "No review",
       "hint": "Records the plan to review. It does not book an appointment."
     }
+  },
+  "labs": {
+    "addTest": "Add a test",
+    "addTestPlaceholder": "Search by name or code…",
+    "none": "No tests ordered yet.",
+    "removeRow": "Remove test",
+    "noCharge": "No charge",
+    "total": "Total",
+    "willBill": "These tests will be billed at reception. Nothing is paid yet.",
+    "billed": "Billed on invoice {{invoiceNo}} — unpaid until settled at reception.",
+    "clinicalNote": "Clinical note",
+    "clinicalNotePlaceholder": "Why the tests are being ordered (optional)",
+    "save": "Save order",
+    "saving": "Saving…",
+    "failed": "Could not save the lab order."
   },
   "notes": {
     "loading": "Opening the notes…",

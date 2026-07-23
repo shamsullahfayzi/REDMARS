@@ -40,6 +40,18 @@ export class LabTestController {
     return this.tests.list(this.auth(req).facilityId);
   }
 
+  /**
+   * The active catalog, for the consult screen's order picker. Gated on `lab_order.create`,
+   * the doctor's permission — so a prescriber can see what is orderable without holding the
+   * catalog-management right the manage screen requires. Declared before `:id` routes so the
+   * literal path is never shadowed by a param.
+   */
+  @RequirePermission('lab_order.create')
+  @Get('orderable')
+  orderable(@Req() req: Request): Promise<LabTestListResponse> {
+    return this.tests.listOrderable(this.auth(req).facilityId);
+  }
+
   @RequirePermission('labtest.manage')
   @Post()
   @HttpCode(201)

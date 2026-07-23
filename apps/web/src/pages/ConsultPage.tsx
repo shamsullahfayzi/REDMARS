@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Pill,
   Play,
+  TestTube,
 } from 'lucide-react'
 import { defaultPrintSettings, isVisitOpen, type ConsultContext } from '@redmars/shared'
 import { AllergyBanner } from '@/components/AllergyBanner'
@@ -20,10 +21,12 @@ import { ConsultActions } from '@/components/ConsultActions'
 import { ComplaintTab } from '@/components/ComplaintTab'
 import { DiagnosisTab } from '@/components/DiagnosisTab'
 import { HistoryTab } from '@/components/HistoryTab'
+import { LabsTab } from '@/components/LabsTab'
 import { NotesTab } from '@/components/NotesTab'
 import { PrescriptionSheet } from '@/components/PrescriptionSheet'
 import { PrescriptionTab } from '@/components/PrescriptionTab'
 import { VitalsTab } from '@/components/VitalsTab'
+import { useAuth } from '@/auth/authContext'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -59,17 +62,26 @@ const TABS = [
   { key: 'complaint', icon: MessageSquare },
   { key: 'diagnosis', icon: ClipboardList },
   { key: 'prescription', icon: Pill },
+  // Module-gated: the laboratory is optional (task 2.13), so this tab is present only when
+  // the facility has it on. The server re-checks the module on every lab route regardless.
+  { key: 'labs', icon: TestTube, module: 'lab' },
   { key: 'notes', icon: FileText },
   { key: 'history', icon: History },
 ] as const
 
-type TabKey = (typeof TABS)[number]['key']
+type Tab = (typeof TABS)[number]
+type TabKey = Tab['key']
 
 export function ConsultPage() {
   const { t } = useTranslation()
   const { visitId } = useParams<{ visitId: string }>()
+  const { enabledModules } = useAuth()
   const contextQuery = useConsultContext(visitId)
   const [tab, setTab] = useState<TabKey>('vitals')
+
+  // A module-tagged tab (labs) shows only where its module is on. Hiding is courtesy — every
+  // lab route is module-guarded on the server too.
+  const tabs = TABS.filter((entry) => !('module' in entry) || enabledModules.includes(entry.module))
 
   const context = contextQuery.data
 
@@ -104,6 +116,7 @@ export function ConsultPage() {
         <PatientBanner context={context} />
         <AllergyEditor patientId={context.patient.id} />
         <ConsultTabs
+          tabs={tabs}
           active={tab}
           onChange={setTab}
           panels={{
@@ -111,6 +124,7 @@ export function ConsultPage() {
             complaint: <ComplaintTab visit={context.visit} />,
             diagnosis: <DiagnosisTab visit={context.visit} />,
             prescription: <PrescriptionTab visit={context.visit} />,
+            labs: <LabsTab visit={context.visit} />,
             notes: <NotesTab visit={context.visit} />,
             history: <HistoryTab patientId={context.patient.id} currentVisitId={context.visit.id} />,
           }}
@@ -270,10 +284,12 @@ function StartConsultation({ visit }: { visit: ConsultContext['visit'] }) {
  * ArrowRight has to mean "previous" or the keys fight the layout.
  */
 function ConsultTabs({
+  tabs,
   active,
   onChange,
   panels,
 }: {
+  tabs: readonly Tab[]
   active: TabKey
   onChange: (tab: TabKey) => void
   panels: Partial<Record<TabKey, ReactNode>>
@@ -288,10 +304,10 @@ function ConsultTabs({
   }
 
   function move(by: number) {
-    const index = TABS.findIndex((entry) => entry.key === active)
+    const index = tabs.findIndex((entry) => entry.key === active)
     // Wraps, per the ARIA pattern: the end of the strip is not a wall to bump into.
-    const next = (index + by + TABS.length) % TABS.length
-    focusTab(TABS[next].key)
+    const next = (index + by + tabs.length) % tabs.length
+    focusTab(tabs[next].key)
   }
 
   function onKeyDown(event: React.KeyboardEvent) {
@@ -300,28 +316,29 @@ function ConsultTabs({
 
     if (event.key === forward) move(1)
     else if (event.key === back) move(-1)
-    else if (event.key === 'Home') focusTab(TABS[0].key)
-    else if (event.key === 'End') focusTab(TABS[TABS.length - 1].key)
+    else if (event.key === 'Home') focusTab(tabs[0].key)
+    else if (event.key === 'End') focusTab(tabs[tabs.length - 1].key)
     else return
 
     event.preventDefault()
   }
 
-  // Alt+1…6, listened for on the window rather than on the strip: a doctor's hands are
+  // Alt+1…N, listened for on the window rather than on the strip: a doctor's hands are
   // in a text field, not on the tabs, and a shortcut that only works once you have
-  // already navigated to the thing it navigates to is not a shortcut.
+  // already navigated to the thing it navigates to is not a shortcut. The numbers follow
+  // the VISIBLE strip, so with labs hidden they still run 1…6 with no gap.
   useEffect(() => {
     function onWindowKey(event: KeyboardEvent) {
       if (!event.altKey || event.ctrlKey || event.metaKey) return
       const index = Number(event.key) - 1
-      if (!Number.isInteger(index) || index < 0 || index >= TABS.length) return
+      if (!Number.isInteger(index) || index < 0 || index >= tabs.length) return
       event.preventDefault()
-      onChange(TABS[index].key)
-      document.getElementById(`consult-tab-${TABS[index].key}`)?.focus()
+      onChange(tabs[index].key)
+      document.getElementById(`consult-tab-${tabs[index].key}`)?.focus()
     }
     window.addEventListener('keydown', onWindowKey)
     return () => window.removeEventListener('keydown', onWindowKey)
-  }, [onChange])
+  }, [onChange, tabs])
 
   return (
     <div className="space-y-3">
@@ -332,7 +349,7 @@ function ConsultTabs({
         onKeyDown={onKeyDown}
         className="flex flex-wrap gap-1 border-b border-border"
       >
-        {TABS.map(({ key, icon: Icon }, index) => (
+        {tabs.map(({ key, icon: Icon }, index) => (
           <button
             key={key}
             id={`consult-tab-${key}`}
@@ -370,7 +387,7 @@ function ConsultTabs({
         Esc and be told there was nothing unsaved. Work in progress does not stop existing
         because it scrolled off screen.
       */}
-      {TABS.map(({ key }) => (
+      {tabs.map(({ key }) => (
         <div
           key={key}
           id={`consult-panel-${key}`}
