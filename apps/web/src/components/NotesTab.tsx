@@ -129,6 +129,19 @@ function toContent(noteType: NoteType, drafts: Drafts): Record<string, unknown> 
   )
 }
 
+/**
+ * What an untouched section serialises to — every text field null, every risk domain 'none'.
+ *
+ * This is the baseline for a note that does NOT exist yet. Comparing against '' instead
+ * would mark every section dirty the instant the screen opened (a blank draft is not the
+ * empty string), and F2/F4/F9 would then try to save four empty notes — which the contract
+ * rightly refuses, taking save, print and finish down with it. A note is optional; a blank
+ * one is clean, not unsaved.
+ */
+const EMPTY_SIGNATURE = Object.fromEntries(
+  NOTE_TYPES.map((noteType) => [noteType, JSON.stringify(toContent(noteType, blankDrafts()))]),
+) as Record<NoteType, string>
+
 export function NotesTab({ visit }: { visit: VisitSummary }) {
   const { t } = useTranslation()
   const { roles } = useAuth()
@@ -160,7 +173,9 @@ export function NotesTab({ visit }: { visit: VisitSummary }) {
   const dirtyTypes = useMemo(
     () =>
       NOTE_TYPES.filter(
-        (noteType) => JSON.stringify(toContent(noteType, drafts)) !== (baseline[noteType] ?? ''),
+        (noteType) =>
+          JSON.stringify(toContent(noteType, drafts)) !==
+          (baseline[noteType] ?? EMPTY_SIGNATURE[noteType]),
       ),
     [drafts, baseline],
   )
@@ -178,7 +193,8 @@ export function NotesTab({ visit }: { visit: VisitSummary }) {
     const saved: NoteType[] = []
 
     for (const noteType of NOTE_TYPES) {
-      if (JSON.stringify(toContent(noteType, drafts)) === (baseline[noteType] ?? '')) continue
+      if (JSON.stringify(toContent(noteType, drafts)) === (baseline[noteType] ?? EMPTY_SIGNATURE[noteType]))
+        continue
 
       const parsed = saveClinicalNoteRequestSchema.safeParse({
         noteType,
