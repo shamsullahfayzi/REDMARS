@@ -7,6 +7,7 @@ import {
   Clock,
   Pencil,
   RefreshCw,
+  ShieldCheck,
   Syringe,
   Wallet,
   WifiOff,
@@ -24,6 +25,7 @@ import {
   useCollectSample,
   useLabQueue,
   useSaveLabResult,
+  useVerifyResults,
 } from '@/hooks/useLabQueue'
 import { waitTone } from '@/hooks/useQueue'
 import { ApiError } from '@/lib/api'
@@ -214,17 +216,21 @@ function OrderCard({ group }: { group: OrderGroup }) {
   const { t } = useTranslation()
   const { roles } = useAuth()
   const collect = useCollectSample()
+  const verify = useVerifyResults()
   const tone = waitTone(group.waitedMinutes)
   const payment = paymentOf(group.entries)
 
   // The bench and the nurse draw samples (lab.collect_sample); the desk and the doctor do
   // not. Server re-checks — this only decides whether to show the button.
   const mayCollect = roles.includes('lab_tech') || roles.includes('nurse')
-  // Entering the result is the lab tech's alone (lab.enter_result).
+  // Entering and verifying the result are the lab tech's (lab.enter_result / verify_result).
   const mayEnterResult = roles.includes('lab_tech')
+  const mayVerify = roles.includes('lab_tech')
   // Eligible = still ordered AND its charge is settled (the queue's `paid` already means
   // "nothing outstanding", matching what the endpoint enforces).
   const ready = group.entries.filter((entry) => entry.status === 'ordered' && entry.paid)
+  // Results waiting for sign-off.
+  const resulted = group.entries.filter((entry) => entry.status === 'resulted')
 
   return (
     <li>
@@ -307,6 +313,31 @@ function OrderCard({ group }: { group: OrderGroup }) {
               {collect.isPending
                 ? t('labQueue.collect.saving')
                 : t('labQueue.collect.action', { count: ready.length })}
+            </Button>
+          </div>
+        )}
+
+        {mayVerify && resulted.length > 0 && (
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {verify.isError && (
+              <p className="text-xs text-destructive">
+                {verify.error instanceof ApiError && typeof verify.error.body === 'object'
+                  ? ((verify.error.body as { message?: string }).message ??
+                    t('labQueue.verify.failed'))
+                  : t('labQueue.verify.failed')}
+              </p>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={verify.isPending}
+              onClick={() => verify.mutate(resulted.map((entry) => entry.itemId))}
+            >
+              <ShieldCheck className="size-4" aria-hidden />
+              {verify.isPending
+                ? t('labQueue.verify.saving')
+                : t('labQueue.verify.action', { count: resulted.length })}
             </Button>
           </div>
         )}

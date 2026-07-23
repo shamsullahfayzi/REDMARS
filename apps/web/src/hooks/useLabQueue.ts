@@ -3,6 +3,7 @@ import {
   collectSampleResponseSchema,
   labQueueResponseSchema,
   saveLabResultResponseSchema,
+  verifyResultResponseSchema,
   type LabQueueQuery,
 } from '@redmars/shared'
 import { apiGet, apiPost, apiPut } from '@/lib/api'
@@ -65,6 +66,20 @@ export function useSaveLabResult() {
       const body = NUMERIC.test(trimmed) ? { valueNumeric: trimmed } : { valueText: trimmed }
       return apiPut(`/lab-queue/items/${itemId}/result`, body, saveLabResultResponseSchema)
     },
+    onSuccess: () => client.invalidateQueries({ queryKey: ['lab-queue'] }),
+  })
+}
+
+/**
+ * Verifying results — the sign-off that releases an order's resulted tests to `verified` and
+ * clears them off the active worklist. A batch, like collecting; the server refuses the lot if
+ * any one is not ready.
+ */
+export function useVerifyResults() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (itemIds: string[]) =>
+      apiPost('/lab-queue/verify', { itemIds }, verifyResultResponseSchema),
     onSuccess: () => client.invalidateQueries({ queryKey: ['lab-queue'] }),
   })
 }

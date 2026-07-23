@@ -1,7 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Gender } from '@prisma/client';
-import type { LabResult, SaveLabResultRequest, SaveLabResultResponse } from '@redmars/shared';
+import type {
+  LabResult,
+  SaveLabResultRequest,
+  SaveLabResultResponse,
+  VerifyResultRequest,
+  VerifyResultResponse,
+} from '@redmars/shared';
 import { currentAgeYears } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -163,6 +174,68 @@ export class LabResultService {
       referenceText: band.text,
     };
     return { result };
+  }
+
+  /**
+   * Verify a batch of results — the sign-off that moves `resulted` to `verified` and locks it.
+   *
+   * All or nothing: every item must be a result waiting to be verified, or none are. The
+   * final `resulted` check runs inside the transaction so a result re-entered (which resets it
+   * to `resulted` and clears any stamp) between the read and the write cannot be verified out
+   * from under the edit.
+   */
+  async verify(
+    facilityId: string,
+    userId: string,
+    input: VerifyResultRequest,
+  ): Promise<VerifyResultResponse> {
+    const itemIds = [...new Set(input.itemIds)];
+
+    const items = await this.prisma.db.labOrderItem.findMany({
+      where: { id: { in: itemIds }, labOrder: { facilityId } },
+      select: { id: true, status: true },
+    });
+    if (items.length !== itemIds.length) {
+      throw new BadRequestException({
+        message: 'One of those results is not on this facility’s orders.',
+        code: 'unknown_item',
+      });
+    }
+    const notResulted = items.filter((item) => item.status !== 'resulted');
+    if (notResulted.length > 0) {
+      throw new BadRequestException({
+        message: 'Only a result that has been entered can be verified.',
+        code: 'not_verifiable',
+      });
+    }
+
+    const now = new Date();
+    await this.prisma.db.$transaction(async (tx) => {
+      const stillResulted = await tx.labOrderItem.count({
+        where: { id: { in: itemIds }, status: 'resulted' },
+      });
+      if (stillResulted !== itemIds.length) {
+        throw new ConflictException({
+          message: 'One of those results just changed. Reload the queue.',
+          code: 'result_changed',
+        });
+      }
+      for (const id of itemIds) {
+        await tx.labResult.update({
+          where: { labOrderItemId: id },
+          data: { verifiedBy: userId, verifiedAt: now },
+        });
+        await tx.labOrderItem.update({ where: { id }, data: { status: 'verified' } });
+      }
+    });
+
+    return {
+      items: itemIds.map((itemId) => ({
+        itemId,
+        status: 'verified' as const,
+        verifiedAt: now.toISOString(),
+      })),
+    };
   }
 
   /**

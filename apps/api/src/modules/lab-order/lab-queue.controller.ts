@@ -16,11 +16,13 @@ import {
   collectSampleRequestSchema,
   labQueueQuerySchema,
   saveLabResultRequestSchema,
+  verifyResultRequestSchema,
 } from '@redmars/shared';
 import type {
   CollectSampleResponse,
   LabQueueResponse,
   SaveLabResultResponse,
+  VerifyResultResponse,
 } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { RequiresModule } from '../../auth/decorators/requires-module.decorator';
@@ -94,6 +96,20 @@ export class LabQueueController {
     }
     const auth = this.auth(req);
     return this.results.save(auth.facilityId, auth.userId, itemId, parsed.data);
+  }
+
+  @Post('verify')
+  @RequirePermission('lab.verify_result')
+  verify(@Req() req: Request, @Body() body: unknown): Promise<VerifyResultResponse> {
+    const parsed = verifyResultRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid verification',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    const auth = this.auth(req);
+    return this.results.verify(auth.facilityId, auth.userId, parsed.data);
   }
 
   private auth(req: Request): AuthContext {

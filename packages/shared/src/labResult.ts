@@ -73,3 +73,31 @@ export const saveLabResultResponseSchema = z.object({
   result: labResultSchema,
 })
 export type SaveLabResultResponse = z.infer<typeof saveLabResultResponseSchema>
+
+/**
+ * Verifying results (Phase 5, fifth slice) — a sign-off that moves a result from `resulted`
+ * to `verified`, after which it is locked: correcting it becomes amendment (lab.amend_result),
+ * a new record that leaves the original standing, not a quiet overwrite.
+ *
+ * A batch, like collecting: a patient's results are checked and released together. Ideally the
+ * verifier is a different person from whoever entered the value — real labs separate the two —
+ * but a single-tech clinic has one pair of hands, so that separation is a policy the
+ * permission leaves open rather than a rule enforced here. All or nothing: if any item in the
+ * batch is not `resulted`, none are verified.
+ */
+export const verifyResultRequestSchema = z.object({
+  itemIds: z.array(z.uuid()).min(1).max(50),
+})
+export type VerifyResultRequest = z.infer<typeof verifyResultRequestSchema>
+
+export const verifiedResultItemSchema = z.object({
+  itemId: z.uuid(),
+  status: labOrderItemStatusSchema,
+  verifiedAt: z.string(),
+})
+export type VerifiedResultItem = z.infer<typeof verifiedResultItemSchema>
+
+export const verifyResultResponseSchema = z.object({
+  items: z.array(verifiedResultItemSchema),
+})
+export type VerifyResultResponse = z.infer<typeof verifyResultResponseSchema>

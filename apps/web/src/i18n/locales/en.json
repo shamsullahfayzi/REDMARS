@@ -1081,6 +1081,11 @@
       "abnormal": "Abnormal",
       "high": "High",
       "low": "Low"
+    },
+    "verify": {
+      "action": "Verify ({{count}})",
+      "saving": "Verifying…",
+      "failed": "Could not verify."
     }
   },
   "notes": {
