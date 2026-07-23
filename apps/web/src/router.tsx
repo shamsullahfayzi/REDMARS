@@ -15,6 +15,7 @@ import { DrugsPage } from '@/pages/DrugsPage'
 import { IcdLookupPage } from '@/pages/IcdLookupPage'
 import { InteractionCheckerPage } from '@/pages/InteractionCheckerPage'
 import { LabPanelsPage } from '@/pages/LabPanelsPage'
+import { LabQueuePage } from '@/pages/LabQueuePage'
 import { ModulesPage } from '@/pages/ModulesPage'
 import { LabTestsPage } from '@/pages/LabTestsPage'
 import { PatientDetailPage } from '@/pages/PatientDetailPage'
@@ -64,7 +65,7 @@ export const router = createBrowserRouter([
           { path: 'follow-ups', element: <FollowUpsPage /> },
           { path: 'icd', element: <IcdLookupPage /> },
           { path: 'interactions', element: <InteractionCheckerPage /> },
-          { path: 'lab', element: <PlaceholderPage sectionKey="lab" /> },
+          { path: 'lab', element: <LabQueuePage /> },
           { path: 'pharmacy', element: <PlaceholderPage sectionKey="pharmacy" /> },
           { path: 'users', element: <UsersPage /> },
           { path: 'modules', element: <ModulesPage /> },

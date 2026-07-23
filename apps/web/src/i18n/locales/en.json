@@ -1039,6 +1039,35 @@
     "saving": "Saving…",
     "failed": "Could not save the lab order."
   },
+  "labQueue": {
+    "subtitle": "Ordered tests, oldest first. Collect the sample once the desk has been paid.",
+    "date": "Date",
+    "filterStatus": "Status",
+    "allActive": "All active",
+    "refresh": "Refresh",
+    "error": "Could not load the lab queue.",
+    "empty": "No lab work waiting.",
+    "waited": "{{minutes}} min",
+    "noCharge": "No charge",
+    "status": {
+      "ordered": "Ordered",
+      "sample_collected": "Sample taken",
+      "in_progress": "In progress",
+      "resulted": "Resulted",
+      "verified": "Verified",
+      "cancelled": "Cancelled"
+    },
+    "payment": {
+      "paid": "Paid",
+      "awaiting": "Awaiting payment",
+      "noCharge": "No charge"
+    },
+    "live": {
+      "on": "Live · every {{seconds}}s",
+      "failing": "Not updating",
+      "pastDay": "Past day"
+    }
+  },
   "notes": {
     "loading": "Opening the notes…",
     "error": "Could not open the notes.",

@@ -114,6 +114,7 @@ export class LabOrderService {
         const orderNo = await this.sequence.next(facilityId, 'lab_order_no', undefined, tx);
         order = await tx.labOrder.create({
           data: {
+            facilityId,
             visitId,
             practitionerId,
             orderNo: orderNo.formatted,

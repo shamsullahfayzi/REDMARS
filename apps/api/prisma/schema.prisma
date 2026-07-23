@@ -216,6 +216,7 @@ model Facility {
   labPanels       LabPanel[]
   services        Service[]
   invoices        Invoice[]
+  labOrders       LabOrder[]
   panels          Panel[]
   auditLogs       AuditLog[]
   numberSequences NumberSequence[]
@@ -979,18 +980,24 @@ model ReferenceRange {
 /// 34 — FHIR ServiceRequest. The doctor's request.
 model LabOrder {
   id             String      @id @default(uuid())
+  facilityId     String      @map("facility_id")
   visitId        String      @map("visit_id")
   practitionerId String?     @map("practitioner_id")
-  orderNo        String      @unique @map("order_no")
+  orderNo        String      @map("order_no")
   status         OrderStatus @default(active)
   clinicalNote   String?     @map("clinical_note") // why the test was ordered
   orderedAt      DateTime    @default(now()) @map("ordered_at")
   createdAt      DateTime    @default(now()) @map("created_at")
 
+  facility     Facility       @relation(fields: [facilityId], references: [id])
   visit        Visit          @relation(fields: [visitId], references: [id])
   practitioner Practitioner?  @relation(fields: [practitionerId], references: [id])
   items        LabOrderItem[]
 
+  // The order number is issued per facility (the counter restarts at 1 in each), so it is
+  // unique WITHIN a facility, not globally — the same rule invoiceNo follows. A bare @unique
+  // on order_no would collide the moment a second facility placed its first order.
+  @@unique([facilityId, orderNo])
   @@index([visitId])
   @@map("lab_order")
 }
