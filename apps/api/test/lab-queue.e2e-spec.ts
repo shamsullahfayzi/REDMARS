@@ -186,32 +186,29 @@ describe('Lab queue (e2e)', () => {
     expect(byName['ALT'].waitedMinutes).toBeGreaterThanOrEqual(0);
   });
 
-  it('paid flips true only when the whole lab invoice is settled', async () => {
+  it('paid is PER LINE: paying one test frees it while the other stays unpaid', async () => {
     const visitId = await stageVisit();
     const placed = (await order(visitId, [tests.cbc, tests.alt]).expect(200))
       .body as LabOrderResponse;
-    const invoice = placed.order!.invoice!;
+    const cbcItem = placed.order!.items.find((i) => i.name === 'Complete Blood Count')!;
 
-    // A partial payment does not flip paid — which line a partial sum covers is not tracked.
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: { paidAmount: '100.00', status: 'partially_paid' },
-    });
+    // Born unpaid: neither line is settled.
     let mine = (await queue().expect(200)).body as LabQueueResponse;
     expect(mine.entries.filter((e) => e.visitId === visitId).every((e) => e.paid === false)).toBe(
       true,
     );
-    expect(mine.entries.find((e) => e.visitId === visitId)!.invoiceStatus).toBe('partially_paid');
 
-    // Fully settled: now the bench may act.
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: { paidAmount: invoice.total, status: 'paid' },
+    // Settle only the CBC line — the way reception collects one test of several.
+    await prisma.invoiceItem.updateMany({
+      where: { refType: 'lab_order_item', refId: cbcItem.id },
+      data: { isPaid: true, paidAt: new Date() },
     });
     mine = (await queue().expect(200)).body as LabQueueResponse;
-    expect(mine.entries.filter((e) => e.visitId === visitId).every((e) => e.paid === true)).toBe(
-      true,
+    const byName = Object.fromEntries(
+      mine.entries.filter((e) => e.visitId === visitId).map((e) => [e.testName, e]),
     );
+    expect(byName['Complete Blood Count'].paid).toBe(true);
+    expect(byName['ALT'].paid).toBe(false);
   });
 
   it('the default view is active work: verified and cancelled tests drop off', async () => {

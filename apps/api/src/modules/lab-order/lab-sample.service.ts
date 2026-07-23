@@ -56,19 +56,16 @@ export class LabSampleService {
       });
     }
 
-    // The gate. A test's charge must be settled before its sample is drawn. "Settled" is
-    // measured by what is OUTSTANDING, not by the status word: a test billed nothing (an
-    // unpriced one still carries a 0.00 line on an unpaid invoice) owes nothing and passes,
-    // and a fully-paid invoice owes nothing either. A test with no invoice line at all owes
-    // nothing too. Only a real amount still owed closes the door.
+    // The gate, now PER LINE. A test's own charge must be settled before its sample is drawn —
+    // not the whole invoice, so paying one test on an order of four frees THAT test and leaves
+    // the rest waiting. A line that costs nothing is born paid; a test with no invoice line at
+    // all owes nothing either. Only an unpaid priced line closes the door.
     const lines = await this.prisma.db.invoiceItem.findMany({
       where: { refType: LAB_REF_TYPE, refId: { in: itemIds } },
-      select: { refId: true, invoice: { select: { total: true, paidAmount: true } } },
+      select: { refId: true, isPaid: true },
     });
-    const outstandingByItem = new Map(
-      lines.map((line) => [line.refId, line.invoice.total.greaterThan(line.invoice.paidAmount)]),
-    );
-    const unpaid = items.filter((item) => outstandingByItem.get(item.id) === true);
+    const paidByItem = new Map(lines.map((line) => [line.refId, line.isPaid]));
+    const unpaid = items.filter((item) => paidByItem.get(item.id) === false);
     if (unpaid.length > 0) {
       throw new BadRequestException({
         message: 'The reception has not been paid for this test yet.',

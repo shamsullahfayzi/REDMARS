@@ -250,6 +250,7 @@ export class LabOrderService {
       }
       for (const item of toAdd) {
         const price = priceByTest.get(item.testId) ?? ZERO;
+        const free = price.isZero();
         await tx.invoiceItem.create({
           data: {
             invoiceId,
@@ -260,6 +261,10 @@ export class LabOrderService {
             unitPrice: price,
             discount: ZERO,
             total: price,
+            // A line that costs nothing owes nothing — born paid, so the bench may draw it
+            // without a trip to the window (reception collects the priced lines).
+            isPaid: free,
+            paidAt: free ? new Date() : null,
           },
         });
       }

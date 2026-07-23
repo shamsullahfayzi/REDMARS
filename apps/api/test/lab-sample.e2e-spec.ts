@@ -87,6 +87,12 @@ describe('Lab sample collection (e2e)', () => {
       .expect(200);
     const order = (res.body as LabOrderResponse).order!;
     if (pay && order.invoice) {
+      // Settlement is per LINE now — mark each of the order's charges paid, the way the
+      // reception window does.
+      await prisma.invoiceItem.updateMany({
+        where: { refType: 'lab_order_item', refId: { in: order.items.map((i) => i.id) } },
+        data: { isPaid: true, paidAt: new Date() },
+      });
       await prisma.invoice.update({
         where: { id: order.invoice.id },
         data: { paidAmount: order.invoice.total, status: 'paid' },

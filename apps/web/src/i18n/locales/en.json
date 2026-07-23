@@ -1205,5 +1205,22 @@
     "overrideTitle": "Prescribed despite a recorded allergy:",
     "interactionTitle": "Interaction acknowledged:",
     "followUp": "Come back on:"
+  },
+  "labCharges": {
+    "title": "Lab charges",
+    "outstanding": "Owed: {{amount}}",
+    "paid": "Paid",
+    "method": "Method",
+    "collect": "Collect {{amount}}",
+    "collecting": "Collecting…",
+    "failed": "Could not take payment.",
+    "methods": {
+      "cash": "Cash",
+      "card": "Card",
+      "bank_transfer": "Bank transfer",
+      "mobile_money": "Mobile money",
+      "panel": "Panel",
+      "waiver": "Waiver"
+    }
   }
 }

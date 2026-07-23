@@ -104,7 +104,8 @@ export class LabQueueService {
           select: {
             refId: true,
             unitPrice: true,
-            invoice: { select: { status: true, total: true, paidAmount: true } },
+            isPaid: true,
+            invoice: { select: { status: true } },
           },
         })
       : [];
@@ -114,11 +115,9 @@ export class LabQueueService {
         {
           status: line.invoice.status,
           price: line.unitPrice.toFixed(2),
-          // Settled means nothing OUTSTANDING, not the status word: a 0.00 invoice (an
-          // unpriced test) is born 'issued' yet owes nothing, so the bench may draw it. This
-          // is the same measure the collect endpoint gates on, so the queue's "paid" badge
-          // and the draw button never disagree.
-          settled: !line.invoice.total.greaterThan(line.invoice.paidAmount),
+          // Settled is PER LINE — this test's own charge, paid or not — the same signal the
+          // collect endpoint gates on, so the "paid" badge and the draw button never disagree.
+          settled: line.isPaid,
         },
       ]),
     );

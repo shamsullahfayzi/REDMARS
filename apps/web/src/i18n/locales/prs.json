@@ -1205,5 +1205,22 @@
     "overrideTitle": "با وجود حساسیت ثبت‌شده تجویز شد:",
     "interactionTitle": "تداخل دوایی تایید شد:",
     "followUp": "مراجعهٔ بعدی:"
+  },
+  "labCharges": {
+    "title": "هزینه‌های آزمایش",
+    "outstanding": "بدهی: {{amount}}",
+    "paid": "پرداخت‌شده",
+    "method": "روش",
+    "collect": "دریافت {{amount}}",
+    "collecting": "در حال دریافت…",
+    "failed": "پرداخت انجام نشد.",
+    "methods": {
+      "cash": "نقد",
+      "card": "کارت",
+      "bank_transfer": "انتقال بانکی",
+      "mobile_money": "پول موبایل",
+      "panel": "پنل",
+      "waiver": "معافیت"
+    }
   }
 }

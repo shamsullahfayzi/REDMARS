@@ -16,6 +16,7 @@ import { BookFollowUp } from '@/components/BookFollowUp'
 import { PatientFormFields } from '@/components/PatientFormFields'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { LabChargesCard } from '@/components/LabChargesCard'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -219,6 +220,10 @@ export function PatientDetailPage() {
           <p className="text-sm text-destructive">{t('patients.identifiers.error')}</p>
         )}
       </Card>
+
+      {/* Reception's lab settlement — renders itself only where the lab is on, the viewer may
+          bill, and the patient actually has outstanding lab charges. */}
+      <LabChargesCard patientId={patient.id} />
 
       {canEdit && (
         <Card className="max-w-lg p-6">

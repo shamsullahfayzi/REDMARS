@@ -16,6 +16,7 @@ import { DrugModule } from './modules/drug/drug.module';
 import { LabTestModule } from './modules/lab-test/lab-test.module';
 import { LabPanelModule } from './modules/lab-panel/lab-panel.module';
 import { LabOrderModule } from './modules/lab-order/lab-order.module';
+import { LabBillingModule } from './modules/lab-billing/lab-billing.module';
 import { ReferenceRangeModule } from './modules/reference-range/reference-range.module';
 import { IcdModule } from './modules/icd/icd.module';
 import { DrugInteractionModule } from './modules/drug-interaction/drug-interaction.module';
@@ -55,6 +56,7 @@ import { FollowUpModule } from './modules/follow-up/follow-up.module';
     LabTestModule,
     LabPanelModule,
     LabOrderModule,
+    LabBillingModule,
     ReferenceRangeModule,
     IcdModule,
     DrugInteractionModule,

@@ -1205,5 +1205,22 @@
     "overrideTitle": "د ثبت شوي حساسیت سره سره وټاکل شو:",
     "interactionTitle": "د درملو تداخل ومنل شو:",
     "followUp": "بیا راتګ:"
+  },
+  "labCharges": {
+    "title": "د لابراتوار لګښتونه",
+    "outstanding": "پور: {{amount}}",
+    "paid": "تادیه شوی",
+    "method": "طریقه",
+    "collect": "راټولول {{amount}}",
+    "collecting": "راټولیږي…",
+    "failed": "تادیه ونشوه.",
+    "methods": {
+      "cash": "نغدي",
+      "card": "کارت",
+      "bank_transfer": "بانکي لیږد",
+      "mobile_money": "موبایل پیسې",
+      "panel": "پینل",
+      "waiver": "معافیت"
+    }
   }
 }
