@@ -101,3 +101,41 @@ export const verifyResultResponseSchema = z.object({
   items: z.array(verifiedResultItemSchema),
 })
 export type VerifyResultResponse = z.infer<typeof verifyResultResponseSchema>
+
+/**
+ * Results flowing back to the doctor (Phase 5, final slice) — the loop closing. The doctor
+ * who ordered the tests reads them here, on the consult screen where they ordered, and prints
+ * the report the patient carries.
+ *
+ * A VALUE APPEARS ONLY ONCE VERIFIED. Before the sign-off a result is provisional, and a
+ * doctor acting on an unverified number is the mistake verification exists to prevent — so a
+ * test that is ordered, drawn, in progress or merely entered shows its STATUS (where it is in
+ * the pipeline) but no value. The value, its flag and the band it was judged against arrive
+ * together, verified.
+ */
+export const visitLabResultItemSchema = z.object({
+  itemId: z.uuid(),
+  code: z.string(),
+  testName: z.string(),
+  orderNo: z.string(),
+  orderedAt: z.string(),
+  status: labOrderItemStatusSchema,
+  /** Everything below is null/false until the result is verified. */
+  value: z.string().nullable(),
+  isNumeric: z.boolean(),
+  unit: z.string().nullable(),
+  flag: z.string().nullable(),
+  isAbnormal: z.boolean(),
+  referenceLow: z.string().nullable(),
+  referenceHigh: z.string().nullable(),
+  referenceText: z.string().nullable(),
+  verifiedAt: z.string().nullable(),
+  comment: z.string().nullable(),
+})
+export type VisitLabResultItem = z.infer<typeof visitLabResultItemSchema>
+
+export const visitLabResultsResponseSchema = z.object({
+  visitId: z.uuid(),
+  items: z.array(visitLabResultItemSchema),
+})
+export type VisitLabResultsResponse = z.infer<typeof visitLabResultsResponseSchema>

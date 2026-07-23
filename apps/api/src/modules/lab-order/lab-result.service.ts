@@ -12,6 +12,8 @@ import type {
   SaveLabResultResponse,
   VerifyResultRequest,
   VerifyResultResponse,
+  VisitLabResultItem,
+  VisitLabResultsResponse,
 } from '@redmars/shared';
 import { currentAgeYears } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -236,6 +238,113 @@ export class LabResultService {
         verifiedAt: now.toISOString(),
       })),
     };
+  }
+
+  /**
+   * The visit's lab results, read back by the doctor who ordered them — the loop closing.
+   *
+   * Every non-cancelled test on the visit, in the order it was written, each carrying WHERE it
+   * is in the pipeline. The value, its flag and the band it was judged against appear only for
+   * a VERIFIED result: before the sign-off a number is provisional, and this screen is where a
+   * doctor decides, so it shows status but not an unverified value. The band is recomputed from
+   * the patient here (it is not stored on the result) so the report can print "normal 70–110".
+   */
+  async forVisit(facilityId: string, visitId: string): Promise<VisitLabResultsResponse> {
+    const visit = await this.prisma.db.visit.findFirst({
+      where: { id: visitId, facilityId },
+      select: {
+        id: true,
+        patient: {
+          select: {
+            gender: true,
+            dateOfBirth: true,
+            estimatedAgeYears: true,
+            estimatedAgeMonths: true,
+            ageRecordedAt: true,
+          },
+        },
+      },
+    });
+    if (!visit) throw new NotFoundException('Visit not found');
+
+    const rows = await this.prisma.db.labOrderItem.findMany({
+      where: { labOrder: { visitId }, status: { not: 'cancelled' } },
+      orderBy: [{ labOrder: { orderedAt: 'asc' } }, { testNameAtTime: 'asc' }],
+      select: {
+        id: true,
+        status: true,
+        testId: true,
+        testNameAtTime: true,
+        test: { select: { code: true } },
+        labOrder: { select: { orderNo: true, orderedAt: true } },
+        result: {
+          select: {
+            valueNumeric: true,
+            valueText: true,
+            unit: true,
+            flag: true,
+            isAbnormal: true,
+            comment: true,
+            verifiedAt: true,
+          },
+        },
+      },
+    });
+
+    const ageYears = currentAgeYears({
+      dateOfBirth: visit.patient.dateOfBirth?.toISOString().slice(0, 10) ?? null,
+      estimatedAgeYears: visit.patient.estimatedAgeYears,
+      estimatedAgeMonths: visit.patient.estimatedAgeMonths,
+      ageRecordedAt: visit.patient.ageRecordedAt?.toISOString() ?? null,
+    });
+
+    const items: VisitLabResultItem[] = [];
+    for (const row of rows) {
+      const verified = row.status === 'verified' && row.result?.verifiedAt != null;
+      const base = {
+        itemId: row.id,
+        code: row.test.code,
+        testName: row.testNameAtTime,
+        orderNo: row.labOrder.orderNo,
+        orderedAt: row.labOrder.orderedAt.toISOString(),
+        status: row.status,
+      };
+      if (!verified || !row.result) {
+        items.push({
+          ...base,
+          value: null,
+          isNumeric: false,
+          unit: null,
+          flag: null,
+          isAbnormal: false,
+          referenceLow: null,
+          referenceHigh: null,
+          referenceText: null,
+          verifiedAt: null,
+          comment: null,
+        });
+        continue;
+      }
+      const numeric = row.result.valueNumeric != null;
+      // The band is recomputed for display; a numeric result uses the patient's age band, a
+      // text result only its text band.
+      const band = await this.bandFor(row.testId, visit.patient.gender, numeric ? ageYears : null);
+      items.push({
+        ...base,
+        value: row.result.valueNumeric?.toString() ?? row.result.valueText ?? '',
+        isNumeric: numeric,
+        unit: row.result.unit,
+        flag: row.result.flag,
+        isAbnormal: row.result.isAbnormal,
+        referenceLow: band.low?.toString() ?? null,
+        referenceHigh: band.high?.toString() ?? null,
+        referenceText: band.text,
+        verifiedAt: row.result.verifiedAt.toISOString(),
+        comment: row.result.comment,
+      });
+    }
+
+    return { visitId: visit.id, items };
   }
 
   /**

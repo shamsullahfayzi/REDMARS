@@ -286,4 +286,36 @@
     color: #000;
     font-family: ui-sans-serif, system-ui, sans-serif;
   }
+
+  /*
+   * Phase 5 — the lab result report. A SECOND print-only sheet on the consult screen, so which
+   * one prints is chosen by a stamp on the root (see lib/print.ts): the lab report only when
+   * `lab` is asked for, and the prescription steps aside so the two never land on one page. F4
+   * (no stamp) still prints the prescription.
+   */
+  .lab-result-sheet {
+    display: none !important;
+  }
+
+  :root[data-print-target='lab'] .lab-result-sheet {
+    display: block !important;
+    color: #000;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+
+  :root[data-print-target='lab'] .rx-sheet {
+    display: none !important;
+  }
+
+  .lab-result-sheet table {
+    break-inside: auto;
+  }
+
+  .lab-result-sheet tr {
+    break-inside: avoid;
+  }
+
+  .lab-result-sheet thead {
+    display: table-header-group;
+  }
 }

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Printer, Trash2 } from 'lucide-react'
 import {
   isVisitOpen,
   saveLabOrderRequestSchema,
   type LabOrderItemStatus,
   type LabTestSummary,
+  type VisitLabResultItem,
   type VisitSummary,
 } from '@redmars/shared'
 import { Button } from '@/components/ui/button'
@@ -14,8 +15,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useConsultSaver } from '@/hooks/useConsultSave'
-import { useLabOrder, useOrderableTests, useSaveLabOrder } from '@/hooks/useLabOrder'
+import {
+  useLabOrder,
+  useOrderableTests,
+  useSaveLabOrder,
+  useVisitLabResults,
+} from '@/hooks/useLabOrder'
 import { serverMessage } from '@/lib/api'
+import { printTarget } from '@/lib/print'
+import { cn } from '@/lib/utils'
 
 /**
  * Phase 5 — the doctor orders lab tests from the consulting room.
@@ -232,7 +240,94 @@ export function LabsTab({ visit }: { visit: VisitSummary }) {
           )}
         </div>
       )}
+
+      <LabResultsView visitId={visit.id} />
     </div>
+  )
+}
+
+/**
+ * The loop closing — the results the doctor ordered, come home. Read-only: a VERIFIED test
+ * shows its value and flag, anything earlier shows only where it is in the pipeline, because a
+ * doctor should not act on a number the lab has not signed off. The report the patient carries
+ * prints from here (the hidden sheet on the consult page renders the same verified results).
+ */
+function LabResultsView({ visitId }: { visitId: string }) {
+  const { t } = useTranslation()
+  const resultsQuery = useVisitLabResults(visitId, true)
+  const items = resultsQuery.data?.items ?? []
+  if (items.length === 0) return null
+
+  const anyVerified = items.some((item) => item.value != null)
+
+  return (
+    <div className="space-y-2 border-t border-border pt-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">{t('labs.resultsTitle')}</h3>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={!anyVerified}
+          onClick={() => printTarget('lab')}
+        >
+          <Printer className="size-4" aria-hidden />
+          {t('labs.print')}
+        </Button>
+      </div>
+      <ul className="divide-y divide-border rounded-lg border border-border">
+        {items.map((item) => (
+          <li key={item.itemId} className="flex items-center gap-3 px-3 py-2">
+            <span className="flex-1 text-sm text-foreground">
+              {item.testName}
+              <span dir="ltr" className="ms-2 font-mono text-xs text-muted-foreground">
+                {item.code}
+              </span>
+            </span>
+            {item.value != null ? (
+              <ResultValue item={item} />
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                {t(`labQueue.status.${item.status}`)}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function ResultValue({ item }: { item: VisitLabResultItem }) {
+  const reference =
+    item.referenceLow != null || item.referenceHigh != null
+      ? `${item.referenceLow ?? ''}–${item.referenceHigh ?? ''}`
+      : item.referenceText
+  return (
+    <span className="flex items-center gap-2">
+      {reference && (
+        <span dir="ltr" className="text-xs text-muted-foreground">
+          {reference}
+        </span>
+      )}
+      <span
+        className={cn('text-sm font-semibold tabular-nums', item.isAbnormal && 'text-destructive')}
+        dir="ltr"
+      >
+        {item.value}
+        {item.unit ? ` ${item.unit}` : ''}
+      </span>
+      {(item.flag === 'H' || item.flag === 'L') && (
+        <span
+          className={cn(
+            'rounded px-1.5 py-0.5 text-xs font-bold',
+            item.flag === 'H' ? 'bg-destructive/15 text-destructive' : 'bg-info/15 text-info',
+          )}
+        >
+          {item.flag}
+        </span>
+      )}
+    </span>
   )
 }
 

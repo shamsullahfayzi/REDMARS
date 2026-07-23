@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   labOrderResponseSchema,
   labTestListResponseSchema,
+  visitLabResultsResponseSchema,
   type SaveLabOrderRequest,
 } from '@redmars/shared'
 import { apiGet, apiPut } from '@/lib/api'
@@ -23,6 +24,20 @@ export function useSaveLabOrder(visitId: string) {
       apiPut(`/visits/${visitId}/lab-order`, input, labOrderResponseSchema),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['visits', 'lab-order', visitId] }),
+  })
+}
+
+/**
+ * The visit's lab results, read back by the doctor — verified values come home here. Kept a
+ * little fresh (30s) so a result signed off while the doctor has the visit open appears
+ * without a manual reload.
+ */
+export function useVisitLabResults(visitId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['visits', 'lab-results', visitId],
+    queryFn: () => apiGet(`/visits/${visitId}/lab-results`, visitLabResultsResponseSchema),
+    enabled: enabled && Boolean(visitId),
+    staleTime: 30 * 1000,
   })
 }
 

@@ -1037,7 +1037,9 @@
     "clinicalNotePlaceholder": "Why the tests are being ordered (optional)",
     "save": "Save order",
     "saving": "Saving…",
-    "failed": "Could not save the lab order."
+    "failed": "Could not save the lab order.",
+    "resultsTitle": "Results",
+    "print": "Print results"
   },
   "labQueue": {
     "subtitle": "Ordered tests, oldest first. Collect the sample once the desk has been paid.",
@@ -1222,5 +1224,13 @@
       "panel": "Panel",
       "waiver": "Waiver"
     }
+  },
+  "labResultSheet": {
+    "title": "Laboratory Report",
+    "test": "Test",
+    "result": "Result",
+    "flag": "Flag",
+    "reference": "Reference",
+    "verifiedBy": "Verified by"
   }
 }

@@ -24,6 +24,7 @@ import { HistoryTab } from '@/components/HistoryTab'
 import { LabsTab } from '@/components/LabsTab'
 import { NotesTab } from '@/components/NotesTab'
 import { PrescriptionSheet } from '@/components/PrescriptionSheet'
+import { LabResultSheet } from '@/components/LabResultSheet'
 import { PrescriptionTab } from '@/components/PrescriptionTab'
 import { VitalsTab } from '@/components/VitalsTab'
 import { useAuth } from '@/auth/authContext'
@@ -142,6 +143,10 @@ export function ConsultPage() {
         screen that writes them per facility exists.
       */}
       <PrescriptionSheet context={context} settings={defaultPrintSettings()} />
+      {/* The lab result report — a second hidden sheet. Which one prints is chosen by the
+          data-print-target stamp (lib/print.ts); F4 prints the prescription, the Labs tab's
+          Print prints this. Mounted only where the lab is on. */}
+      {enabledModules.includes('lab') && <LabResultSheet context={context} />}
     </ConsultSaveProvider>
   )
 }
