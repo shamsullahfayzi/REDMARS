@@ -153,43 +153,59 @@ export const invoiceSummarySchema = z.object({
 export type InvoiceSummary = z.infer<typeof invoiceSummarySchema>
 
 /**
+ * The three blocks a printed slip carries besides the charges — the hospital it is
+ * printed on, who it is for, and (when there is one) which visit it belongs to. Named
+ * exports rather than anonymous shapes because the invoice reprint (task 6.1) prints the
+ * SAME receipt from a stored invoice, and reusing these means the check-in slip and the
+ * reprint cannot drift a field apart.
+ */
+export const receiptFacilitySchema = z.object({
+  // The hospital the invoice is printed on. Name is always present; the local names,
+  // address, phone and email are filled in as far as the facility record has them, and
+  // the printed invoice simply omits whichever lines are blank.
+  name: z.string(),
+  nameLocalPrs: z.string().nullable(),
+  nameLocalPs: z.string().nullable(),
+  address: z.string().nullable(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
+})
+export type ReceiptFacility = z.infer<typeof receiptFacilitySchema>
+
+export const receiptPatientSchema = z.object({
+  id: z.uuid(),
+  mrn: z.string(),
+  name: z.string(),
+  gender: z.string(),
+  // Age in whole years for the bill's "Age/Sex" line, aged forward from the estimate —
+  // null when neither a birth date nor an estimate was ever recorded.
+  ageYears: z.number().int().nullable(),
+  phone: z.string().nullable(),
+  address: z.string().nullable(),
+  isNew: z.boolean(),
+})
+export type ReceiptPatient = z.infer<typeof receiptPatientSchema>
+
+export const receiptVisitSchema = z.object({
+  id: z.uuid(),
+  visitNo: z.string(),
+  type: z.string(),
+  status: z.string(),
+  departmentName: z.string(),
+  practitionerName: z.string().nullable(),
+  startedAt: z.string(),
+})
+export type ReceiptVisit = z.infer<typeof receiptVisitSchema>
+
+/**
  * Everything the printed slip needs, from one save. The patient and visit come back in
  * full because the receipt carries them: an MRN the patient keeps, and a visit number
  * the queue is called from.
  */
 export const checkInResponseSchema = z.object({
-  // The hospital the invoice is printed on. Name is always present; the local names,
-  // address, phone and email are filled in as far as the facility record has them, and
-  // the printed invoice simply omits whichever lines are blank.
-  facility: z.object({
-    name: z.string(),
-    nameLocalPrs: z.string().nullable(),
-    nameLocalPs: z.string().nullable(),
-    address: z.string().nullable(),
-    phone: z.string().nullable(),
-    email: z.string().nullable(),
-  }),
-  patient: z.object({
-    id: z.uuid(),
-    mrn: z.string(),
-    name: z.string(),
-    gender: z.string(),
-    // Age in whole years for the bill's "Age/Sex" line, aged forward from the estimate —
-    // null when neither a birth date nor an estimate was ever recorded.
-    ageYears: z.number().int().nullable(),
-    phone: z.string().nullable(),
-    address: z.string().nullable(),
-    isNew: z.boolean(),
-  }),
-  visit: z.object({
-    id: z.uuid(),
-    visitNo: z.string(),
-    type: z.string(),
-    status: z.string(),
-    departmentName: z.string(),
-    practitionerName: z.string().nullable(),
-    startedAt: z.string(),
-  }),
+  facility: receiptFacilitySchema,
+  patient: receiptPatientSchema,
+  visit: receiptVisitSchema,
   invoice: invoiceSummarySchema,
 })
 export type CheckInResponse = z.infer<typeof checkInResponseSchema>

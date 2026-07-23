@@ -1,0 +1,256 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import type {
+  InvoiceDetail,
+  InvoiceListItem,
+  InvoiceListQuery,
+  InvoiceListResponse,
+} from '@redmars/shared';
+import { currentAgeYears } from '@redmars/shared';
+import { PrismaService } from '../../prisma/prisma.service';
+import { facilityDayBoundsFor } from '../../common/facility-time';
+
+/** Money out, always to two places — the shape of Decimal(12,2). */
+function money(value: Prisma.Decimal): string {
+  return value.toFixed(2);
+}
+
+/** A patient's display name from its parts, skipping the blanks. */
+function fullName(parts: (string | null | undefined)[]): string {
+  return parts.filter((p) => p != null && p.trim().length > 0).join(' ');
+}
+
+/**
+ * Task 6.1 — reading invoices back.
+ *
+ * The write side already exists (reception 3.6, lab 5.6); this is the read side those
+ * slices always implied. `list` is the register the desk searches; `detail` is one bill in
+ * full, shaped so the web can reprint the identical receipt the patient was handed.
+ */
+@Injectable()
+export class InvoiceService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async list(facilityId: string, query: InvoiceListQuery): Promise<InvoiceListResponse> {
+    const where: Prisma.InvoiceWhereInput = { facilityId };
+
+    if (query.patientId) where.patientId = query.patientId;
+    if (query.status) where.status = query.status;
+    if (query.date) {
+      const { start, end } = facilityDayBoundsFor(query.date);
+      where.createdAt = { gte: start, lt: end };
+    }
+    if (query.q) {
+      // The slip carries a number, or the desk is handed a name — match either, plus MRN.
+      where.OR = [
+        { invoiceNo: { contains: query.q, mode: 'insensitive' } },
+        { patient: { mrn: { contains: query.q, mode: 'insensitive' } } },
+        { patient: { firstName: { contains: query.q, mode: 'insensitive' } } },
+        { patient: { lastName: { contains: query.q, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [total, rows] = await this.prisma.db.$transaction([
+      this.prisma.db.invoice.count({ where }),
+      this.prisma.db.invoice.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+        select: {
+          id: true,
+          invoiceNo: true,
+          status: true,
+          total: true,
+          paidAmount: true,
+          currency: true,
+          createdAt: true,
+          patient: {
+            select: { id: true, mrn: true, prefix: true, firstName: true, lastName: true },
+          },
+          visit: { select: { visitNo: true } },
+          items: { select: { description: true }, orderBy: { description: 'asc' } },
+        },
+      }),
+    ]);
+
+    const invoices: InvoiceListItem[] = rows.map((row) => ({
+      id: row.id,
+      invoiceNo: row.invoiceNo,
+      status: row.status,
+      patientId: row.patient.id,
+      patientName: fullName([row.patient.prefix, row.patient.firstName, row.patient.lastName]),
+      patientMrn: row.patient.mrn,
+      visitNo: row.visit?.visitNo ?? null,
+      summary: row.items[0]?.description ?? '',
+      itemCount: row.items.length,
+      total: money(row.total),
+      paidAmount: money(row.paidAmount),
+      currency: row.currency,
+      createdAt: row.createdAt.toISOString(),
+    }));
+
+    return { invoices, total, page: query.page, limit: query.limit };
+  }
+
+  async detail(facilityId: string, invoiceId: string): Promise<InvoiceDetail> {
+    const invoice = await this.prisma.db.invoice.findFirst({
+      where: { id: invoiceId, facilityId },
+      select: {
+        id: true,
+        invoiceNo: true,
+        status: true,
+        subtotal: true,
+        discount: true,
+        discountReason: true,
+        total: true,
+        paidAmount: true,
+        currency: true,
+        createdAt: true,
+        createdBy: true,
+        facility: {
+          select: {
+            name: true,
+            nameLocalPrs: true,
+            nameLocalPs: true,
+            address: true,
+            phone: true,
+            email: true,
+          },
+        },
+        patient: {
+          select: {
+            id: true,
+            mrn: true,
+            prefix: true,
+            firstName: true,
+            lastName: true,
+            gender: true,
+            dateOfBirth: true,
+            estimatedAgeYears: true,
+            estimatedAgeMonths: true,
+            estimatedAgeDays: true,
+            ageRecordedAt: true,
+            phone: true,
+            address: true,
+          },
+        },
+        visit: {
+          select: {
+            id: true,
+            visitNo: true,
+            type: true,
+            status: true,
+            startedAt: true,
+            department: { select: { name: true } },
+            practitioner: { select: { firstName: true, lastName: true } },
+          },
+        },
+        items: {
+          select: { id: true, description: true, quantity: true, unitPrice: true, total: true },
+        },
+        payments: {
+          orderBy: { receivedAt: 'asc' },
+          select: {
+            id: true,
+            amount: true,
+            method: true,
+            reference: true,
+            receiptNo: true,
+            receivedAt: true,
+            isReversed: true,
+          },
+        },
+      },
+    });
+    if (!invoice) throw new NotFoundException('Invoice not found');
+
+    const creator = invoice.createdBy
+      ? await this.prisma.db.appUser.findUnique({
+          where: { id: invoice.createdBy },
+          select: { fullName: true },
+        })
+      : null;
+
+    // How it was settled, for the receipt's "PAYMENT BY …" line: the last real payment.
+    const live = invoice.payments.filter((p) => !p.isReversed);
+    const lastPayment = live.at(-1) ?? null;
+
+    return {
+      facility: invoice.facility,
+      patient: {
+        id: invoice.patient.id,
+        mrn: invoice.patient.mrn,
+        name: fullName([
+          invoice.patient.prefix,
+          invoice.patient.firstName,
+          invoice.patient.lastName,
+        ]),
+        gender: invoice.patient.gender,
+        // currentAgeYears reads the same string shape the wire uses; the stored Dates are
+        // rendered to YYYY-MM-DD / ISO first so the estimate ages forward correctly.
+        ageYears: currentAgeYears({
+          dateOfBirth: invoice.patient.dateOfBirth
+            ? invoice.patient.dateOfBirth.toISOString().slice(0, 10)
+            : null,
+          estimatedAgeYears: invoice.patient.estimatedAgeYears,
+          estimatedAgeMonths: invoice.patient.estimatedAgeMonths,
+          ageRecordedAt: invoice.patient.ageRecordedAt
+            ? invoice.patient.ageRecordedAt.toISOString()
+            : null,
+        }),
+        phone: invoice.patient.phone,
+        address: invoice.patient.address,
+        // A reprint is never a registration, so it never announces a new patient.
+        isNew: false,
+      },
+      visit: invoice.visit
+        ? {
+            id: invoice.visit.id,
+            visitNo: invoice.visit.visitNo,
+            type: invoice.visit.type,
+            status: invoice.visit.status,
+            departmentName: invoice.visit.department.name,
+            practitionerName: invoice.visit.practitioner
+              ? fullName([
+                  invoice.visit.practitioner.firstName,
+                  invoice.visit.practitioner.lastName,
+                ])
+              : null,
+            startedAt: invoice.visit.startedAt.toISOString(),
+          }
+        : null,
+      invoice: {
+        id: invoice.id,
+        invoiceNo: invoice.invoiceNo,
+        status: invoice.status,
+        subtotal: money(invoice.subtotal),
+        discount: money(invoice.discount),
+        discountReason: invoice.discountReason,
+        total: money(invoice.total),
+        paidAmount: money(invoice.paidAmount),
+        currency: invoice.currency,
+        items: invoice.items.map((item) => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: money(item.unitPrice),
+          total: money(item.total),
+        })),
+        paymentMethod: lastPayment?.method ?? null,
+        paidAt: lastPayment?.receivedAt.toISOString() ?? null,
+      },
+      createdAt: invoice.createdAt.toISOString(),
+      createdByName: creator?.fullName ?? null,
+      payments: live.map((p) => ({
+        id: p.id,
+        amount: money(p.amount),
+        method: p.method,
+        reference: p.reference,
+        receiptNo: p.receiptNo,
+        receivedAt: p.receivedAt.toISOString(),
+        isReversed: p.isReversed,
+      })),
+    };
+  }
+}

@@ -66,7 +66,8 @@
     },
     "reception": "Reception",
     "appointments": "Appointments",
-    "followUps": "Follow-ups"
+    "followUps": "Follow-ups",
+    "invoices": "Invoices"
   },
   "theme": {
     "toLight": "Switch to light mode",
@@ -731,6 +732,41 @@
       "next": "Next patient",
       "openRecord": "Open the patient record"
     }
+  },
+  "invoices": {
+    "subtitle": "Find a bill and reprint the receipt.",
+    "searchPlaceholder": "Invoice number, patient name or ID",
+    "date": "Date",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "allDates": "All dates",
+    "statusLabel": {
+      "draft": "Draft",
+      "issued": "Unpaid",
+      "partially_paid": "Part-paid",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    },
+    "error": "Could not load invoices.",
+    "empty": "No invoices match.",
+    "count": "Showing {{shown}} of {{total}}",
+    "page": "Page {{page}} of {{pageCount}}",
+    "previous": "Previous",
+    "next": "Next",
+    "col": {
+      "no": "No.",
+      "date": "Date",
+      "patient": "Patient",
+      "for": "For",
+      "total": "Total",
+      "status": "Status"
+    },
+    "summaryMore": "{{first}} +{{more}} more",
+    "back": "Back to invoices",
+    "reprint": "Reprint receipt",
+    "loading": "Loading…",
+    "detailError": "Could not load this invoice.",
+    "outstanding": "Outstanding {{amount}} {{currency}}"
   },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",

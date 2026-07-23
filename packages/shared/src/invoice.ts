@@ -1,0 +1,110 @@
+import { z } from 'zod'
+import {
+  invoiceStatusSchema,
+  invoiceSummarySchema,
+  paymentMethodSchema,
+  receiptFacilitySchema,
+  receiptPatientSchema,
+  receiptVisitSchema,
+} from './reception.js'
+
+/**
+ * Task 6.1 — the invoices you handed out, findable again.
+ *
+ * Reception (3.6) and the lab (5.6) both RAISE invoices; nothing until now could LIST them
+ * or open one back up. This is that half: a paged register the desk searches, and a detail
+ * that reprints the very same bill the patient was handed — the check-in receipt, rebuilt
+ * from what was stored rather than from what a save happened to return.
+ *
+ * Read-only. Taking money, discounting and refunding are their own later slices with their
+ * own permissions; here the desk only looks and reprints.
+ */
+
+// ---------------------------------------------------------------------------------
+// The register
+// ---------------------------------------------------------------------------------
+
+export const invoiceListQuerySchema = z.object({
+  /**
+   * A single facility day, YYYY-MM-DD, read in the hospital's zone. Absent means "all
+   * days" — the register is normally opened to today from the UI, but a search across
+   * everything is a legitimate question a null date answers.
+   */
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
+    .optional(),
+  /** One patient's bills — every invoice raised for them, newest first. */
+  patientId: z.uuid().optional(),
+  status: invoiceStatusSchema.optional(),
+  /**
+   * Free text over the invoice number, and the patient's name and MRN. The desk is handed
+   * a slip with a number on it, or a name, and should not have to say which.
+   */
+  q: z.string().trim().max(60).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+})
+export type InvoiceListQuery = z.infer<typeof invoiceListQuerySchema>
+
+export const invoiceListItemSchema = z.object({
+  id: z.uuid(),
+  invoiceNo: z.string(),
+  status: invoiceStatusSchema,
+  patientId: z.uuid(),
+  patientName: z.string(),
+  patientMrn: z.string(),
+  /** Null for an invoice not tied to a visit — the model allows it, even if today none are. */
+  visitNo: z.string().nullable(),
+  /** What the bill was for, at a glance: the first line, plus how many more there are. */
+  summary: z.string(),
+  itemCount: z.number().int(),
+  total: z.string(),
+  paidAmount: z.string(),
+  currency: z.string(),
+  createdAt: z.string(),
+})
+export type InvoiceListItem = z.infer<typeof invoiceListItemSchema>
+
+export const invoiceListResponseSchema = z.object({
+  invoices: z.array(invoiceListItemSchema),
+  /** Total matches, which may exceed the returned page. */
+  total: z.number().int(),
+  page: z.number().int(),
+  limit: z.number().int(),
+})
+export type InvoiceListResponse = z.infer<typeof invoiceListResponseSchema>
+
+// ---------------------------------------------------------------------------------
+// One invoice, in full — the reprint
+// ---------------------------------------------------------------------------------
+
+/** One settled (or reversed) payment against the invoice — the cash trail on the detail. */
+export const invoicePaymentSchema = z.object({
+  id: z.uuid(),
+  amount: z.string(),
+  method: paymentMethodSchema,
+  reference: z.string().nullable(),
+  receiptNo: z.string().nullable(),
+  receivedAt: z.string(),
+  isReversed: z.boolean(),
+})
+export type InvoicePayment = z.infer<typeof invoicePaymentSchema>
+
+/**
+ * Everything the reprinted bill needs, rebuilt from the stored invoice. The same three
+ * blocks the check-in receipt carries — facility, patient, visit — so the printed page is
+ * identical to the one handed over at the window. `createdAt` is the receipt date for a
+ * reprint (the visit's start time is when they arrived, not when this bill was raised),
+ * and `visit` is nullable because the invoice model does not require one.
+ */
+export const invoiceDetailSchema = z.object({
+  facility: receiptFacilitySchema,
+  patient: receiptPatientSchema,
+  visit: receiptVisitSchema.nullable(),
+  invoice: invoiceSummarySchema,
+  createdAt: z.string(),
+  createdByName: z.string().nullable(),
+  payments: z.array(invoicePaymentSchema),
+})
+export type InvoiceDetail = z.infer<typeof invoiceDetailSchema>

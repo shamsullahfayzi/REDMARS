@@ -89,6 +89,16 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   { key: 'lab', to: '/lab', group: 'clinical', roles: ['admin', 'lab_tech'], module: 'lab' },
   { key: 'pharmacy', to: '/pharmacy', group: 'clinical', roles: ['pharmacist'] },
+  // Task 6.1 — the billing register, matching `invoice.read`. Grouped with the other
+  // money-and-numbers screens (reports) rather than the clinical desk, though the
+  // receptionist works from it daily. Not module-gated, for the same reason the reception
+  // desk is not: reading an OPD bill is core, not the billing module's later apparatus.
+  {
+    key: 'invoices',
+    to: '/invoices',
+    group: 'administration',
+    roles: ['admin', 'receptionist', 'pharmacist', 'management'],
+  },
   { key: 'users', to: '/users', group: 'administration', roles: ['admin'] },
   { key: 'modules', to: '/modules', group: 'administration', roles: ['admin'] },
   { key: 'departments', to: '/departments', group: 'administration', roles: ['admin'] },

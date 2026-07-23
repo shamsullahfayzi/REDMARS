@@ -66,7 +66,8 @@
     },
     "reception": "پذیرش",
     "appointments": "وعدې",
-    "followUps": "بیا کتنې"
+    "followUps": "بیا کتنې",
+    "invoices": "بیلونه"
   },
   "theme": {
     "toLight": "روښانه حالت",
@@ -731,6 +732,41 @@
       "next": "بل ناروغ",
       "openRecord": "د ناروغ دوسیه پرانیزئ"
     }
+  },
+  "invoices": {
+    "subtitle": "یو بیل ومومئ او رسید بیا چاپ کړئ.",
+    "searchPlaceholder": "د بیل شمېره، د ناروغ نوم یا پېژندنه",
+    "date": "نېټه",
+    "status": "حالت",
+    "allStatuses": "ټول حالتونه",
+    "allDates": "ټولې نېټې",
+    "statusLabel": {
+      "draft": "مسوده",
+      "issued": "ناتادیه",
+      "partially_paid": "جزوي تادیه",
+      "paid": "تادیه شوی",
+      "cancelled": "لغوه شوی"
+    },
+    "error": "د بیلونو بارول ناکام شو.",
+    "empty": "هیڅ بیل سمون نه خوري.",
+    "count": "ښودل {{shown}} له {{total}}",
+    "page": "مخ {{page}} له {{pageCount}}",
+    "previous": "مخکینی",
+    "next": "راتلونکی",
+    "col": {
+      "no": "شمېره",
+      "date": "نېټه",
+      "patient": "ناروغ",
+      "for": "لپاره",
+      "total": "ټول",
+      "status": "حالت"
+    },
+    "summaryMore": "{{first}} +{{more}} نور",
+    "back": "بیلونو ته بېرته",
+    "reprint": "رسید بیا چاپ",
+    "loading": "بارېږي…",
+    "detailError": "د دې بیل بارول ناکام شو.",
+    "outstanding": "پاتې {{amount}} {{currency}}"
   },
   "queue": {
     "mine": "ستاسو ناروغان چې نن انتظار باسي، اوږد انتظار لومړی.",
