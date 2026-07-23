@@ -134,7 +134,7 @@ export class LabQueueService {
             mrn: string;
             prefix: string | null;
             firstName: string;
-            lastName: string;
+            lastName: string | null;
           };
         };
       };
