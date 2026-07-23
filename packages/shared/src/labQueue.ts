@@ -69,3 +69,32 @@ export const labQueueResponseSchema = z.object({
   }),
 })
 export type LabQueueResponse = z.infer<typeof labQueueResponseSchema>
+
+/**
+ * Collecting the sample (Phase 5, third slice) — the first write that moves a test's own
+ * state, from `ordered` to `sample_collected`.
+ *
+ * A SET of items, not one: a sample is drawn once for a patient even when four tests were
+ * ordered, so the bench collects the order's tests together in a single action. The request
+ * is the item ids to draw; the server refuses the whole batch rather than half-collecting if
+ * any one of them is not ready — a test whose sample was already taken, or, the point of
+ * this slice, one the reception has not been paid for. Farhat collects at the window first,
+ * and this is where that rule stops being advisory and becomes a locked door.
+ */
+export const collectSampleRequestSchema = z.object({
+  /** The ordered tests whose sample is being drawn now. */
+  itemIds: z.array(z.uuid()).min(1).max(50),
+})
+export type CollectSampleRequest = z.infer<typeof collectSampleRequestSchema>
+
+export const collectedSampleItemSchema = z.object({
+  itemId: z.uuid(),
+  status: labOrderItemStatusSchema,
+  sampleCollectedAt: z.string(),
+})
+export type CollectedSampleItem = z.infer<typeof collectedSampleItemSchema>
+
+export const collectSampleResponseSchema = z.object({
+  items: z.array(collectedSampleItemSchema),
+})
+export type CollectSampleResponse = z.infer<typeof collectSampleResponseSchema>

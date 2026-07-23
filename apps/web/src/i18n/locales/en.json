@@ -1066,6 +1066,11 @@
       "on": "Live · every {{seconds}}s",
       "failing": "Not updating",
       "pastDay": "Past day"
+    },
+    "collect": {
+      "action": "Collect sample ({{count}})",
+      "saving": "Collecting…",
+      "failed": "Could not collect the sample."
     }
   },
   "notes": {

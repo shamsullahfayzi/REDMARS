@@ -91,13 +91,25 @@ export class LabQueueService {
     const lines = itemIds.length
       ? await this.prisma.db.invoiceItem.findMany({
           where: { refType: LAB_REF_TYPE, refId: { in: itemIds } },
-          select: { refId: true, unitPrice: true, invoice: { select: { status: true } } },
+          select: {
+            refId: true,
+            unitPrice: true,
+            invoice: { select: { status: true, total: true, paidAmount: true } },
+          },
         })
       : [];
     const payByItem = new Map(
       lines.map((line) => [
         line.refId,
-        { status: line.invoice.status, price: line.unitPrice.toFixed(2) },
+        {
+          status: line.invoice.status,
+          price: line.unitPrice.toFixed(2),
+          // Settled means nothing OUTSTANDING, not the status word: a 0.00 invoice (an
+          // unpriced test) is born 'issued' yet owes nothing, so the bench may draw it. This
+          // is the same measure the collect endpoint gates on, so the queue's "paid" badge
+          // and the draw button never disagree.
+          settled: !line.invoice.total.greaterThan(line.invoice.paidAmount),
+        },
       ]),
     );
 
@@ -139,7 +151,7 @@ export class LabQueueService {
         };
       };
     },
-    payByItem: Map<string | null, { status: string; price: string }>,
+    payByItem: Map<string | null, { status: string; price: string; settled: boolean }>,
     now: number,
   ): LabQueueEntry {
     const patient = item.labOrder.visit.patient;
@@ -161,9 +173,9 @@ export class LabQueueService {
       orderedAt: item.labOrder.orderedAt.toISOString(),
       waitedMinutes: Math.max(0, Math.floor((now - item.labOrder.orderedAt.getTime()) / 60_000)),
       invoiceStatus: pay?.status ?? null,
-      // Fully settled only. A partial payment cannot yet name the line it covers, so it is
-      // not "paid" for the bench's purposes.
-      paid: pay?.status === 'paid',
+      // Paid = nothing outstanding on the invoice (a 0.00 bill owes nothing; a partial
+      // payment still owes and reads unpaid). Same measure the collect endpoint enforces.
+      paid: pay ? pay.settled : true,
       price: pay?.price ?? null,
     };
   }

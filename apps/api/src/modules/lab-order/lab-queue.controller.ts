@@ -1,18 +1,21 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
+  Post,
   Query,
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { labQueueQuerySchema } from '@redmars/shared';
-import type { LabQueueResponse } from '@redmars/shared';
+import { collectSampleRequestSchema, labQueueQuerySchema } from '@redmars/shared';
+import type { CollectSampleResponse, LabQueueResponse } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { RequiresModule } from '../../auth/decorators/requires-module.decorator';
 import { AuthContext } from '../../auth/auth-context';
 import { LabQueueService } from './lab-queue.service';
+import { LabSampleService } from './lab-sample.service';
 
 /**
  * Phase 5 — the lab worklist, read by the bench.
@@ -22,11 +25,18 @@ import { LabQueueService } from './lab-queue.service';
  * is), but this is not `lab_order.create` — reading the whole facility's work is not the
  * same right as writing one order on one visit. Module-gated: a facility without the lab
  * never reaches here.
+ *
+ * Collecting the sample (POST /lab-queue/collect) sits on the same screen but a THIRD
+ * permission — `lab.collect_sample`, the bench's and the nurse's, not the doctor's or the
+ * desk's. Reading the worklist and drawing from it are different rights.
  */
 @RequiresModule('lab')
 @Controller('lab-queue')
 export class LabQueueController {
-  constructor(private readonly queue: LabQueueService) {}
+  constructor(
+    private readonly queue: LabQueueService,
+    private readonly samples: LabSampleService,
+  ) {}
 
   @Get()
   @RequirePermission('lab_order.read_queue')
@@ -39,6 +49,20 @@ export class LabQueueController {
       });
     }
     return this.queue.queue(this.auth(req).facilityId, parsed.data);
+  }
+
+  @Post('collect')
+  @RequirePermission('lab.collect_sample')
+  collect(@Req() req: Request, @Body() body: unknown): Promise<CollectSampleResponse> {
+    const parsed = collectSampleRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid sample collection',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    const auth = this.auth(req);
+    return this.samples.collect(auth.facilityId, auth.userId, parsed.data);
   }
 
   private auth(req: Request): AuthContext {

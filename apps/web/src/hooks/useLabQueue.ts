@@ -1,6 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
-import { labQueueResponseSchema, type LabQueueQuery } from '@redmars/shared'
-import { apiGet } from '@/lib/api'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  collectSampleResponseSchema,
+  labQueueResponseSchema,
+  type LabQueueQuery,
+} from '@redmars/shared'
+import { apiGet, apiPost } from '@/lib/api'
 
 /**
  * How often the lab worklist re-reads itself. Ten seconds, matching the visit queue — the
@@ -26,5 +30,20 @@ export function useLabQueue(filters: Partial<LabQueueQuery>, options: { poll?: b
     // Wait times age between reads — a stale worklist is a misleading one.
     staleTime: 0,
     refetchInterval: options.poll === false ? false : LAB_QUEUE_POLL_MS,
+  })
+}
+
+/**
+ * Collecting the sample — moves an order's ordered-and-paid tests to sample_collected. The
+ * server is the authority on which are eligible (paid, still ordered); the button sends the
+ * ids it believes are ready and the queue refetches, so a refusal or a race just re-reads
+ * the truth rather than trusting the click.
+ */
+export function useCollectSample() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (itemIds: string[]) =>
+      apiPost('/lab-queue/collect', { itemIds }, collectSampleResponseSchema),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['lab-queue'] }),
   })
 }

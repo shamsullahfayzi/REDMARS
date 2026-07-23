@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { Beaker, CheckCircle2, Clock, RefreshCw, Wallet, WifiOff } from 'lucide-react'
+import { Beaker, CheckCircle2, Clock, RefreshCw, Syringe, Wallet, WifiOff } from 'lucide-react'
 import type { LabQueueEntry, LabOrderItemStatus } from '@redmars/shared'
+import { useAuth } from '@/auth/authContext'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
-import { LAB_QUEUE_POLL_MS, useLabQueue } from '@/hooks/useLabQueue'
+import { LAB_QUEUE_POLL_MS, useCollectSample, useLabQueue } from '@/hooks/useLabQueue'
 import { waitTone } from '@/hooks/useQueue'
+import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 /**
@@ -196,8 +198,17 @@ export function LabQueuePage() {
 
 function OrderCard({ group }: { group: OrderGroup }) {
   const { t } = useTranslation()
+  const { roles } = useAuth()
+  const collect = useCollectSample()
   const tone = waitTone(group.waitedMinutes)
   const payment = paymentOf(group.entries)
+
+  // The bench and the nurse draw samples (lab.collect_sample); the desk and the doctor do
+  // not. Server re-checks — this only decides whether to show the button.
+  const mayCollect = roles.includes('lab_tech') || roles.includes('nurse')
+  // Eligible = still ordered AND its charge is settled (the queue's `paid` already means
+  // "nothing outstanding", matching what the endpoint enforces).
+  const ready = group.entries.filter((entry) => entry.status === 'ordered' && entry.paid)
 
   return (
     <li>
@@ -256,6 +267,32 @@ function OrderCard({ group }: { group: OrderGroup }) {
             </li>
           ))}
         </ul>
+
+        {mayCollect && ready.length > 0 && (
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {/* Says what happened rather than silently doing nothing — the common refusal is
+                the desk not yet paid, or a colleague drawing it first. */}
+            {collect.isError && (
+              <p className="text-xs text-destructive">
+                {collect.error instanceof ApiError && typeof collect.error.body === 'object'
+                  ? ((collect.error.body as { message?: string }).message ??
+                    t('labQueue.collect.failed'))
+                  : t('labQueue.collect.failed')}
+              </p>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              disabled={collect.isPending}
+              onClick={() => collect.mutate(ready.map((entry) => entry.itemId))}
+            >
+              <Syringe className="size-4" aria-hidden />
+              {collect.isPending
+                ? t('labQueue.collect.saving')
+                : t('labQueue.collect.action', { count: ready.length })}
+            </Button>
+          </div>
+        )}
       </Card>
     </li>
   )
