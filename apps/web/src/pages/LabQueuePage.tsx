@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { Beaker, CheckCircle2, Clock, RefreshCw, Syringe, Wallet, WifiOff } from 'lucide-react'
+import {
+  Beaker,
+  CheckCircle2,
+  Clock,
+  Pencil,
+  RefreshCw,
+  Syringe,
+  Wallet,
+  WifiOff,
+} from 'lucide-react'
 import type { LabQueueEntry, LabOrderItemStatus } from '@redmars/shared'
 import { useAuth } from '@/auth/authContext'
 import { PageHeader } from '@/components/PageHeader'
@@ -10,7 +19,12 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
-import { LAB_QUEUE_POLL_MS, useCollectSample, useLabQueue } from '@/hooks/useLabQueue'
+import {
+  LAB_QUEUE_POLL_MS,
+  useCollectSample,
+  useLabQueue,
+  useSaveLabResult,
+} from '@/hooks/useLabQueue'
 import { waitTone } from '@/hooks/useQueue'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -206,6 +220,8 @@ function OrderCard({ group }: { group: OrderGroup }) {
   // The bench and the nurse draw samples (lab.collect_sample); the desk and the doctor do
   // not. Server re-checks — this only decides whether to show the button.
   const mayCollect = roles.includes('lab_tech') || roles.includes('nurse')
+  // Entering the result is the lab tech's alone (lab.enter_result).
+  const mayEnterResult = roles.includes('lab_tech')
   // Eligible = still ordered AND its charge is settled (the queue's `paid` already means
   // "nothing outstanding", matching what the endpoint enforces).
   const ready = group.entries.filter((entry) => entry.status === 'ordered' && entry.paid)
@@ -253,13 +269,14 @@ function OrderCard({ group }: { group: OrderGroup }) {
 
         <ul className="divide-y divide-border rounded-lg border border-border">
           {group.entries.map((entry) => (
-            <li key={entry.itemId} className="flex items-center gap-3 px-3 py-2">
-              <span className="flex-1 text-sm text-foreground">
+            <li key={entry.itemId} className="flex flex-wrap items-center gap-3 px-3 py-2">
+              <span className="min-w-40 flex-1 text-sm text-foreground">
                 {entry.testName}
                 <span dir="ltr" className="ms-2 font-mono text-xs text-muted-foreground">
                   {entry.code}
                 </span>
               </span>
+              <ResultCell entry={entry} mayEnter={mayEnterResult} />
               <StatusPill status={entry.status} />
               <span className="w-20 text-end text-sm tabular-nums text-muted-foreground" dir="ltr">
                 {entry.price == null ? t('labQueue.noCharge') : entry.price}
@@ -296,6 +313,109 @@ function OrderCard({ group }: { group: OrderGroup }) {
       </Card>
     </li>
   )
+}
+
+/**
+ * The result on a test row: the entered value with its flag once there is one, or an inline
+ * box to type it while the sample is waiting. One field — a number flags itself against the
+ * band, anything else is stored as text. Editing a not-yet-verified result re-opens the box.
+ */
+function ResultCell({ entry, mayEnter }: { entry: LabQueueEntry; mayEnter: boolean }) {
+  const { t } = useTranslation()
+  const save = useSaveLabResult()
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState('')
+
+  const awaitingEntry = entry.status === 'sample_collected' || entry.status === 'in_progress'
+  const showBox = mayEnter && (editing || (awaitingEntry && !entry.result))
+
+  if (showBox) {
+    const submit = () => {
+      if (!value.trim()) return
+      save.mutate({ itemId: entry.itemId, value }, { onSuccess: () => setEditing(false) })
+    }
+    return (
+      <span className="flex items-center gap-1.5">
+        <Input
+          value={value}
+          autoFocus={editing}
+          placeholder={t('labQueue.result.placeholder')}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              submit()
+            }
+          }}
+          className="h-8 w-28"
+          dir="ltr"
+        />
+        <Button type="button" size="sm" disabled={save.isPending || !value.trim()} onClick={submit}>
+          {save.isPending ? t('labQueue.result.saving') : t('labQueue.result.save')}
+        </Button>
+        {save.isError && <span className="text-xs text-destructive">{t('labQueue.result.failed')}</span>}
+      </span>
+    )
+  }
+
+  if (entry.result) {
+    const { result } = entry
+    return (
+      <span className="flex items-center gap-1.5">
+        <span
+          className={cn('text-sm font-semibold tabular-nums', result.isAbnormal && 'text-destructive')}
+          dir="ltr"
+        >
+          {result.value}
+          {result.unit ? ` ${result.unit}` : ''}
+        </span>
+        <FlagBadge flag={result.flag} isAbnormal={result.isAbnormal} />
+        {mayEnter && entry.status === 'resulted' && (
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t('labQueue.result.edit')}
+            onClick={() => {
+              setValue(result.value)
+              setEditing(true)
+            }}
+          >
+            <Pencil className="size-3.5" aria-hidden />
+          </Button>
+        )}
+      </span>
+    )
+  }
+
+  return null
+}
+
+function FlagBadge({ flag, isAbnormal }: { flag: string | null; isAbnormal: boolean }) {
+  const { t } = useTranslation()
+  if (flag === 'H' || flag === 'L') {
+    // H / L is universal lab notation — the letter itself, not translated. The word says
+    // which way for anyone who does not read the shorthand.
+    return (
+      <span
+        className={cn(
+          'rounded px-1.5 py-0.5 text-xs font-bold',
+          flag === 'H' ? 'bg-destructive/15 text-destructive' : 'bg-info/15 text-info',
+        )}
+        title={t(flag === 'H' ? 'labQueue.result.high' : 'labQueue.result.low')}
+      >
+        {flag}
+      </span>
+    )
+  }
+  if (isAbnormal) {
+    return (
+      <span className="rounded px-1.5 py-0.5 text-xs font-medium bg-warning/15 text-warning-foreground">
+        {t('labQueue.result.abnormal')}
+      </span>
+    )
+  }
+  return null
 }
 
 function PaymentBadge({ payment }: { payment: 'paid' | 'awaiting' | 'noCharge' }) {

@@ -1071,6 +1071,16 @@
       "action": "Collect sample ({{count}})",
       "saving": "Collecting…",
       "failed": "Could not collect the sample."
+    },
+    "result": {
+      "placeholder": "Value",
+      "save": "Save",
+      "saving": "…",
+      "failed": "Could not save the result.",
+      "edit": "Edit result",
+      "abnormal": "Abnormal",
+      "high": "High",
+      "low": "Low"
     }
   },
   "notes": {

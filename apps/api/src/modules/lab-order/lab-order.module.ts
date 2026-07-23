@@ -4,6 +4,7 @@ import { LabOrderController } from './lab-order.controller';
 import { LabOrderService } from './lab-order.service';
 import { LabQueueController } from './lab-queue.controller';
 import { LabQueueService } from './lab-queue.service';
+import { LabResultService } from './lab-result.service';
 import { LabSampleService } from './lab-sample.service';
 
 @Module({
@@ -11,6 +12,6 @@ import { LabSampleService } from './lab-sample.service';
   // from the shared sequence — inside the caller's transaction, so a rollback takes them.
   imports: [NumberSequenceModule],
   controllers: [LabOrderController, LabQueueController],
-  providers: [LabOrderService, LabQueueService, LabSampleService],
+  providers: [LabOrderService, LabQueueService, LabSampleService, LabResultService],
 })
 export class LabOrderModule {}

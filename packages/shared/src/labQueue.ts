@@ -41,6 +41,17 @@ export const labQueueEntrySchema = z.object({
   /** True only when the whole lab invoice is settled — see the note above. */
   paid: z.boolean(),
   price: z.string().nullable(),
+  /** The entered result, once there is one — so the worklist shows the value and its flag. */
+  result: z
+    .object({
+      value: z.string(),
+      isNumeric: z.boolean(),
+      unit: z.string().nullable(),
+      /** H / L, or null for normal or a text result. */
+      flag: z.string().nullable(),
+      isAbnormal: z.boolean(),
+    })
+    .nullable(),
 })
 export type LabQueueEntry = z.infer<typeof labQueueEntrySchema>
 

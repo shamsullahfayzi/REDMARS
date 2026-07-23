@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import type { LabQueueEntry, LabQueueQuery, LabQueueResponse } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -59,6 +60,15 @@ export class LabQueueService {
           testNameAtTime: true,
           status: true,
           test: { select: { code: true } },
+          result: {
+            select: {
+              valueNumeric: true,
+              valueText: true,
+              unit: true,
+              flag: true,
+              isAbnormal: true,
+            },
+          },
           labOrder: {
             select: {
               id: true,
@@ -135,6 +145,13 @@ export class LabQueueService {
       testNameAtTime: string;
       status: LabQueueEntry['status'];
       test: { code: string };
+      result: {
+        valueNumeric: Prisma.Decimal | null;
+        valueText: string | null;
+        unit: string | null;
+        flag: string | null;
+        isAbnormal: boolean;
+      } | null;
       labOrder: {
         id: string;
         orderNo: string;
@@ -176,6 +193,16 @@ export class LabQueueService {
       // Paid = nothing outstanding on the invoice (a 0.00 bill owes nothing; a partial
       // payment still owes and reads unpaid). Same measure the collect endpoint enforces.
       paid: pay ? pay.settled : true,
+      result: item.result
+        ? {
+            // A result is a number or a text; the numeric one keeps its exact string.
+            value: item.result.valueNumeric?.toString() ?? item.result.valueText ?? '',
+            isNumeric: item.result.valueNumeric != null,
+            unit: item.result.unit,
+            flag: item.result.flag,
+            isAbnormal: item.result.isAbnormal,
+          }
+        : null,
       price: pay?.price ?? null,
     };
   }
