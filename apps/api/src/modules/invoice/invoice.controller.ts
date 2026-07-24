@@ -12,8 +12,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { invoiceListQuerySchema, recordPaymentRequestSchema } from '@redmars/shared';
+import {
+  applyDiscountRequestSchema,
+  invoiceListQuerySchema,
+  recordPaymentRequestSchema,
+} from '@redmars/shared';
 import type {
+  ApplyDiscountResponse,
   InvoiceDetail,
   InvoiceListResponse,
   RecordPaymentResponse,
@@ -22,6 +27,7 @@ import type {
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuditRead } from '../../audit/decorators/audit-read.decorator';
 import { AuthContext } from '../../auth/auth-context';
+import { DiscountService } from './discount.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentService } from './payment.service';
 
@@ -38,6 +44,7 @@ export class InvoiceController {
   constructor(
     private readonly invoices: InvoiceService,
     private readonly payments: PaymentService,
+    private readonly discounts: DiscountService,
   ) {}
 
   @Get()
@@ -99,6 +106,31 @@ export class InvoiceController {
     }
     const auth = this.auth(req);
     return this.payments.pay(auth.facilityId, auth.userId, id, parsed.data);
+  }
+
+  /**
+   * Task 6.4 — discount a bill after it was raised, Rule R10. `discount.apply` opens the
+   * door (admin, receptionist, pharmacist); the 10% ceiling and the mandatory reason are the
+   * service's to enforce, since the cap is a percentage of a subtotal no guard has seen. The
+   * change is audited by the write itself — the invoice.update carries its own before/after.
+   */
+  @Post(':id/discount')
+  @RequirePermission('discount.apply')
+  @HttpCode(200)
+  discount(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ): Promise<ApplyDiscountResponse> {
+    const parsed = applyDiscountRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid discount',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    const auth = this.auth(req);
+    return this.discounts.apply(auth.facilityId, auth.permissions, id, parsed.data);
   }
 
   private auth(req: Request): AuthContext {

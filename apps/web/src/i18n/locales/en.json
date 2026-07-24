@@ -800,6 +800,19 @@
     "took": "Receipt {{receiptNo}} · {{amount}} {{currency}} received",
     "settled": "Bill settled"
   },
+  "discount": {
+    "title": "Discount",
+    "current": "Now {{amount}} {{currency}} off",
+    "amount": "Discount amount",
+    "reason": "Reason",
+    "reasonPlaceholder": "Why the bill is reduced (required)",
+    "apply": "Apply discount",
+    "applying": "Applying…",
+    "ceilingHint": "Up to {{pct}}% — max {{max}} {{currency}}",
+    "ceilingNone": "Up to the full {{subtotal}} {{currency}}",
+    "applied": "Discount applied · new total {{total}} {{currency}}",
+    "error": "Could not apply the discount."
+  },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",
     "everyone": "Everyone waiting today, longest wait first.",

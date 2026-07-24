@@ -800,6 +800,19 @@
     "took": "رسید {{receiptNo}} · {{amount}} {{currency}} ترلاسه شو",
     "settled": "بیل تصفیه شو"
   },
+  "discount": {
+    "title": "تخفیف",
+    "current": "اوس مهال {{amount}} {{currency}} تخفیف",
+    "amount": "د تخفیف اندازه",
+    "reason": "دلیل",
+    "reasonPlaceholder": "د بیل د کمولو دلیل (اړین)",
+    "apply": "تخفیف پلي کول",
+    "applying": "پلي کیږي…",
+    "ceilingHint": "تر {{pct}}٪ پورې — اعظمي {{max}} {{currency}}",
+    "ceilingNone": "د بشپړ {{subtotal}} {{currency}} پورې",
+    "applied": "تخفیف پلي شو · نوی ټول {{total}} {{currency}}",
+    "error": "تخفیف پلي نشو."
+  },
   "queue": {
     "mine": "ستاسو ناروغان چې نن انتظار باسي، اوږد انتظار لومړی.",
     "everyone": "ټول هغه چې نن انتظار باسي، اوږد انتظار لومړی.",

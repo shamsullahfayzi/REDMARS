@@ -203,3 +203,35 @@ export const recordPaymentResponseSchema = z.object({
   payment: invoicePaymentSchema,
 })
 export type RecordPaymentResponse = z.infer<typeof recordPaymentResponseSchema>
+
+// ---------------------------------------------------------------------------------
+// Reducing the bill — task 6.4 (Rule R10)
+// ---------------------------------------------------------------------------------
+
+/**
+ * A discount on a bill already raised. The reason is mandatory — a discount column with no
+ * reason column is how cash walks out of a till (the same rule reception 3.6 enforces at
+ * creation). The ceiling is R10's business: a receptionist may take at most
+ * DISCOUNT_CEILING_PCT off the subtotal, an admin any amount. The amount here is a discount
+ * on the SUBTOTAL, and it replaces whatever discount the bill already carried rather than
+ * stacking — applying a discount sets the bill's discount, it does not add to it.
+ */
+export const applyDiscountRequestSchema = z.object({
+  amount: moneySchema.refine((v) => Number(v) > 0, 'Enter a discount greater than zero'),
+  reason: z.string().trim().min(3, 'Give a reason for the discount').max(200),
+})
+export type ApplyDiscountRequest = z.infer<typeof applyDiscountRequestSchema>
+
+/** The bill's new standing after a discount lands — what it now totals and still owes. */
+export const applyDiscountResponseSchema = z.object({
+  invoiceId: z.uuid(),
+  status: invoiceStatusSchema,
+  subtotal: z.string(),
+  discount: z.string(),
+  discountReason: z.string().nullable(),
+  total: z.string(),
+  paidAmount: z.string(),
+  outstanding: z.string(),
+  currency: z.string(),
+})
+export type ApplyDiscountResponse = z.infer<typeof applyDiscountResponseSchema>

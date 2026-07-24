@@ -1,5 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
+  type ApplyDiscountRequest,
+  applyDiscountResponseSchema,
   invoiceDetailSchema,
   invoiceListResponseSchema,
   type RecordPaymentRequest,
@@ -68,6 +70,22 @@ export function useRecordPayment(invoiceId: string) {
   return useMutation({
     mutationFn: (input: RecordPaymentRequest) =>
       apiPost(`/invoices/${invoiceId}/payments`, input, recordPaymentResponseSchema),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      void queryClient.invalidateQueries({ queryKey: ['visit-bills'] })
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
+  })
+}
+
+/**
+ * Apply a discount to a bill (task 6.4, Rule R10). Reshapes the total, so the same three
+ * caches drop as a payment does — the detail, the visit's bills, and the register.
+ */
+export function useApplyDiscount(invoiceId: string) {
+  return useMutation({
+    mutationFn: (input: ApplyDiscountRequest) =>
+      apiPost(`/invoices/${invoiceId}/discount`, input, applyDiscountResponseSchema),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       void queryClient.invalidateQueries({ queryKey: ['visit-bills'] })

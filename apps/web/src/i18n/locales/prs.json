@@ -800,6 +800,19 @@
     "took": "رسید {{receiptNo}} · {{amount}} {{currency}} دریافت شد",
     "settled": "صورت‌حساب تسویه شد"
   },
+  "discount": {
+    "title": "تخفیف",
+    "current": "فعلاً {{amount}} {{currency}} تخفیف",
+    "amount": "مبلغ تخفیف",
+    "reason": "دلیل",
+    "reasonPlaceholder": "دلیل کاهش صورت‌حساب (الزامی)",
+    "apply": "اعمال تخفیف",
+    "applying": "در حال اعمال…",
+    "ceilingHint": "تا {{pct}}٪ — حداکثر {{max}} {{currency}}",
+    "ceilingNone": "تا کل مبلغ {{subtotal}} {{currency}}",
+    "applied": "تخفیف اعمال شد · مجموع جدید {{total}} {{currency}}",
+    "error": "تخفیف اعمال نشد."
+  },
   "queue": {
     "mine": "بیماران شما که امروز منتظر اند، طولانی‌ترین انتظار اول.",
     "everyone": "همه کسانی که امروز منتظر اند، طولانی‌ترین انتظار اول.",

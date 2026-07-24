@@ -36,6 +36,8 @@ describe('Invoice register + reprint (e2e)', () => {
   let invoiceNo: string;
   let payInvoiceId: string;
   let overInvoiceId: string;
+  let discountInvoiceId: string;
+  let refundGuardInvoiceId: string;
   const tokens: Record<string, string> = {};
 
   jest.setTimeout(60_000);
@@ -94,6 +96,7 @@ describe('Invoice register + reprint (e2e)', () => {
 
     receptionistId = await seedActor('recep', 'receptionist');
     await seedActor('doctor', 'doctor');
+    await seedActor('admin', 'admin');
 
     const dept = await prisma.department.create({
       data: { facilityId, code: `${PREFIX}OPD`, name: 'E2E OPD', type: 'opd' },
@@ -244,6 +247,57 @@ describe('Invoice register + reprint (e2e)', () => {
       })
     ).id;
 
+    // A 1000 bill for the discount tests: 10% ceiling is a round 100.
+    discountInvoiceId = (
+      await prisma.invoice.create({
+        data: {
+          facilityId,
+          patientId: patient.id,
+          createdBy: receptionistId,
+          invoiceNo: `${PREFIX}INVD`,
+          subtotal: '1000',
+          total: '1000',
+          paidAmount: '0',
+          status: 'issued',
+          items: {
+            create: {
+              refType: 'service',
+              description: 'Procedure',
+              quantity: 1,
+              unitPrice: '1000',
+              total: '1000',
+            },
+          },
+        },
+      })
+    ).id;
+
+    // A fully-paid 500 bill, to prove a discount that would drop the total below what is
+    // already paid is refused (the gap is a refund, task 6.6).
+    refundGuardInvoiceId = (
+      await prisma.invoice.create({
+        data: {
+          facilityId,
+          patientId: patient.id,
+          createdBy: receptionistId,
+          invoiceNo: `${PREFIX}INVDR`,
+          subtotal: '500',
+          total: '500',
+          paidAmount: '500',
+          status: 'paid',
+          items: {
+            create: {
+              refType: 'service',
+              description: 'Scan',
+              quantity: 1,
+              unitPrice: '500',
+              total: '500',
+            },
+          },
+        },
+      })
+    ).id;
+
     // A second facility's invoice, to prove the register is facility-scoped.
     const otherFacilityId = (
       await prisma.facility.create({ data: { code: `${PREFIX}fac2`, name: 'E2E Other' } })
@@ -288,6 +342,11 @@ describe('Invoice register + reprint (e2e)', () => {
   const pay = (as: string, id: string, body: unknown) =>
     request(server)
       .post(`/invoices/${id}/payments`)
+      .set('Authorization', `Bearer ${tokens[as]}`)
+      .send(body);
+  const discount = (as: string, id: string, body: unknown) =>
+    request(server)
+      .post(`/invoices/${id}/discount`)
       .set('Authorization', `Bearer ${tokens[as]}`)
       .send(body);
 
@@ -418,10 +477,54 @@ describe('Invoice register + reprint (e2e)', () => {
     await pay('recep', payInvoiceId, { amount: '10', method: 'waiver' }).expect(400);
   });
 
-  it('denies a doctor — invoice.read and payment.receive are not theirs', async () => {
+  it('the done-when: a receptionist cannot discount past 10%, but an admin can', async () => {
+    // Exactly the 10% ceiling on a 1000 bill — allowed, with its mandatory reason.
+    const ok = (
+      await discount('recep', discountInvoiceId, { amount: '100', reason: 'Elderly patient' })
+        .expect(200)
+    ).body as ApplyDiscountResponse;
+    expect(ok.discount).toBe('100.00');
+    expect(ok.total).toBe('900.00');
+    expect(ok.discountReason).toBe('Elderly patient');
+    expect(ok.status).toBe('issued');
+
+    // A hair over the ceiling — refused. This is "the receptionist can't zero a bill".
+    const over = (
+      await discount('recep', discountInvoiceId, { amount: '150', reason: 'Friend of the family' })
+        .expect(403)
+    ).body as { code?: string };
+    expect(over.code).toBe('over_ceiling');
+
+    // The same over-ceiling discount from an admin lands — an unconditional grant has no cap.
+    const admin = (
+      await discount('admin', discountInvoiceId, { amount: '500', reason: 'Director approved' })
+        .expect(200)
+    ).body as ApplyDiscountResponse;
+    expect(admin.discount).toBe('500.00');
+    expect(admin.total).toBe('500.00');
+  });
+
+  it('requires a reason, refuses more than the bill, and no refund by discount', async () => {
+    await discount('recep', discountInvoiceId, { amount: '50', reason: '  ' }).expect(400);
+    await discount('recep', discountInvoiceId, { amount: '50' }).expect(400);
+    // Admin, uncapped, but still cannot discount beyond the subtotal.
+    const overSub = (
+      await discount('admin', discountInvoiceId, { amount: '2000', reason: 'Too much' }).expect(400)
+    ).body as { code?: string };
+    expect(overSub.code).toBe('over_subtotal');
+    // A discount that would drop the total below what is already paid needs a refund first.
+    const refund = (
+      await discount('admin', refundGuardInvoiceId, { amount: '100', reason: 'Late goodwill' })
+        .expect(400)
+    ).body as { code?: string };
+    expect(refund.code).toBe('would_owe_refund');
+  });
+
+  it('denies a doctor — invoice.read, payment.receive and discount.apply are not theirs', async () => {
     await list('doctor').expect(403);
     await detail('doctor', invoiceId).expect(403);
     await byVisit('doctor', visitId).expect(403);
     await pay('doctor', payInvoiceId, { amount: '10', method: 'cash' }).expect(403);
+    await discount('doctor', discountInvoiceId, { amount: '10', reason: 'no' }).expect(403);
   });
 });

@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ChevronLeft, ChevronRight, Layers, Printer, Search } from 'lucide-react'
 import {
+  DISCOUNT_CEILING_PCT,
   INVOICE_STATUSES,
   type InvoiceListItem,
   type InvoiceOrigin,
@@ -22,6 +23,7 @@ import { Select } from '@/components/ui/select'
 import { serverMessage } from '@/lib/api'
 import { useDebounced } from '@/hooks/useDebounced'
 import {
+  useApplyDiscount,
   useInvoiceDetail,
   useInvoiceList,
   useRecordPayment,
@@ -94,11 +96,14 @@ export function InvoicesPage() {
 
   if (selectedId) {
     const isTill = roles.includes('receptionist') || roles.includes('pharmacist')
+    const canDiscount = roles.includes('admin') || isTill
     return (
       <InvoiceDetailView
         invoiceId={selectedId}
         canPrint={isTill}
         canReceive={isTill}
+        canDiscount={canDiscount}
+        discountUncapped={roles.includes('admin')}
         onBack={() => setSelectedId(null)}
         onOpen={setSelectedId}
       />
@@ -267,12 +272,16 @@ function InvoiceDetailView({
   invoiceId,
   canPrint,
   canReceive,
+  canDiscount,
+  discountUncapped,
   onBack,
   onOpen,
 }: {
   invoiceId: string
   canPrint: boolean
   canReceive: boolean
+  canDiscount: boolean
+  discountUncapped: boolean
   onBack: () => void
   onOpen: (invoiceId: string) => void
 }) {
@@ -346,6 +355,16 @@ function InvoiceDetailView({
                 {lastReceipt.settled ? ` · ${t('payments.settled')}` : ''}
               </Badge>
             </div>
+          )}
+          {canDiscount && detail.invoice.status !== 'cancelled' && (
+            <DiscountForm
+              invoiceId={invoiceId}
+              subtotal={detail.invoice.subtotal}
+              currentDiscount={detail.invoice.discount}
+              currentReason={detail.invoice.discountReason}
+              currency={detail.invoice.currency}
+              uncapped={discountUncapped}
+            />
           )}
           {canReceive && outstanding && detail.invoice.status !== 'cancelled' && (
             <PaymentForm
@@ -587,6 +606,107 @@ function PaymentForm({
       {record.isError && (
         <p className="text-sm text-destructive">
           {serverMessage(record.error) ?? t('payments.error')}
+        </p>
+      )}
+    </Card>
+  )
+}
+
+/**
+ * Task 6.4 — discount a bill, Rule R10. A reason is required (the input will not submit
+ * without one), and for anyone but an admin the amount is capped at 10% of the subtotal —
+ * greyed at the same number the server refuses, so the till is never invited to type a
+ * discount that will bounce. The server enforces both regardless. Screen only.
+ */
+function DiscountForm({
+  invoiceId,
+  subtotal,
+  currentDiscount,
+  currentReason,
+  currency,
+  uncapped,
+}: {
+  invoiceId: string
+  subtotal: string
+  currentDiscount: string
+  currentReason: string | null
+  currency: string
+  uncapped: boolean
+}) {
+  const { t } = useTranslation()
+  const apply = useApplyDiscount(invoiceId)
+  const hasDiscount = Number(currentDiscount) > 0
+  const [amount, setAmount] = useState(hasDiscount ? currentDiscount : '')
+  const [reason, setReason] = useState(currentReason ?? '')
+
+  const subtotalNum = Number(subtotal)
+  const ceiling = uncapped ? subtotalNum : (subtotalNum * DISCOUNT_CEILING_PCT) / 100
+  const value = Number(amount)
+  const valid =
+    amount.trim() !== '' && value > 0 && value <= ceiling && reason.trim().length >= 3
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    if (!valid || apply.isPending) return
+    apply.mutate({ amount, reason: reason.trim() })
+  }
+
+  return (
+    <Card className="max-w-2xl space-y-3 p-4 print:hidden">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-foreground">{t('discount.title')}</p>
+        {hasDiscount && (
+          <Badge variant="muted">
+            {t('discount.current', { amount: currentDiscount, currency })}
+          </Badge>
+        )}
+      </div>
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="mb-1 block text-xs text-muted-foreground" htmlFor="disc-amount">
+            {t('discount.amount')}
+          </label>
+          <Input
+            id="disc-amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            inputMode="decimal"
+            className="w-32 font-mono"
+            dir="ltr"
+          />
+        </div>
+        <div className="min-w-56 flex-1">
+          <label className="mb-1 block text-xs text-muted-foreground" htmlFor="disc-reason">
+            {t('discount.reason')}
+          </label>
+          <Input
+            id="disc-reason"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder={t('discount.reasonPlaceholder')}
+          />
+        </div>
+        <Button type="submit" variant="outline" disabled={!valid || apply.isPending}>
+          {apply.isPending ? t('discount.applying') : t('discount.apply')}
+        </Button>
+      </form>
+      <p className="text-xs text-muted-foreground">
+        {uncapped
+          ? t('discount.ceilingNone', { subtotal, currency })
+          : t('discount.ceilingHint', {
+              pct: DISCOUNT_CEILING_PCT,
+              max: ceiling.toFixed(2),
+              currency,
+            })}
+      </p>
+      {apply.isSuccess && (
+        <p className="text-sm text-success">
+          {t('discount.applied', { total: apply.data.total, currency })}
+        </p>
+      )}
+      {apply.isError && (
+        <p className="text-sm text-destructive">
+          {serverMessage(apply.error) ?? t('discount.error')}
         </p>
       )}
     </Card>
