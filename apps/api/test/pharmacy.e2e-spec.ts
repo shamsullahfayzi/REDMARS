@@ -4,7 +4,11 @@ import { hash } from '@node-rs/argon2';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import type { LoginResponse, PharmacyQueueResponse } from '@redmars/shared';
+import type {
+  LoginResponse,
+  PharmacyPrescription,
+  PharmacyQueueResponse,
+} from '@redmars/shared';
 import { AppModule } from './../src/app.module';
 
 /**
@@ -25,6 +29,9 @@ describe('Pharmacy queue (e2e)', () => {
   let facilityId: string;
   let practitionerId: string;
   let drugId: string;
+  let patientId: string;
+  let detailPrescriptionId: string;
+  let otherPrescriptionId: string;
   const tokens: Record<string, string> = {};
 
   jest.setTimeout(60_000);
@@ -50,38 +57,49 @@ describe('Pharmacy queue (e2e)', () => {
 
   async function seedPrescription(
     facId: string,
-    patientId: string,
+    patId: string,
     departmentId: string,
     practId: string,
-    opts: { visitNo: string; visitStatus: string; status: string; drugs: string[] },
-  ): Promise<void> {
+    drug: string,
+    opts: {
+      visitNo: string;
+      visitStatus: string;
+      status: string;
+      drugs: string[];
+      interactionAckReason?: string;
+      overrideReason?: string;
+    },
+  ): Promise<string> {
     const visit = await prisma.visit.create({
       data: {
         facilityId: facId,
-        patientId,
+        patientId: patId,
         departmentId,
         visitNo: opts.visitNo,
         type: 'opd_consult',
         status: opts.visitStatus,
       },
     });
-    await prisma.prescription.create({
+    const rx = await prisma.prescription.create({
       data: {
         visitId: visit.id,
         practitionerId: practId,
         status: opts.status as never,
+        interactionAckReason: opts.interactionAckReason ?? null,
         items: {
           create: opts.drugs.map((name, i) => ({
-            drugId,
+            drugId: drug,
             drugNameAtTime: name,
             frequency: 'TDS',
             duration: '7 days',
             route: 'oral',
             sequence: i,
+            allergyOverrideReason: i === 0 ? (opts.overrideReason ?? null) : null,
           })),
         },
       },
     });
+    return rx.id;
   }
 
   async function cleanup(): Promise<void> {
@@ -93,6 +111,7 @@ describe('Pharmacy queue (e2e)', () => {
     await prisma.prescription.deleteMany({ where: { visit: facilityFilter } });
     await prisma.visitStatusHistory.deleteMany({ where: { visit: facilityFilter } });
     await prisma.visit.deleteMany({ where: facilityFilter });
+    await prisma.allergy.deleteMany({ where: { patient: facilityFilter } });
     await prisma.prescriptionItem.deleteMany({ where: { drug: facilityFilter } });
     await prisma.drug.deleteMany({ where: facilityFilter });
     await prisma.practitioner.deleteMany({ where: facilityFilter });
@@ -149,17 +168,40 @@ describe('Pharmacy queue (e2e)', () => {
         ageRecordedAt: new Date(),
       },
     });
+    patientId = patient.id;
 
-    // The one that should show: an active prescription on a live visit, two drugs.
-    await seedPrescription(facilityId, patient.id, dept.id, practitionerId, {
+    // The patient's allergies — one live, one retracted — the other half of what R6 grants.
+    await prisma.allergy.create({
+      data: {
+        patientId,
+        substance: 'Penicillin',
+        reaction: 'Rash',
+        severity: 'severe',
+        isActive: true,
+      },
+    });
+    await prisma.allergy.create({
+      data: {
+        patientId,
+        substance: 'Sulfa (old)',
+        severity: 'mild',
+        isActive: false,
+      },
+    });
+
+    // The one that should show: an active prescription on a live visit, two drugs, with a
+    // per-line allergy override and a per-sheet interaction acknowledgement.
+    detailPrescriptionId = await seedPrescription(facilityId, patientId, dept.id, practitionerId, drugId, {
       visitNo: `${PREFIX}V1`,
       visitStatus: 'arrived',
       status: 'active',
       drugs: ['Amoxicillin 500mg', 'Paracetamol 500mg'],
+      interactionAckReason: 'Monitored',
+      overrideReason: 'Benefit outweighs risk',
     });
 
     // Already dispensed — completed — so it is off the queue.
-    await seedPrescription(facilityId, patient.id, dept.id, practitionerId, {
+    await seedPrescription(facilityId, patientId, dept.id, practitionerId, drugId, {
       visitNo: `${PREFIX}V2`,
       visitStatus: 'completed',
       status: 'completed',
@@ -167,7 +209,7 @@ describe('Pharmacy queue (e2e)', () => {
     });
 
     // Active, but its visit was cancelled — gone from the queue.
-    await seedPrescription(facilityId, patient.id, dept.id, practitionerId, {
+    await seedPrescription(facilityId, patientId, dept.id, practitionerId, drugId, {
       visitNo: `${PREFIX}V3`,
       visitStatus: 'cancelled',
       status: 'active',
@@ -204,30 +246,32 @@ describe('Pharmacy queue (e2e)', () => {
         status: 'arrived',
       },
     });
-    await prisma.prescription.create({
-      data: {
-        visitId: otherVisit.id,
-        practitionerId: otherPract.id,
-        status: 'active',
-        items: {
-          create: {
-            drugId: (
-              await prisma.drug.create({
-                data: {
-                  facilityId: otherFacilityId,
-                  code: `${PREFIX}DRUG2`,
-                  genericName: 'Aspirin',
-                },
-              })
-            ).id,
-            drugNameAtTime: 'Aspirin',
-            frequency: 'OD',
-            duration: '3 days',
-            route: 'oral',
+    otherPrescriptionId = (
+      await prisma.prescription.create({
+        data: {
+          visitId: otherVisit.id,
+          practitionerId: otherPract.id,
+          status: 'active',
+          items: {
+            create: {
+              drugId: (
+                await prisma.drug.create({
+                  data: {
+                    facilityId: otherFacilityId,
+                    code: `${PREFIX}DRUG2`,
+                    genericName: 'Aspirin',
+                  },
+                })
+              ).id,
+              drugNameAtTime: 'Aspirin',
+              frequency: 'OD',
+              duration: '3 days',
+              route: 'oral',
+            },
           },
         },
-      },
-    });
+      })
+    ).id;
   });
 
   afterAll(async () => {
@@ -260,7 +304,49 @@ describe('Pharmacy queue (e2e)', () => {
     expect(visitNos).not.toContain(`${PREFIX}OV1`); // other facility
   });
 
-  it('denies a doctor — pharmacy.read_queue is not theirs', async () => {
+  const detail = (as: string, id: string) =>
+    request(server).get(`/pharmacy/prescriptions/${id}`).set('Authorization', `Bearer ${tokens[as]}`);
+
+  it('the done-when (6.9): opens a prescription to drugs + allergies, and NOTHING else', async () => {
+    const body = (await detail('pharm', detailPrescriptionId).expect(200))
+      .body as PharmacyPrescription;
+
+    // The drugs, with the per-line allergy override and the per-sheet interaction ack.
+    expect(body.items).toHaveLength(2);
+    expect(body.items[0].drugName).toBe('Amoxicillin 500mg');
+    expect(body.items[0].allergyOverrideReason).toBe('Benefit outweighs risk');
+    expect(body.interactionAckReason).toBe('Monitored');
+
+    // The allergies — active first, most severe first; the retracted one is present but last.
+    expect(body.allergies[0].isActive).toBe(true);
+    expect(body.allergies[0].substance).toBe('Penicillin');
+    expect(body.allergies[0].severity).toBe('severe');
+    expect(body.allergies.some((a) => !a.isActive)).toBe(true);
+
+    // R6, verified structurally: the payload carries ONLY the drugs-and-allergies shape —
+    // no diagnosis, complaint, note or vital field can be present because none is a key here.
+    expect(Object.keys(body).sort()).toEqual(
+      [
+        'advice',
+        'allergies',
+        'interactionAckReason',
+        'items',
+        'orderedAt',
+        'patient',
+        'practitionerName',
+        'prescriptionId',
+        'status',
+        'visitNo',
+      ].sort(),
+    );
+  });
+
+  it('404s a prescription in another facility', async () => {
+    await detail('pharm', otherPrescriptionId).expect(404);
+  });
+
+  it('denies a doctor — pharmacy.read_queue is not theirs (queue and detail)', async () => {
     await queue('doctor').expect(403);
+    await detail('doctor', detailPrescriptionId).expect(403);
   });
 });

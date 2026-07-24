@@ -1,6 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import type { PharmacyQueueItem, PharmacyQueueResponse } from '@redmars/shared';
-import { currentAgeYears } from '@redmars/shared';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import type {
+  PharmacyAllergy,
+  PharmacyPrescription,
+  PharmacyQueueItem,
+  PharmacyQueueResponse,
+} from '@redmars/shared';
+import { ALLERGY_SEVERITY_RANK, currentAgeYears } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /** A display name from its parts, skipping the blanks. */
@@ -82,5 +87,126 @@ export class PharmacyService {
     });
 
     return { items, total: items.length };
+  }
+
+  /**
+   * Task 6.9 — one prescription, as R6 allows the pharmacy to see it: the drugs and the
+   * patient's allergies, and nothing else clinical. The query selects ONLY those fields —
+   * no diagnosis, complaint, note or vital is read here, so none can be returned. The two
+   * safety reasons that ARE dispensing-relevant travel with it: the per-line allergy
+   * override, and the per-sheet serious-interaction acknowledgement.
+   */
+  async prescription(facilityId: string, prescriptionId: string): Promise<PharmacyPrescription> {
+    const row = await this.prisma.db.prescription.findFirst({
+      where: { id: prescriptionId, visit: { facilityId } },
+      select: {
+        id: true,
+        status: true,
+        advice: true,
+        interactionAckReason: true,
+        createdAt: true,
+        practitioner: { select: { firstName: true, lastName: true } },
+        visit: {
+          select: {
+            visitNo: true,
+            patient: {
+              select: {
+                id: true,
+                mrn: true,
+                prefix: true,
+                firstName: true,
+                lastName: true,
+                gender: true,
+                dateOfBirth: true,
+                estimatedAgeYears: true,
+                estimatedAgeMonths: true,
+                ageRecordedAt: true,
+              },
+            },
+          },
+        },
+        items: {
+          orderBy: { sequence: 'asc' },
+          select: {
+            id: true,
+            drugNameAtTime: true,
+            dose: true,
+            frequency: true,
+            duration: true,
+            route: true,
+            quantity: true,
+            instructions: true,
+            allergyOverrideReason: true,
+          },
+        },
+      },
+    });
+    if (!row) throw new NotFoundException('Prescription not found');
+
+    const patient = row.visit.patient;
+
+    // The patient's allergies — the other half of what R6 grants. Read separately, active
+    // and worst first, retracted ones last but shown (a doctor removed them for a reason).
+    const allergyRows = await this.prisma.db.allergy.findMany({
+      where: { patientId: patient.id },
+      select: {
+        id: true,
+        substance: true,
+        reaction: true,
+        severity: true,
+        isActive: true,
+        notedAt: true,
+        drug: { select: { genericName: true } },
+      },
+    });
+    const allergies: PharmacyAllergy[] = allergyRows
+      .map((a) => ({
+        id: a.id,
+        substance: a.substance,
+        drugName: a.drug?.genericName ?? null,
+        reaction: a.reaction,
+        severity: a.severity,
+        isActive: a.isActive,
+        notedAt: a.notedAt.toISOString(),
+      }))
+      .sort(
+        (x, y) =>
+          Number(y.isActive) - Number(x.isActive) ||
+          ALLERGY_SEVERITY_RANK[y.severity] - ALLERGY_SEVERITY_RANK[x.severity],
+      );
+
+    return {
+      prescriptionId: row.id,
+      visitNo: row.visit.visitNo,
+      orderedAt: row.createdAt.toISOString(),
+      status: row.status,
+      patient: {
+        id: patient.id,
+        name: fullName([patient.prefix, patient.firstName, patient.lastName]),
+        mrn: patient.mrn,
+        gender: patient.gender,
+        ageYears: currentAgeYears({
+          dateOfBirth: patient.dateOfBirth ? patient.dateOfBirth.toISOString().slice(0, 10) : null,
+          estimatedAgeYears: patient.estimatedAgeYears,
+          estimatedAgeMonths: patient.estimatedAgeMonths,
+          ageRecordedAt: patient.ageRecordedAt ? patient.ageRecordedAt.toISOString() : null,
+        }),
+      },
+      practitionerName: fullName([row.practitioner.firstName, row.practitioner.lastName]),
+      advice: row.advice,
+      interactionAckReason: row.interactionAckReason,
+      items: row.items.map((item) => ({
+        id: item.id,
+        drugName: item.drugNameAtTime,
+        dose: item.dose,
+        frequency: item.frequency,
+        duration: item.duration,
+        route: item.route,
+        quantity: item.quantity,
+        instructions: item.instructions,
+        allergyOverrideReason: item.allergyOverrideReason,
+      })),
+      allergies,
+    };
   }
 }

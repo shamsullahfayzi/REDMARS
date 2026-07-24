@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { allergySeveritySchema } from './allergy.js'
 
 /**
  * Task 6.8 — the pharmacy queue: the doctor's orders, waiting to be dispensed.
@@ -35,3 +36,65 @@ export const pharmacyQueueResponseSchema = z.object({
   total: z.number().int(),
 })
 export type PharmacyQueueResponse = z.infer<typeof pharmacyQueueResponseSchema>
+
+// ---------------------------------------------------------------------------------
+// The prescription, as the pharmacy is allowed to see it — task 6.9 (Rule R6)
+// ---------------------------------------------------------------------------------
+
+/**
+ * R6, made concrete. When the pharmacist opens a queued prescription they see the DRUGS and
+ * the patient's ALLERGIES, and nothing else clinical — no diagnosis, no complaint, no notes,
+ * no vitals, no history. This shape carries exactly that and no more; it is built on purpose
+ * rather than reusing the doctor's prescription response, so a clinical field cannot leak in
+ * by being added to the shared shape later. Two fields that ARE allowed and DO matter to
+ * dispensing safety travel with it: why a drug was prescribed despite a recorded allergy
+ * (per line), and why a serious interaction was accepted (per sheet).
+ */
+export const pharmacyDrugLineSchema = z.object({
+  id: z.uuid(),
+  drugName: z.string(),
+  dose: z.string().nullable(),
+  frequency: z.string(),
+  duration: z.string(),
+  route: z.string(),
+  quantity: z.number().int().nullable(),
+  instructions: z.string().nullable(),
+  /** Medico-legal: the drug was prescribed to a patient recorded as allergic to it, and why. */
+  allergyOverrideReason: z.string().nullable(),
+})
+export type PharmacyDrugLine = z.infer<typeof pharmacyDrugLineSchema>
+
+/** A patient allergy, as the bench needs it — the substance, how bad, and the reaction. */
+export const pharmacyAllergySchema = z.object({
+  id: z.uuid(),
+  substance: z.string(),
+  drugName: z.string().nullable(),
+  reaction: z.string().nullable(),
+  severity: allergySeveritySchema,
+  isActive: z.boolean(),
+  notedAt: z.string(),
+})
+export type PharmacyAllergy = z.infer<typeof pharmacyAllergySchema>
+
+export const pharmacyPrescriptionSchema = z.object({
+  prescriptionId: z.uuid(),
+  visitNo: z.string(),
+  orderedAt: z.string(),
+  status: z.string(),
+  patient: z.object({
+    id: z.uuid(),
+    name: z.string(),
+    mrn: z.string(),
+    gender: z.string().nullable(),
+    ageYears: z.number().int().nullable(),
+  }),
+  practitionerName: z.string(),
+  /** Advice the prescriber wrote onto the sheet ("after food") — part of the drug order. */
+  advice: z.string().nullable(),
+  /** Why a flagged serious drug–drug interaction was prescribed anyway (4.9); null if none. */
+  interactionAckReason: z.string().nullable(),
+  items: z.array(pharmacyDrugLineSchema),
+  /** Active first, most severe first — the retracted ones last, but shown (a doctor removed them). */
+  allergies: z.array(pharmacyAllergySchema),
+})
+export type PharmacyPrescription = z.infer<typeof pharmacyPrescriptionSchema>

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { pharmacyQueueResponseSchema } from '@redmars/shared'
+import { pharmacyPrescriptionSchema, pharmacyQueueResponseSchema } from '@redmars/shared'
 import { apiGet } from '@/lib/api'
 
 /**
@@ -13,5 +13,18 @@ export function usePharmacyQueue() {
     queryFn: () => apiGet('/pharmacy/queue', pharmacyQueueResponseSchema),
     staleTime: 0,
     refetchInterval: 30_000,
+  })
+}
+
+/**
+ * One prescription, drugs and allergies only (task 6.9, R6). Fetched when a queue row is
+ * opened; the server returns nothing else clinical, so nothing else can be shown.
+ */
+export function usePharmacyPrescription(prescriptionId: string | null) {
+  return useQuery({
+    queryKey: ['pharmacy', 'prescription', prescriptionId],
+    queryFn: () => apiGet(`/pharmacy/prescriptions/${prescriptionId}`, pharmacyPrescriptionSchema),
+    enabled: !!prescriptionId,
+    staleTime: 30_000,
   })
 }

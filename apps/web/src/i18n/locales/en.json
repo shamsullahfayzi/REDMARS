@@ -850,7 +850,17 @@
       "patient": "Patient",
       "drugs": "Drugs",
       "prescriber": "Prescriber"
-    }
+    },
+    "back": "Back to queue",
+    "loading": "Loading…",
+    "detailError": "Could not load this prescription.",
+    "by": "by {{name}}",
+    "noAllergies": "No allergies recorded.",
+    "allergies": "Allergies",
+    "interactionAck": "Interaction noted",
+    "qty": "Qty {{count}}",
+    "allergyOverride": "Prescribed despite allergy: {{reason}}",
+    "advice": "Advice"
   },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",
