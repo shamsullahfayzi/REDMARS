@@ -781,6 +781,25 @@
       "other": "نور"
     }
   },
+  "payments": {
+    "title": "د پیسو اخیستل",
+    "amount": "اندازه",
+    "method": "طریقه",
+    "methodLabel": {
+      "cash": "نغدي",
+      "card": "کارت",
+      "bank_transfer": "بانکي لیږد",
+      "mobile_money": "موبایل پیسې"
+    },
+    "reference": "حواله",
+    "referencePlaceholder": "د کارت رسید یا د لیږد شمېره (اختیاري)",
+    "submit": "د پیسو اخیستل",
+    "submitting": "اخیستل کیږي…",
+    "owedHint": "{{amount}} {{currency}} پاتې",
+    "error": "تادیه ونه شوه.",
+    "took": "رسید {{receiptNo}} · {{amount}} {{currency}} ترلاسه شو",
+    "settled": "بیل تصفیه شو"
+  },
   "queue": {
     "mine": "ستاسو ناروغان چې نن انتظار باسي، اوږد انتظار لومړی.",
     "everyone": "ټول هغه چې نن انتظار باسي، اوږد انتظار لومړی.",

@@ -781,6 +781,25 @@
       "other": "دیگر"
     }
   },
+  "payments": {
+    "title": "دریافت پول",
+    "amount": "مبلغ",
+    "method": "روش",
+    "methodLabel": {
+      "cash": "نقد",
+      "card": "کارت",
+      "bank_transfer": "انتقال بانکی",
+      "mobile_money": "پول موبایل"
+    },
+    "reference": "مرجع",
+    "referencePlaceholder": "شماره رسید کارت یا انتقال (اختیاری)",
+    "submit": "دریافت پول",
+    "submitting": "در حال دریافت…",
+    "owedHint": "{{amount}} {{currency}} باقی‌مانده",
+    "error": "پرداخت انجام نشد.",
+    "took": "رسید {{receiptNo}} · {{amount}} {{currency}} دریافت شد",
+    "settled": "صورت‌حساب تسویه شد"
+  },
   "queue": {
     "mine": "بیماران شما که امروز منتظر اند، طولانی‌ترین انتظار اول.",
     "everyone": "همه کسانی که امروز منتظر اند، طولانی‌ترین انتظار اول.",

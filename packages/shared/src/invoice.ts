@@ -2,6 +2,7 @@ import { z } from 'zod'
 import {
   invoiceStatusSchema,
   invoiceSummarySchema,
+  moneySchema,
   paymentMethodSchema,
   receiptFacilitySchema,
   receiptPatientSchema,
@@ -157,3 +158,48 @@ export const visitBillsResponseSchema = z.object({
   }),
 })
 export type VisitBillsResponse = z.infer<typeof visitBillsResponseSchema>
+
+// ---------------------------------------------------------------------------------
+// Taking the money — task 6.3
+// ---------------------------------------------------------------------------------
+
+/**
+ * A payment is real money crossing the counter, so the methods here are the real tenders
+ * only — `waiver` and `panel` from the full PaymentMethod enum are deliberately absent.
+ * Writing off a bill is a discount (6.4), and an employer/NGO settling it is panel billing
+ * (6.7); neither is cash taken at the till, and letting them through this door would be a
+ * back way to mark a bill paid with no money behind it.
+ */
+export const PAYMENT_TENDERS = ['cash', 'card', 'bank_transfer', 'mobile_money'] as const
+export const paymentTenderSchema = z.enum(PAYMENT_TENDERS)
+export type PaymentTender = z.infer<typeof paymentTenderSchema>
+
+export const recordPaymentRequestSchema = z.object({
+  /**
+   * What the patient handed over. Server-clamped: never more than the bill still owes, so
+   * an instalment settles part and the balance stays exact. A payment is a tender, not a
+   * price — the server does not trust it as a charge, only as cash received against a total
+   * it computed itself.
+   */
+  amount: moneySchema.refine((v) => Number(v) > 0, 'Enter an amount greater than zero'),
+  method: paymentTenderSchema,
+  /** A card slip number, a transfer reference — free text, optional. */
+  reference: z.string().trim().max(120).optional(),
+})
+export type RecordPaymentRequest = z.infer<typeof recordPaymentRequestSchema>
+
+/**
+ * The result of taking a payment: the bill's new standing — what it now shows paid and
+ * still owes, and whether that closed it — plus the payment itself, receipt number and all,
+ * for the slip the patient walks away with.
+ */
+export const recordPaymentResponseSchema = z.object({
+  invoiceId: z.uuid(),
+  status: invoiceStatusSchema,
+  total: z.string(),
+  paidAmount: z.string(),
+  outstanding: z.string(),
+  currency: z.string(),
+  payment: invoicePaymentSchema,
+})
+export type RecordPaymentResponse = z.infer<typeof recordPaymentResponseSchema>

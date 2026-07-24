@@ -1,10 +1,13 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   invoiceDetailSchema,
   invoiceListResponseSchema,
+  type RecordPaymentRequest,
+  recordPaymentResponseSchema,
   visitBillsResponseSchema,
 } from '@redmars/shared'
-import { apiGet } from '@/lib/api'
+import { apiGet, apiPost } from '@/lib/api'
+import { queryClient } from '@/lib/queryClient'
 
 export interface InvoiceListParams {
   q?: string
@@ -53,5 +56,22 @@ export function useVisitBills(visitId: string | null) {
     queryFn: () => apiGet(`/invoices/by-visit/${visitId}`, visitBillsResponseSchema),
     enabled: !!visitId,
     staleTime: 0,
+  })
+}
+
+/**
+ * Take a payment against a bill (task 6.3) — cash in full, or an instalment. On success the
+ * bill's balance, its sibling visit bills and the register all change, so all three caches
+ * are dropped; the resolved value carries the receipt number for the slip.
+ */
+export function useRecordPayment(invoiceId: string) {
+  return useMutation({
+    mutationFn: (input: RecordPaymentRequest) =>
+      apiPost(`/invoices/${invoiceId}/payments`, input, recordPaymentResponseSchema),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      void queryClient.invalidateQueries({ queryKey: ['visit-bills'] })
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
   })
 }

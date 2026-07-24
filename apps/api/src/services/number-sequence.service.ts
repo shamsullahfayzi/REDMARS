@@ -8,6 +8,7 @@ const SEQUENCE_CONFIG = {
   visit_no: { prefix: 'V', yearly: true, pad: 4 },
   invoice_no: { prefix: 'INV', yearly: true, pad: 4 },
   lab_order_no: { prefix: 'LAB', yearly: true, pad: 4 },
+  receipt_no: { prefix: 'RCP', yearly: true, pad: 4 },
 } as const;
 
 export type SequenceKey = keyof typeof SEQUENCE_CONFIG;

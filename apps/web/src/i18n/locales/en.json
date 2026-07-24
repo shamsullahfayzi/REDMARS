@@ -781,6 +781,25 @@
       "other": "Other"
     }
   },
+  "payments": {
+    "title": "Take payment",
+    "amount": "Amount",
+    "method": "Method",
+    "methodLabel": {
+      "cash": "Cash",
+      "card": "Card",
+      "bank_transfer": "Bank transfer",
+      "mobile_money": "Mobile money"
+    },
+    "reference": "Reference",
+    "referencePlaceholder": "Card slip or transfer no. (optional)",
+    "submit": "Take payment",
+    "submitting": "Taking…",
+    "owedHint": "{{amount}} {{currency}} still owed",
+    "error": "Could not take the payment.",
+    "took": "Receipt {{receiptNo}} · {{amount}} {{currency}} received",
+    "settled": "Bill settled"
+  },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",
     "everyone": "Everyone waiting today, longest wait first.",

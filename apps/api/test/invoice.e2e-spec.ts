@@ -8,6 +8,7 @@ import type {
   InvoiceDetail,
   InvoiceListResponse,
   LoginResponse,
+  RecordPaymentResponse,
   VisitBillsResponse,
 } from '@redmars/shared';
 import { AppModule } from './../src/app.module';
@@ -33,6 +34,8 @@ describe('Invoice register + reprint (e2e)', () => {
   let visitId: string;
   let invoiceId: string;
   let invoiceNo: string;
+  let payInvoiceId: string;
+  let overInvoiceId: string;
   const tokens: Record<string, string> = {};
 
   jest.setTimeout(60_000);
@@ -67,6 +70,9 @@ describe('Invoice register + reprint (e2e)', () => {
     await prisma.patient.deleteMany({ where: facilityFilter });
     await prisma.department.deleteMany({ where: { code: { startsWith: PREFIX } } });
     await prisma.appUser.deleteMany({ where: { username: { startsWith: PREFIX } } });
+    // Taking a payment issues a receipt number, which leaves a per-facility sequence row —
+    // clear it before the facility, or its FK blocks the delete (task 6.3).
+    await prisma.numberSequence.deleteMany({ where: facilityFilter });
     await prisma.facility.deleteMany({ where: { code: { startsWith: PREFIX } } });
   }
 
@@ -188,6 +194,56 @@ describe('Invoice register + reprint (e2e)', () => {
       },
     });
 
+    // Two unpaid bills with NO visit, for the payment tests — kept off the visit so the
+    // 6.2 rollup (which counts bills on the visit) is not disturbed by settling them.
+    payInvoiceId = (
+      await prisma.invoice.create({
+        data: {
+          facilityId,
+          patientId: patient.id,
+          createdBy: receptionistId,
+          invoiceNo: `${PREFIX}INVP`,
+          subtotal: '400',
+          total: '400',
+          paidAmount: '0',
+          status: 'issued',
+          items: {
+            create: {
+              refType: 'service',
+              description: 'Dressing',
+              quantity: 1,
+              unitPrice: '400',
+              total: '400',
+            },
+          },
+        },
+      })
+    ).id;
+
+    overInvoiceId = (
+      await prisma.invoice.create({
+        data: {
+          facilityId,
+          patientId: patient.id,
+          createdBy: receptionistId,
+          invoiceNo: `${PREFIX}INVO`,
+          subtotal: '100',
+          total: '100',
+          paidAmount: '0',
+          status: 'issued',
+          items: {
+            create: {
+              refType: 'service',
+              description: 'Injection',
+              quantity: 1,
+              unitPrice: '100',
+              total: '100',
+            },
+          },
+        },
+      })
+    ).id;
+
     // A second facility's invoice, to prove the register is facility-scoped.
     const otherFacilityId = (
       await prisma.facility.create({ data: { code: `${PREFIX}fac2`, name: 'E2E Other' } })
@@ -229,6 +285,11 @@ describe('Invoice register + reprint (e2e)', () => {
     request(server).get(`/invoices/${id}`).set('Authorization', `Bearer ${tokens[as]}`);
   const byVisit = (as: string, id: string) =>
     request(server).get(`/invoices/by-visit/${id}`).set('Authorization', `Bearer ${tokens[as]}`);
+  const pay = (as: string, id: string, body: unknown) =>
+    request(server)
+      .post(`/invoices/${id}/payments`)
+      .set('Authorization', `Bearer ${tokens[as]}`)
+      .send(body);
 
   it('lists a facility’s invoices, newest first, with a one-line summary', async () => {
     const body = (await list('recep').expect(200)).body as InvoiceListResponse;
@@ -313,9 +374,54 @@ describe('Invoice register + reprint (e2e)', () => {
     await detail('recep', other.id).expect(404);
   });
 
-  it('denies a doctor — invoice.read is not theirs', async () => {
+  it('the done-when: instalments settle a bill, each with its own receipt', async () => {
+    // First instalment — part of the 400.
+    const first = (await pay('recep', payInvoiceId, { amount: '150', method: 'cash' }).expect(200))
+      .body as RecordPaymentResponse;
+    expect(first.status).toBe('partially_paid');
+    expect(first.paidAmount).toBe('150.00');
+    expect(first.outstanding).toBe('250.00');
+    expect(first.payment.amount).toBe('150.00');
+    expect(first.payment.method).toBe('cash');
+    expect(first.payment.receiptNo).toMatch(/^RCP-/);
+
+    // Second instalment closes it.
+    const second = (await pay('recep', payInvoiceId, { amount: '250', method: 'card' }).expect(200))
+      .body as RecordPaymentResponse;
+    expect(second.status).toBe('paid');
+    expect(second.outstanding).toBe('0.00');
+    expect(second.payment.receiptNo).not.toBe(first.payment.receiptNo);
+
+    // The cash trail: two payments on the bill, both with receipt numbers.
+    const body = (await detail('recep', payInvoiceId).expect(200)).body as InvoiceDetail;
+    expect(body.invoice.status).toBe('paid');
+    expect(body.payments).toHaveLength(2);
+    expect(body.payments.every((p) => p.receiptNo?.startsWith('RCP-'))).toBe(true);
+  });
+
+  it('refuses to take more than is owed, or to pay a settled bill', async () => {
+    const over = (await pay('recep', overInvoiceId, { amount: '150', method: 'cash' }).expect(400))
+      .body as { code?: string };
+    expect(over.code).toBe('overpayment');
+
+    // Settle it exactly, then a further payment is refused.
+    await pay('recep', overInvoiceId, { amount: '100', method: 'cash' }).expect(200);
+    const again = (await pay('recep', overInvoiceId, { amount: '10', method: 'cash' }).expect(400))
+      .body as { code?: string };
+    expect(again.code).toBe('already_paid');
+  });
+
+  it('rejects a zero or malformed amount at the contract', async () => {
+    await pay('recep', payInvoiceId, { amount: '0', method: 'cash' }).expect(400);
+    await pay('recep', payInvoiceId, { amount: 'lots', method: 'cash' }).expect(400);
+    // waiver is not a tender — writing a bill off is a discount, not a payment.
+    await pay('recep', payInvoiceId, { amount: '10', method: 'waiver' }).expect(400);
+  });
+
+  it('denies a doctor — invoice.read and payment.receive are not theirs', async () => {
     await list('doctor').expect(403);
     await detail('doctor', invoiceId).expect(403);
     await byVisit('doctor', visitId).expect(403);
+    await pay('doctor', payInvoiceId, { amount: '10', method: 'cash' }).expect(403);
   });
 });
