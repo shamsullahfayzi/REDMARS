@@ -811,7 +811,12 @@
     "ceilingHint": "Up to {{pct}}% — max {{max}} {{currency}}",
     "ceilingNone": "Up to the full {{subtotal}} {{currency}}",
     "applied": "Discount applied · new total {{total}} {{currency}}",
-    "error": "Could not apply the discount."
+    "error": "Could not apply the discount.",
+    "approvalNeeded": "Over 10% — an administrator must approve this discount.",
+    "approverUsername": "Admin username",
+    "approverPassword": "Admin password",
+    "approveAndApply": "Approve & apply",
+    "approvedBy": "approved by {{name}}"
   },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",

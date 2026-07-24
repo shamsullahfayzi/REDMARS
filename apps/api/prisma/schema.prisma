@@ -1101,6 +1101,13 @@ model Invoice {
   /// the money is gone and the record says only that someone decided so.
   discountReason String? @map("discount_reason")
 
+  /// Who authorised a discount above the receptionist's R10 ceiling, and when (task 6.5).
+  /// A discount within the ceiling needs no approval and leaves these null; one past it
+  /// carries the AppUser.id of the admin who approved it at the till — the second person
+  /// the rule requires. Plain id, like createdBy, not a relation.
+  discountApprovedBy String?   @map("discount_approved_by")
+  discountApprovedAt DateTime? @map("discount_approved_at")
+
   total      Decimal       @default(0) @db.Decimal(12, 2)
   paidAmount Decimal       @default(0) @map("paid_amount") @db.Decimal(12, 2)
   currency   String        @default("AFN")

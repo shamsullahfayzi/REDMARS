@@ -811,7 +811,12 @@
     "ceilingHint": "تر {{pct}}٪ پورې — اعظمي {{max}} {{currency}}",
     "ceilingNone": "د بشپړ {{subtotal}} {{currency}} پورې",
     "applied": "تخفیف پلي شو · نوی ټول {{total}} {{currency}}",
-    "error": "تخفیف پلي نشو."
+    "error": "تخفیف پلي نشو.",
+    "approvalNeeded": "له ۱۰٪ زیات — یو مدیر باید دا تخفیف تصویب کړي.",
+    "approverUsername": "د مدیر کارن‌نوم",
+    "approverPassword": "د مدیر پټنوم",
+    "approveAndApply": "تصویب او پلي کول",
+    "approvedBy": "تصویب د {{name}} لخوا"
   },
   "queue": {
     "mine": "ستاسو ناروغان چې نن انتظار باسي، اوږد انتظار لومړی.",

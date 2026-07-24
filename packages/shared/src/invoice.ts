@@ -216,9 +216,23 @@ export type RecordPaymentResponse = z.infer<typeof recordPaymentResponseSchema>
  * on the SUBTOTAL, and it replaces whatever discount the bill already carried rather than
  * stacking — applying a discount sets the bill's discount, it does not add to it.
  */
+/**
+ * A manager override, presented at the till (task 6.5). When a capped user asks for a
+ * discount over the R10 ceiling, an admin standing at the counter authorises it with their
+ * own credentials — the second person the rule requires. Absent for a within-ceiling
+ * discount, which needs no one's approval.
+ */
+export const discountApprovalSchema = z.object({
+  username: z.string().trim().min(1),
+  password: z.string().min(1),
+})
+export type DiscountApproval = z.infer<typeof discountApprovalSchema>
+
 export const applyDiscountRequestSchema = z.object({
   amount: moneySchema.refine((v) => Number(v) > 0, 'Enter a discount greater than zero'),
   reason: z.string().trim().min(3, 'Give a reason for the discount').max(200),
+  /** Only needed — and only checked — when the discount exceeds the caller's ceiling. */
+  approval: discountApprovalSchema.optional(),
 })
 export type ApplyDiscountRequest = z.infer<typeof applyDiscountRequestSchema>
 
@@ -233,5 +247,7 @@ export const applyDiscountResponseSchema = z.object({
   paidAmount: z.string(),
   outstanding: z.string(),
   currency: z.string(),
+  /** The admin who authorised an over-ceiling discount, if one was needed; else null. */
+  approvedByName: z.string().nullable(),
 })
 export type ApplyDiscountResponse = z.infer<typeof applyDiscountResponseSchema>

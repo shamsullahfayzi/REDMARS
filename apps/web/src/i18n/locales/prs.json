@@ -811,7 +811,12 @@
     "ceilingHint": "تا {{pct}}٪ — حداکثر {{max}} {{currency}}",
     "ceilingNone": "تا کل مبلغ {{subtotal}} {{currency}}",
     "applied": "تخفیف اعمال شد · مجموع جدید {{total}} {{currency}}",
-    "error": "تخفیف اعمال نشد."
+    "error": "تخفیف اعمال نشد.",
+    "approvalNeeded": "بیش از ۱۰٪ — یک مدیر باید این تخفیف را تأیید کند.",
+    "approverUsername": "نام کاربری مدیر",
+    "approverPassword": "رمز عبور مدیر",
+    "approveAndApply": "تأیید و اعمال",
+    "approvedBy": "تأیید توسط {{name}}"
   },
   "queue": {
     "mine": "بیماران شما که امروز منتظر اند، طولانی‌ترین انتظار اول.",

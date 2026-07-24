@@ -3,11 +3,20 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { verify } from '@node-rs/argon2';
 import { Prisma } from '@prisma/client';
 import { DISCOUNT_CEILING_PCT } from '@redmars/shared';
-import type { ApplyDiscountRequest, ApplyDiscountResponse } from '@redmars/shared';
+import type {
+  ApplyDiscountRequest,
+  ApplyDiscountResponse,
+  DiscountApproval,
+} from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+
+/** The R10-override permission an approver must hold to authorise an over-ceiling discount. */
+const APPROVE_PERMISSION = 'discount.approve_over_threshold';
 
 /**
  * Task 6.4 — a discount on a bill already raised, Rule R10.
@@ -30,6 +39,7 @@ export class DiscountService {
 
   async apply(
     facilityId: string,
+    userId: string,
     permissions: ReadonlyMap<string, string | null>,
     invoiceId: string,
     input: ApplyDiscountRequest,
@@ -55,7 +65,18 @@ export class DiscountService {
         });
       }
 
-      this.assertWithinCeiling(permissions, invoice.subtotal, discount);
+      // R10. Within the caller's ceiling this is a no-op; over it, the discount is refused
+      // UNLESS a valid approver stands behind it (task 6.5). The approver's id, once
+      // verified, is stamped on the bill as the second person the rule requires.
+      const approver = await this.authoriseCeiling(
+        tx,
+        facilityId,
+        userId,
+        permissions,
+        invoice.subtotal,
+        discount,
+        input.approval,
+      );
 
       const total = invoice.subtotal.minus(discount);
       if (total.lessThan(invoice.paidAmount)) {
@@ -76,10 +97,17 @@ export class DiscountService {
 
       await tx.invoice.update({
         where: { id: invoiceId },
-        data: { discount, discountReason: input.reason, total, status },
+        data: {
+          discount,
+          discountReason: input.reason,
+          total,
+          status,
+          discountApprovedBy: approver?.id ?? null,
+          discountApprovedAt: approver ? new Date() : null,
+        },
       });
 
-      return { invoice, discount, total, status };
+      return { invoice, discount, total, status, approvedByName: approver?.fullName ?? null };
     });
 
     const outstanding = Prisma.Decimal.max(0, result.total.minus(result.invoice.paidAmount));
@@ -93,28 +121,96 @@ export class DiscountService {
       paidAmount: result.invoice.paidAmount.toFixed(2),
       outstanding: outstanding.toFixed(2),
       currency: result.invoice.currency,
+      approvedByName: result.approvedByName,
     };
   }
 
   /**
-   * R10's ceiling, identical to reception's. An unconditional `discount.apply`, or the
-   * authority to approve past the threshold, means no cap; anything else is 10% of subtotal.
+   * R10's ceiling. An unconditional `discount.apply`, or the authority to approve past the
+   * threshold, means no cap — the caller is their own authority and the discount stands with
+   * no approver. Anyone else is held to 10% of subtotal: a discount within it passes freely;
+   * one over it is refused (`over_ceiling`, the signal for the till to summon an admin)
+   * unless a valid approver is supplied, in which case their verified identity is returned to
+   * be stamped on the bill.
    */
-  private assertWithinCeiling(
+  private async authoriseCeiling(
+    tx: Prisma.TransactionClient,
+    facilityId: string,
+    userId: string,
     permissions: ReadonlyMap<string, string | null>,
     subtotal: Prisma.Decimal,
     discount: Prisma.Decimal,
-  ): void {
+    approval: DiscountApproval | undefined,
+  ): Promise<{ id: string; fullName: string } | null> {
     const condition = permissions.get('discount.apply');
-    const uncapped = condition === null || permissions.has('discount.approve_over_threshold');
-    if (uncapped) return;
+    const uncapped = condition === null || permissions.has(APPROVE_PERMISSION);
+    if (uncapped) return null;
 
     const ceiling = subtotal.mul(DISCOUNT_CEILING_PCT).div(100);
-    if (discount.greaterThan(ceiling)) {
+    if (discount.lessThanOrEqualTo(ceiling)) return null;
+
+    if (!approval) {
       throw new ForbiddenException({
-        message: `A discount over ${DISCOUNT_CEILING_PCT}% needs approval (maximum ${ceiling.toFixed(2)}).`,
+        message: `A discount over ${DISCOUNT_CEILING_PCT}% needs an administrator's approval (up to ${ceiling.toFixed(2)} without).`,
         code: 'over_ceiling',
       });
     }
+
+    return this.verifyApprover(tx, facilityId, userId, approval);
+  }
+
+  /**
+   * The manager override, checked at the till (task 6.5). The approver must be a real, active
+   * user of this facility, whose password matches and who holds the over-threshold authority,
+   * and who is NOT the person asking — a second person, literally. A wrong password is 401 so
+   * it cannot be told apart from an unknown user; a valid user without the authority is 403.
+   */
+  private async verifyApprover(
+    tx: Prisma.TransactionClient,
+    facilityId: string,
+    userId: string,
+    approval: DiscountApproval,
+  ): Promise<{ id: string; fullName: string }> {
+    const approver = await tx.appUser.findFirst({
+      where: { facilityId, username: approval.username, deletedAt: null },
+      select: {
+        id: true,
+        fullName: true,
+        passwordHash: true,
+        userRoles: {
+          select: {
+            role: {
+              select: { rolePermissions: { select: { permission: { select: { code: true } } } } },
+            },
+          },
+        },
+      },
+    });
+
+    const passwordOk = approver ? await verify(approver.passwordHash, approval.password) : false;
+    if (!approver || !passwordOk) {
+      throw new UnauthorizedException({
+        message: 'That approval was not accepted — check the username and password.',
+        code: 'approval_invalid',
+      });
+    }
+    if (approver.id === userId) {
+      throw new ForbiddenException({
+        message: 'An over-ceiling discount must be approved by a second person.',
+        code: 'approval_self',
+      });
+    }
+
+    const holdsAuthority = approver.userRoles.some((ur) =>
+      ur.role.rolePermissions.some((rp) => rp.permission.code === APPROVE_PERMISSION),
+    );
+    if (!holdsAuthority) {
+      throw new ForbiddenException({
+        message: 'That user cannot approve a discount over the ceiling.',
+        code: 'approval_insufficient',
+      });
+    }
+
+    return { id: approver.id, fullName: approver.fullName };
   }
 }

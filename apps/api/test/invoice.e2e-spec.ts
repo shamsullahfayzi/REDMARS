@@ -38,6 +38,8 @@ describe('Invoice register + reprint (e2e)', () => {
   let overInvoiceId: string;
   let discountInvoiceId: string;
   let refundGuardInvoiceId: string;
+  let approvalInvoiceId: string;
+  let adminId: string;
   const tokens: Record<string, string> = {};
 
   jest.setTimeout(60_000);
@@ -96,7 +98,7 @@ describe('Invoice register + reprint (e2e)', () => {
 
     receptionistId = await seedActor('recep', 'receptionist');
     await seedActor('doctor', 'doctor');
-    await seedActor('admin', 'admin');
+    adminId = await seedActor('admin', 'admin');
 
     const dept = await prisma.department.create({
       data: { facilityId, code: `${PREFIX}OPD`, name: 'E2E OPD', type: 'opd' },
@@ -263,6 +265,32 @@ describe('Invoice register + reprint (e2e)', () => {
             create: {
               refType: 'service',
               description: 'Procedure',
+              quantity: 1,
+              unitPrice: '1000',
+              total: '1000',
+            },
+          },
+        },
+      })
+    ).id;
+
+    // A 1000 bill for the over-ceiling approval tests (task 6.5), kept separate so its
+    // state is not touched by the 6.4 discount sequence above.
+    approvalInvoiceId = (
+      await prisma.invoice.create({
+        data: {
+          facilityId,
+          patientId: patient.id,
+          createdBy: receptionistId,
+          invoiceNo: `${PREFIX}INVA`,
+          subtotal: '1000',
+          total: '1000',
+          paidAmount: '0',
+          status: 'issued',
+          items: {
+            create: {
+              refType: 'service',
+              description: 'Operation',
               quantity: 1,
               unitPrice: '1000',
               total: '1000',
@@ -518,6 +546,67 @@ describe('Invoice register + reprint (e2e)', () => {
         .expect(400)
     ).body as { code?: string };
     expect(refund.code).toBe('would_owe_refund');
+  });
+
+  it('the done-when: an over-ceiling discount goes through on an admin approval', async () => {
+    // 300 on a 1000 bill is past the receptionist's 100 ceiling: refused without approval…
+    const refused = (
+      await discount('recep', approvalInvoiceId, { amount: '300', reason: 'Hardship case' })
+        .expect(403)
+    ).body as { code?: string };
+    expect(refused.code).toBe('over_ceiling');
+
+    // …and accepted with a valid admin standing behind it — the second person.
+    const ok = (
+      await discount('recep', approvalInvoiceId, {
+        amount: '300',
+        reason: 'Hardship case',
+        approval: { username: `${PREFIX}admin`, password: PASSWORD },
+      }).expect(200)
+    ).body as ApplyDiscountResponse;
+    expect(ok.discount).toBe('300.00');
+    expect(ok.total).toBe('700.00');
+    expect(ok.approvedByName).toBe('E2E Invoice admin');
+
+    // The approver is stamped on the bill.
+    const stamped = await prisma.invoice.findUniqueOrThrow({
+      where: { id: approvalInvoiceId },
+      select: { discountApprovedBy: true, discountApprovedAt: true },
+    });
+    expect(stamped.discountApprovedBy).toBe(adminId);
+    expect(stamped.discountApprovedAt).not.toBeNull();
+  });
+
+  it('refuses a bad approval: wrong password, or an approver without the authority', async () => {
+    const wrongPass = (
+      await discount('recep', approvalInvoiceId, {
+        amount: '300',
+        reason: 'Hardship case',
+        approval: { username: `${PREFIX}admin`, password: 'not-the-password' },
+      }).expect(401)
+    ).body as { code?: string };
+    expect(wrongPass.code).toBe('approval_invalid');
+
+    // A second person who lacks the authority — the doctor holds no
+    // discount.approve_over_threshold — is refused.
+    const notAllowed = (
+      await discount('recep', approvalInvoiceId, {
+        amount: '300',
+        reason: 'Hardship case',
+        approval: { username: `${PREFIX}doctor`, password: PASSWORD },
+      }).expect(403)
+    ).body as { code?: string };
+    expect(notAllowed.code).toBe('approval_insufficient');
+
+    // The caller cannot be their own approver — a second person is required.
+    const self = (
+      await discount('recep', approvalInvoiceId, {
+        amount: '300',
+        reason: 'Hardship case',
+        approval: { username: `${PREFIX}recep`, password: PASSWORD },
+      }).expect(403)
+    ).body as { code?: string };
+    expect(self.code).toBe('approval_self');
   });
 
   it('denies a doctor — invoice.read, payment.receive and discount.apply are not theirs', async () => {

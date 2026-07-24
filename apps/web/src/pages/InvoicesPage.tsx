@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { serverMessage } from '@/lib/api'
+import { ApiError, serverMessage } from '@/lib/api'
 import { useDebounced } from '@/hooks/useDebounced'
 import {
   useApplyDiscount,
@@ -638,17 +638,42 @@ function DiscountForm({
   const hasDiscount = Number(currentDiscount) > 0
   const [amount, setAmount] = useState(hasDiscount ? currentDiscount : '')
   const [reason, setReason] = useState(currentReason ?? '')
+  // Revealed only after the server refuses an over-ceiling discount — then an admin at the
+  // counter authorises it with their own credentials (task 6.5).
+  const [showApproval, setShowApproval] = useState(false)
+  const [approverUsername, setApproverUsername] = useState('')
+  const [approverPassword, setApproverPassword] = useState('')
 
   const subtotalNum = Number(subtotal)
   const ceiling = uncapped ? subtotalNum : (subtotalNum * DISCOUNT_CEILING_PCT) / 100
   const value = Number(amount)
-  const valid =
-    amount.trim() !== '' && value > 0 && value <= ceiling && reason.trim().length >= 3
+  // The amount is bounded by the subtotal here, not the ceiling: over-ceiling is allowed to
+  // be typed on purpose, because it is what triggers the approval path below.
+  const baseValid = amount.trim() !== '' && value > 0 && value <= subtotalNum && reason.trim().length >= 3
+  const approvalValid =
+    !showApproval || (approverUsername.trim() !== '' && approverPassword !== '')
+  const valid = baseValid && approvalValid
 
   function submit(event: FormEvent) {
     event.preventDefault()
     if (!valid || apply.isPending) return
-    apply.mutate({ amount, reason: reason.trim() })
+    apply.mutate(
+      {
+        amount,
+        reason: reason.trim(),
+        approval: showApproval
+          ? { username: approverUsername.trim(), password: approverPassword }
+          : undefined,
+      },
+      {
+        onError: (error) => {
+          if (error instanceof ApiError && errorCode(error) === 'over_ceiling') {
+            setShowApproval(true)
+          }
+        },
+        onSuccess: () => setApproverPassword(''),
+      },
+    )
   }
 
   return (
@@ -686,10 +711,50 @@ function DiscountForm({
             placeholder={t('discount.reasonPlaceholder')}
           />
         </div>
-        <Button type="submit" variant="outline" disabled={!valid || apply.isPending}>
-          {apply.isPending ? t('discount.applying') : t('discount.apply')}
-        </Button>
+        {!showApproval && (
+          <Button type="submit" variant="outline" disabled={!valid || apply.isPending}>
+            {apply.isPending ? t('discount.applying') : t('discount.apply')}
+          </Button>
+        )}
       </form>
+
+      {showApproval && (
+        <form onSubmit={submit} className="space-y-2 rounded-md border border-warning/40 p-3">
+          <p className="text-xs font-medium text-warning">{t('discount.approvalNeeded')}</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground" htmlFor="appr-user">
+                {t('discount.approverUsername')}
+              </label>
+              <Input
+                id="appr-user"
+                value={approverUsername}
+                onChange={(e) => setApproverUsername(e.target.value)}
+                autoComplete="off"
+                dir="ltr"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground" htmlFor="appr-pass">
+                {t('discount.approverPassword')}
+              </label>
+              <Input
+                id="appr-pass"
+                type="password"
+                value={approverPassword}
+                onChange={(e) => setApproverPassword(e.target.value)}
+                autoComplete="off"
+                dir="ltr"
+              />
+            </div>
+            <Button type="submit" disabled={!valid || apply.isPending}>
+              {apply.isPending ? t('discount.applying') : t('discount.approveAndApply')}
+            </Button>
+          </div>
+        </form>
+      )}
+
       <p className="text-xs text-muted-foreground">
         {uncapped
           ? t('discount.ceilingNone', { subtotal, currency })
@@ -702,13 +767,25 @@ function DiscountForm({
       {apply.isSuccess && (
         <p className="text-sm text-success">
           {t('discount.applied', { total: apply.data.total, currency })}
+          {apply.data.approvedByName
+            ? ` · ${t('discount.approvedBy', { name: apply.data.approvedByName })}`
+            : ''}
         </p>
       )}
-      {apply.isError && (
+      {apply.isError && errorCode(apply.error) !== 'over_ceiling' && (
         <p className="text-sm text-destructive">
           {serverMessage(apply.error) ?? t('discount.error')}
         </p>
       )}
     </Card>
   )
+}
+
+/** The server's own error code, when it wrote one — used to branch on `over_ceiling`. */
+function errorCode(error: unknown): string | null {
+  if (error instanceof ApiError && error.body && typeof error.body === 'object' && 'code' in error.body) {
+    const code = (error.body as { code?: unknown }).code
+    return typeof code === 'string' ? code : null
+  }
+  return null
 }

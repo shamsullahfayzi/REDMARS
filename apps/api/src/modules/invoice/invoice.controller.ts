@@ -130,7 +130,7 @@ export class InvoiceController {
       });
     }
     const auth = this.auth(req);
-    return this.discounts.apply(auth.facilityId, auth.permissions, id, parsed.data);
+    return this.discounts.apply(auth.facilityId, auth.userId, auth.permissions, id, parsed.data);
   }
 
   private auth(req: Request): AuthContext {
