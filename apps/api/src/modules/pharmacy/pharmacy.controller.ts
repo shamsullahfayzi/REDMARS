@@ -1,9 +1,23 @@
-import { Controller, Get, Param, ParseUUIDPipe, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { Request } from 'express';
-import type { PharmacyPrescription, PharmacyQueueResponse } from '@redmars/shared';
+import type {
+  DispenseResponse,
+  PharmacyPrescription,
+  PharmacyQueueResponse,
+} from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuditRead } from '../../audit/decorators/audit-read.decorator';
 import { AuthContext } from '../../auth/auth-context';
+import { DispenseService } from './dispense.service';
 import { PharmacyService } from './pharmacy.service';
 
 /**
@@ -16,7 +30,10 @@ import { PharmacyService } from './pharmacy.service';
  */
 @Controller('pharmacy')
 export class PharmacyController {
-  constructor(private readonly pharmacy: PharmacyService) {}
+  constructor(
+    private readonly pharmacy: PharmacyService,
+    private readonly dispensing: DispenseService,
+  ) {}
 
   @Get('queue')
   @RequirePermission('pharmacy.read_queue')
@@ -39,6 +56,20 @@ export class PharmacyController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<PharmacyPrescription> {
     return this.pharmacy.prescription(this.auth(req).facilityId, id);
+  }
+
+  /**
+   * Task 6.10 — dispense a prescription and raise the pharmacy bill. `pharmacy.dispense` is
+   * the pharmacist's alone. No body: the drugs and their prices are the server's, read from
+   * the prescription and the formulary. The bill it returns is then paid at the till with
+   * the ordinary payment endpoint (6.3).
+   */
+  @Post('prescriptions/:id/dispense')
+  @RequirePermission('pharmacy.dispense')
+  @HttpCode(200)
+  dispense(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string): Promise<DispenseResponse> {
+    const auth = this.auth(req);
+    return this.dispensing.dispense(auth.facilityId, auth.userId, id);
   }
 
   private auth(req: Request): AuthContext {

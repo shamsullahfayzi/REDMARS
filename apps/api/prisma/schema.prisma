@@ -804,6 +804,11 @@ model Drug {
   defaultRoute    String?  @map("default_route")
   defaultFreq     String?  @map("default_freq") // OD | BD | TDS | QID | PRN
   defaultDuration String?  @map("default_duration")
+  /// What the pharmacy charges for one unit, priced SERVER-side at dispense (task 6.10).
+  /// Nullable: a drug with no price is dispensed at no charge (a sample, a free-issue item),
+  /// which is a zero line, not a blocked one. The browser never sends this — the till reads
+  /// it from here (guardrail 7).
+  sellPrice       Decimal? @map("sell_price") @db.Decimal(12, 2)
   isControlled    Boolean  @default(false) @map("is_controlled")
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at")
@@ -855,6 +860,11 @@ model Prescription {
   interactionAckReason String? @map("interaction_ack_reason")
   followUpDate   DateTime?   @map("follow_up_date") @db.Date
   printedAt      DateTime?   @map("printed_at")
+  /// When the pharmacy dispensed this sheet, and who did (task 6.10). Dispensing also moves
+  /// status to `completed`, which takes it off the pharmacy queue; these record the event
+  /// itself, for the daily till reconciliation (6.12).
+  dispensedAt    DateTime?   @map("dispensed_at")
+  dispensedBy    String?     @map("dispensed_by")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 

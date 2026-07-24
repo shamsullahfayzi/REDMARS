@@ -5,9 +5,11 @@ import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import type {
+  DispenseResponse,
   LoginResponse,
   PharmacyPrescription,
   PharmacyQueueResponse,
+  RecordPaymentResponse,
 } from '@redmars/shared';
 import { AppModule } from './../src/app.module';
 
@@ -32,6 +34,7 @@ describe('Pharmacy queue (e2e)', () => {
   let patientId: string;
   let detailPrescriptionId: string;
   let otherPrescriptionId: string;
+  let dispensePrescriptionId: string;
   const tokens: Record<string, string> = {};
 
   jest.setTimeout(60_000);
@@ -105,6 +108,10 @@ describe('Pharmacy queue (e2e)', () => {
   async function cleanup(): Promise<void> {
     const facilityFilter = { facility: { code: { startsWith: PREFIX } } };
     await prisma.auditLog.deleteMany({ where: facilityFilter });
+    // Bills raised by dispensing (task 6.10) — before the visit they point at.
+    await prisma.payment.deleteMany({ where: { invoice: facilityFilter } });
+    await prisma.invoiceItem.deleteMany({ where: { invoice: facilityFilter } });
+    await prisma.invoice.deleteMany({ where: facilityFilter });
     await prisma.prescriptionItem.deleteMany({
       where: { prescription: { visit: facilityFilter } },
     });
@@ -112,11 +119,11 @@ describe('Pharmacy queue (e2e)', () => {
     await prisma.visitStatusHistory.deleteMany({ where: { visit: facilityFilter } });
     await prisma.visit.deleteMany({ where: facilityFilter });
     await prisma.allergy.deleteMany({ where: { patient: facilityFilter } });
-    await prisma.prescriptionItem.deleteMany({ where: { drug: facilityFilter } });
     await prisma.drug.deleteMany({ where: facilityFilter });
     await prisma.practitioner.deleteMany({ where: facilityFilter });
     await prisma.patient.deleteMany({ where: facilityFilter });
     await prisma.department.deleteMany({ where: { code: { startsWith: PREFIX } } });
+    await prisma.numberSequence.deleteMany({ where: facilityFilter });
     await prisma.appUser.deleteMany({ where: { username: { startsWith: PREFIX } } });
     await prisma.facility.deleteMany({ where: { code: { startsWith: PREFIX } } });
   }
@@ -152,7 +159,12 @@ describe('Pharmacy queue (e2e)', () => {
 
     drugId = (
       await prisma.drug.create({
-        data: { facilityId, code: `${PREFIX}DRUG`, genericName: 'Amoxicillin' },
+        data: {
+          facilityId,
+          code: `${PREFIX}DRUG`,
+          genericName: 'Amoxicillin',
+          sellPrice: '50',
+        },
       })
     ).id;
 
@@ -215,6 +227,21 @@ describe('Pharmacy queue (e2e)', () => {
       status: 'active',
       drugs: ['Metformin'],
     });
+
+    // A separate active prescription for the dispense flow (task 6.10): two priced lines.
+    dispensePrescriptionId = await seedPrescription(
+      facilityId,
+      patientId,
+      dept.id,
+      practitionerId,
+      drugId,
+      {
+        visitNo: `${PREFIX}V4`,
+        visitStatus: 'arrived',
+        status: 'active',
+        drugs: ['Amoxicillin 500mg', 'Vitamin C'],
+      },
+    );
 
     // Another facility's active order — never seen here.
     const otherFacilityId = (
@@ -306,6 +333,15 @@ describe('Pharmacy queue (e2e)', () => {
 
   const detail = (as: string, id: string) =>
     request(server).get(`/pharmacy/prescriptions/${id}`).set('Authorization', `Bearer ${tokens[as]}`);
+  const dispense = (as: string, id: string) =>
+    request(server)
+      .post(`/pharmacy/prescriptions/${id}/dispense`)
+      .set('Authorization', `Bearer ${tokens[as]}`);
+  const pay = (as: string, invoiceId: string, body: unknown) =>
+    request(server)
+      .post(`/invoices/${invoiceId}/payments`)
+      .set('Authorization', `Bearer ${tokens[as]}`)
+      .send(body);
 
   it('the done-when (6.9): opens a prescription to drugs + allergies, and NOTHING else', async () => {
     const body = (await detail('pharm', detailPrescriptionId).expect(200))
@@ -345,8 +381,50 @@ describe('Pharmacy queue (e2e)', () => {
     await detail('pharm', otherPrescriptionId).expect(404);
   });
 
-  it('denies a doctor — pharmacy.read_queue is not theirs (queue and detail)', async () => {
+  it('the done-when (6.10): dispensing raises a priced pharmacy bill, paid at the till', async () => {
+    // Two lines at 50 each — priced from the formulary, not sent by the caller.
+    const bill = (await dispense('pharm', dispensePrescriptionId).expect(200))
+      .body as DispenseResponse;
+    expect(bill.items).toHaveLength(2);
+    expect(bill.items[0].unitPrice).toBe('50.00');
+    expect(bill.total).toBe('100.00');
+    expect(bill.status).toBe('issued');
+    expect(bill.outstanding).toBe('100.00');
+
+    // The bill is a pharmacy-origin invoice: its lines are prescription_item.
+    const invoiceItems = await prisma.invoiceItem.findMany({
+      where: { invoiceId: bill.invoiceId },
+      select: { refType: true },
+    });
+    expect(invoiceItems.every((i) => i.refType === 'prescription_item')).toBe(true);
+
+    // The prescription is dispensed and off the queue.
+    const rx = await prisma.prescription.findUniqueOrThrow({
+      where: { id: dispensePrescriptionId },
+      select: { status: true, dispensedAt: true, dispensedBy: true },
+    });
+    expect(rx.status).toBe('completed');
+    expect(rx.dispensedAt).not.toBeNull();
+    expect(rx.dispensedBy).not.toBeNull();
+    const stillQueued = (await queue('pharm').expect(200)).body as PharmacyQueueResponse;
+    expect(stillQueued.items.map((i) => i.visitNo)).not.toContain(`${PREFIX}V4`);
+
+    // The patient pays for the medicine at the pharmacy till.
+    const paid = (await pay('pharm', bill.invoiceId, { amount: '100', method: 'cash' }).expect(200))
+      .body as RecordPaymentResponse;
+    expect(paid.status).toBe('paid');
+    expect(paid.payment.receiptNo).toMatch(/^RCP-/);
+
+    // Dispensing the same sheet again is refused.
+    const again = (await dispense('pharm', dispensePrescriptionId).expect(400)).body as {
+      code?: string;
+    };
+    expect(again.code).toBe('already_dispensed');
+  });
+
+  it('denies a doctor — pharmacy.read_queue and pharmacy.dispense are not theirs', async () => {
     await queue('doctor').expect(403);
     await detail('doctor', detailPrescriptionId).expect(403);
+    await dispense('doctor', detailPrescriptionId).expect(403);
   });
 });

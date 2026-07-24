@@ -1,17 +1,23 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Pill, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, Pill, Printer, TriangleAlert } from 'lucide-react'
 import type {
   AllergySeverity,
+  DispenseResponse,
   PharmacyAllergy,
   PharmacyPrescription,
   PharmacyQueueItem,
 } from '@redmars/shared'
+import { useAuth } from '@/auth/authContext'
+import { InvoiceReceipt } from '@/components/InvoiceReceipt'
 import { PageHeader } from '@/components/PageHeader'
+import { PaymentForm } from '@/components/PaymentForm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { usePharmacyPrescription, usePharmacyQueue } from '@/hooks/usePharmacy'
+import { serverMessage } from '@/lib/api'
+import { useInvoiceDetail } from '@/hooks/useInvoices'
+import { useDispense, usePharmacyPrescription, usePharmacyQueue } from '@/hooks/usePharmacy'
 
 const WAIT_TIME = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Asia/Kabul',
@@ -128,8 +134,24 @@ function PrescriptionView({
   onBack: () => void
 }) {
   const { t } = useTranslation()
+  const { roles } = useAuth()
   const query = usePharmacyPrescription(prescriptionId)
   const rx = query.data
+  const dispense = useDispense()
+  const [bill, setBill] = useState<DispenseResponse | null>(null)
+
+  const isPharmacist = roles.includes('pharmacist')
+
+  if (bill) {
+    return (
+      <DispensedBill
+        bill={bill}
+        canReceive={isPharmacist}
+        canPrint={isPharmacist}
+        onDone={onBack}
+      />
+    )
+  }
 
   return (
     <div className="space-y-5">
@@ -146,7 +168,97 @@ function PrescriptionView({
           <PatientHeader rx={rx} />
           <AllergyPanel allergies={rx.allergies} />
           <DrugSheet rx={rx} />
+
+          {isPharmacist && rx.status === 'active' && (
+            <div className="space-y-2">
+              <Button
+                onClick={() => dispense.mutate(prescriptionId, { onSuccess: setBill })}
+                disabled={dispense.isPending}
+              >
+                {dispense.isPending ? t('pharmacy.dispensing') : t('pharmacy.dispense')}
+              </Button>
+              {dispense.isError && (
+                <p className="text-sm text-destructive">
+                  {serverMessage(dispense.error) ?? t('pharmacy.dispenseError')}
+                </p>
+              )}
+            </div>
+          )}
+          {rx.status !== 'active' && (
+            <Badge variant="muted">{t('pharmacy.alreadyDispensed')}</Badge>
+          )}
         </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Task 6.10 — the medicine bill, dispensed and ready to settle at the pharmacy till. Reuses
+ * the shared payment form and the invoice receipt: a pharmacy bill is paid and printed the
+ * same way as any other. The receipt is fetched fresh so it reflects each instalment.
+ */
+function DispensedBill({
+  bill,
+  canReceive,
+  canPrint,
+  onDone,
+}: {
+  bill: DispenseResponse
+  canReceive: boolean
+  canPrint: boolean
+  onDone: () => void
+}) {
+  const { t } = useTranslation()
+  const detailQuery = useInvoiceDetail(bill.invoiceId)
+  const detail = detailQuery.data
+  const outstanding = detail
+    ? (() => {
+        const owed = Number(detail.invoice.total) - Number(detail.invoice.paidAmount)
+        return owed > 0 ? owed.toFixed(2) : null
+      })()
+    : null
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
+        <Button variant="ghost" onClick={onDone}>
+          <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />
+          {t('pharmacy.back')}
+        </Button>
+        {canPrint && detail && (
+          <Button onClick={() => window.print()}>
+            <Printer className="size-4" aria-hidden />
+            {t('pharmacy.printBill')}
+          </Button>
+        )}
+      </div>
+
+      <div className="print:hidden">
+        <Badge variant="success">
+          {t('pharmacy.dispensed', { invoiceNo: bill.invoiceNo, total: bill.total, currency: bill.currency })}
+        </Badge>
+      </div>
+
+      {canReceive && outstanding && detail && (
+        <PaymentForm
+          invoiceId={bill.invoiceId}
+          outstanding={outstanding}
+          currency={detail.invoice.currency}
+          onPaid={() => undefined}
+        />
+      )}
+
+      {detail && (
+        <Card className="max-w-2xl p-6 print:max-w-none print:border-0 print:p-0 print:shadow-none">
+          <InvoiceReceipt
+            facility={detail.facility}
+            patient={detail.patient}
+            visit={detail.visit}
+            invoice={detail.invoice}
+            receiptDate={detail.createdAt}
+          />
+        </Card>
       )}
     </div>
   )

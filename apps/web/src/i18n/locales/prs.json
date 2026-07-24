@@ -860,7 +860,13 @@
     "interactionAck": "تداخل یادداشت شده",
     "qty": "تعداد {{count}}",
     "allergyOverride": "با وجود حساسیت تجویز شد: {{reason}}",
-    "advice": "توصیه"
+    "advice": "توصیه",
+    "dispense": "توزیع و صورت‌حساب",
+    "dispensing": "در حال توزیع…",
+    "dispenseError": "توزیع انجام نشد.",
+    "alreadyDispensed": "قبلاً توزیع شده",
+    "printBill": "چاپ صورت‌حساب",
+    "dispensed": "توزیع شد · {{invoiceNo}} · {{total}} {{currency}}"
   },
   "queue": {
     "mine": "بیماران شما که امروز منتظر اند، طولانی‌ترین انتظار اول.",

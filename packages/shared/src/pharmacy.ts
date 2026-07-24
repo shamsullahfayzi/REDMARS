@@ -98,3 +98,39 @@ export const pharmacyPrescriptionSchema = z.object({
   allergies: z.array(pharmacyAllergySchema),
 })
 export type PharmacyPrescription = z.infer<typeof pharmacyPrescriptionSchema>
+
+// ---------------------------------------------------------------------------------
+// Dispensing and the pharmacy bill — task 6.10
+// ---------------------------------------------------------------------------------
+
+/** One priced medicine line on the pharmacy bill. Priced server-side from the formulary. */
+export const dispenseLineSchema = z.object({
+  description: z.string(),
+  quantity: z.number().int(),
+  unitPrice: z.string(),
+  total: z.string(),
+})
+export type DispenseLine = z.infer<typeof dispenseLineSchema>
+
+/**
+ * The result of dispensing a prescription: the sheet is marked dispensed (and leaves the
+ * queue), and a pharmacy-origin invoice is raised for the drugs, priced from the formulary —
+ * the browser sends nothing but the instruction to dispense. The patient then pays it at the
+ * pharmacy till with the ordinary payment machinery (6.3); this returns the bill to settle.
+ *
+ * The request carries no body: quantities and prices are the server's, read from the
+ * prescription and the drug catalogue, never sent by the till.
+ */
+export const dispenseResponseSchema = z.object({
+  prescriptionId: z.uuid(),
+  invoiceId: z.uuid(),
+  invoiceNo: z.string(),
+  subtotal: z.string(),
+  total: z.string(),
+  paidAmount: z.string(),
+  outstanding: z.string(),
+  currency: z.string(),
+  status: z.string(),
+  items: z.array(dispenseLineSchema),
+})
+export type DispenseResponse = z.infer<typeof dispenseResponseSchema>

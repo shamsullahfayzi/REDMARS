@@ -860,7 +860,13 @@
     "interactionAck": "Interaction noted",
     "qty": "Qty {{count}}",
     "allergyOverride": "Prescribed despite allergy: {{reason}}",
-    "advice": "Advice"
+    "advice": "Advice",
+    "dispense": "Dispense & bill",
+    "dispensing": "Dispensing…",
+    "dispenseError": "Could not dispense.",
+    "alreadyDispensed": "Already dispensed",
+    "printBill": "Print bill",
+    "dispensed": "Dispensed · {{invoiceNo}} · {{total}} {{currency}}"
   },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",

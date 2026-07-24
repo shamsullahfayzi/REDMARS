@@ -860,7 +860,13 @@
     "interactionAck": "تداخل یادښت شوی",
     "qty": "مقدار {{count}}",
     "allergyOverride": "د حساسیت سره سره وړاندیز شو: {{reason}}",
-    "advice": "مشوره"
+    "advice": "مشوره",
+    "dispense": "ویش او بیل",
+    "dispensing": "ویشل کیږي…",
+    "dispenseError": "ویش ونه شو.",
+    "alreadyDispensed": "مخکې ویشل شوی",
+    "printBill": "د بیل چاپ",
+    "dispensed": "وویشل شو · {{invoiceNo}} · {{total}} {{currency}}"
   },
   "queue": {
     "mine": "ستاسو ناروغان چې نن انتظار باسي، اوږد انتظار لومړی.",

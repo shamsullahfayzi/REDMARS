@@ -1,6 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
-import { pharmacyPrescriptionSchema, pharmacyQueueResponseSchema } from '@redmars/shared'
-import { apiGet } from '@/lib/api'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+  dispenseResponseSchema,
+  pharmacyPrescriptionSchema,
+  pharmacyQueueResponseSchema,
+} from '@redmars/shared'
+import { apiGet, apiPost } from '@/lib/api'
+import { queryClient } from '@/lib/queryClient'
 
 /**
  * The pharmacy queue (task 6.8) — the doctor's active orders, oldest first. Kept fresh
@@ -26,5 +31,22 @@ export function usePharmacyPrescription(prescriptionId: string | null) {
     queryFn: () => apiGet(`/pharmacy/prescriptions/${prescriptionId}`, pharmacyPrescriptionSchema),
     enabled: !!prescriptionId,
     staleTime: 30_000,
+  })
+}
+
+/**
+ * Dispense a prescription and raise the pharmacy bill (task 6.10). No request body — the
+ * drugs and prices are the server's. On success the queue drops the sheet and the register
+ * gains the new bill, so both caches are invalidated; the resolved value is the bill to pay.
+ */
+export function useDispense() {
+  return useMutation({
+    mutationFn: (prescriptionId: string) =>
+      apiPost(`/pharmacy/prescriptions/${prescriptionId}/dispense`, {}, dispenseResponseSchema),
+    onSuccess: (_data, prescriptionId) => {
+      void queryClient.invalidateQueries({ queryKey: ['pharmacy', 'queue'] })
+      void queryClient.invalidateQueries({ queryKey: ['pharmacy', 'prescription', prescriptionId] })
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
   })
 }
