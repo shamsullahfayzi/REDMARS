@@ -99,6 +99,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: 'administration',
     roles: ['admin', 'receptionist', 'pharmacist', 'management'],
   },
+  // Task 6.12 — the daily till. The receptionist and pharmacist reconcile their own drawer
+  // (payment.receive); an admin or manager sees every till (report.financial). Same set as
+  // the people who touch money, so the menu matches who has a drawer to close.
+  {
+    key: 'till',
+    to: '/till',
+    group: 'administration',
+    roles: ['admin', 'receptionist', 'pharmacist', 'management'],
+  },
   { key: 'users', to: '/users', group: 'administration', roles: ['admin'] },
   { key: 'modules', to: '/modules', group: 'administration', roles: ['admin'] },
   { key: 'departments', to: '/departments', group: 'administration', roles: ['admin'] },

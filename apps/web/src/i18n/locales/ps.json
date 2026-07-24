@@ -67,7 +67,8 @@
     "reception": "پذیرش",
     "appointments": "وعدې",
     "followUps": "بیا کتنې",
-    "invoices": "بیلونه"
+    "invoices": "بیلونه",
+    "till": "صندوق"
   },
   "theme": {
     "toLight": "روښانه حالت",
@@ -874,6 +875,18 @@
     "confirmReturn": "بیرته‌ورکړه تایید",
     "returnError": "درمل بیرته ونه ورکړل شول.",
     "returned": "بیرته‌ورکړل‌شو · {{amount}} {{currency}} بیرته شو · {{receiptNo}}"
+  },
+  "till": {
+    "subtitle": "د ورځې د نغدو پیسو تصفیه د بندولو په وخت.",
+    "date": "نېټه",
+    "error": "صندوق بار نشو.",
+    "empty": "پدې ورځ هیڅ پیسې نه دي اخیستل شوي.",
+    "unattributed": "ناڅرګند",
+    "movements": "{{payments}} دننه · {{refunds}} بهر",
+    "cashToCount": "د شمېرلو نغدي",
+    "total": "ټول",
+    "grandCash": "ټول صندوقونه — نغدي",
+    "grandTotal": "ټول صندوقونه — ټول"
   },
   "queue": {
     "mine": "ستاسو ناروغان چې نن انتظار باسي، اوږد انتظار لومړی.",

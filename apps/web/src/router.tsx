@@ -23,6 +23,7 @@ import { PatientDetailPage } from '@/pages/PatientDetailPage'
 import { PatientsPage } from '@/pages/PatientsPage'
 import { PharmacyPage } from '@/pages/PharmacyPage'
 import { PractitionersPage } from '@/pages/PractitionersPage'
+import { TillPage } from '@/pages/TillPage'
 import { QueuePage } from '@/pages/QueuePage'
 import { ReceptionPage } from '@/pages/ReceptionPage'
 import { ServicesPage } from '@/pages/ServicesPage'
@@ -69,6 +70,7 @@ export const router = createBrowserRouter([
           { path: 'interactions', element: <InteractionCheckerPage /> },
           { path: 'lab', element: <LabQueuePage /> },
           { path: 'invoices', element: <InvoicesPage /> },
+          { path: 'till', element: <TillPage /> },
           { path: 'pharmacy', element: <PharmacyPage /> },
           { path: 'users', element: <UsersPage /> },
           { path: 'modules', element: <ModulesPage /> },

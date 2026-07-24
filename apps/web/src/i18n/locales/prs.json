@@ -67,7 +67,8 @@
     "reception": "پذیرش",
     "appointments": "وعده‌ها",
     "followUps": "مراجعات بعدی",
-    "invoices": "صورت‌حساب‌ها"
+    "invoices": "صورت‌حساب‌ها",
+    "till": "صندوق"
   },
   "theme": {
     "toLight": "حالت روشن",
@@ -874,6 +875,18 @@
     "confirmReturn": "تأیید بازگشت",
     "returnError": "بازگرداندن دوا انجام نشد.",
     "returned": "بازگردانده شد · {{amount}} {{currency}} مسترد شد · {{receiptNo}}"
+  },
+  "till": {
+    "subtitle": "تسویه پول نقد روز هنگام بستن.",
+    "date": "تاریخ",
+    "error": "صندوق بارگیری نشد.",
+    "empty": "در این روز پولی دریافت نشده.",
+    "unattributed": "نامشخص",
+    "movements": "{{payments}} ورودی · {{refunds}} خروجی",
+    "cashToCount": "پول نقد برای شمارش",
+    "total": "مجموع",
+    "grandCash": "همه صندوق‌ها — نقد",
+    "grandTotal": "همه صندوق‌ها — مجموع"
   },
   "queue": {
     "mine": "بیماران شما که امروز منتظر اند، طولانی‌ترین انتظار اول.",

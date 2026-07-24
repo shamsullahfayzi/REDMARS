@@ -67,7 +67,8 @@
     "reception": "Reception",
     "appointments": "Appointments",
     "followUps": "Follow-ups",
-    "invoices": "Invoices"
+    "invoices": "Invoices",
+    "till": "Till"
   },
   "theme": {
     "toLight": "Switch to light mode",
@@ -874,6 +875,18 @@
     "confirmReturn": "Confirm return",
     "returnError": "Could not return the medicine.",
     "returned": "Returned · {{amount}} {{currency}} refunded · {{receiptNo}}"
+  },
+  "till": {
+    "subtitle": "Reconcile the day's cash at closing.",
+    "date": "Date",
+    "error": "Could not load the till.",
+    "empty": "No money taken on this day.",
+    "unattributed": "Unattributed",
+    "movements": "{{payments}} in · {{refunds}} out",
+    "cashToCount": "Cash to count",
+    "total": "Total",
+    "grandCash": "All tills — cash",
+    "grandTotal": "All tills — total"
   },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",
