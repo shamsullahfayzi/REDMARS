@@ -7,6 +7,7 @@ import type {
   PharmacyAllergy,
   PharmacyPrescription,
   PharmacyQueueItem,
+  ReturnMedicineResponse,
 } from '@redmars/shared'
 import { useAuth } from '@/auth/authContext'
 import { InvoiceReceipt } from '@/components/InvoiceReceipt'
@@ -15,9 +16,15 @@ import { PaymentForm } from '@/components/PaymentForm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { serverMessage } from '@/lib/api'
 import { useInvoiceDetail } from '@/hooks/useInvoices'
-import { useDispense, usePharmacyPrescription, usePharmacyQueue } from '@/hooks/usePharmacy'
+import {
+  useDispense,
+  usePharmacyPrescription,
+  usePharmacyQueue,
+  useReturnMedicine,
+} from '@/hooks/usePharmacy'
 
 const WAIT_TIME = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Asia/Kabul',
@@ -148,6 +155,7 @@ function PrescriptionView({
         bill={bill}
         canReceive={isPharmacist}
         canPrint={isPharmacist}
+        canReturn={isPharmacist}
         onDone={onBack}
       />
     )
@@ -202,22 +210,37 @@ function DispensedBill({
   bill,
   canReceive,
   canPrint,
+  canReturn,
   onDone,
 }: {
   bill: DispenseResponse
   canReceive: boolean
   canPrint: boolean
+  canReturn: boolean
   onDone: () => void
 }) {
   const { t } = useTranslation()
   const detailQuery = useInvoiceDetail(bill.invoiceId)
   const detail = detailQuery.data
+  const returned = useReturnMedicine(bill.prescriptionId)
+  const [showReturn, setShowReturn] = useState(false)
+  const [reason, setReason] = useState('')
+  const [result, setResult] = useState<ReturnMedicineResponse | null>(null)
+
   const outstanding = detail
     ? (() => {
         const owed = Number(detail.invoice.total) - Number(detail.invoice.paidAmount)
         return owed > 0 ? owed.toFixed(2) : null
       })()
     : null
+
+  function submitReturn() {
+    if (reason.trim().length < 3 || returned.isPending) return
+    returned.mutate(
+      { reason: reason.trim() },
+      { onSuccess: (r) => { setResult(r); setShowReturn(false) } },
+    )
+  }
 
   return (
     <div className="space-y-5">
@@ -226,7 +249,7 @@ function DispensedBill({
           <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />
           {t('pharmacy.back')}
         </Button>
-        {canPrint && detail && (
+        {canPrint && detail && !result && (
           <Button onClick={() => window.print()}>
             <Printer className="size-4" aria-hidden />
             {t('pharmacy.printBill')}
@@ -235,18 +258,65 @@ function DispensedBill({
       </div>
 
       <div className="print:hidden">
-        <Badge variant="success">
-          {t('pharmacy.dispensed', { invoiceNo: bill.invoiceNo, total: bill.total, currency: bill.currency })}
+        <Badge variant={result ? 'danger' : 'success'}>
+          {result
+            ? t('pharmacy.returned', {
+                amount: result.refundedAmount,
+                currency: result.currency,
+                receiptNo: result.refundReceiptNo ?? '—',
+              })
+            : t('pharmacy.dispensed', {
+                invoiceNo: bill.invoiceNo,
+                total: bill.total,
+                currency: bill.currency,
+              })}
         </Badge>
       </div>
 
-      {canReceive && outstanding && detail && (
+      {!result && canReceive && outstanding && detail && (
         <PaymentForm
           invoiceId={bill.invoiceId}
           outstanding={outstanding}
           currency={detail.invoice.currency}
           onPaid={() => undefined}
         />
+      )}
+
+      {!result && canReturn && (
+        <Card className="max-w-2xl space-y-2 p-4 print:hidden">
+          {!showReturn ? (
+            <Button variant="destructive" onClick={() => setShowReturn(true)}>
+              {t('pharmacy.return')}
+            </Button>
+          ) : (
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-56 flex-1">
+                <label className="mb-1 block text-xs text-muted-foreground" htmlFor="return-reason">
+                  {t('pharmacy.returnReason')}
+                </label>
+                <Input
+                  id="return-reason"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder={t('pharmacy.returnReasonPlaceholder')}
+                  autoFocus
+                />
+              </div>
+              <Button
+                variant="destructive"
+                disabled={reason.trim().length < 3 || returned.isPending}
+                onClick={submitReturn}
+              >
+                {returned.isPending ? t('pharmacy.returning') : t('pharmacy.confirmReturn')}
+              </Button>
+            </div>
+          )}
+          {returned.isError && (
+            <p className="text-sm text-destructive">
+              {serverMessage(returned.error) ?? t('pharmacy.returnError')}
+            </p>
+          )}
+        </Card>
       )}
 
       {detail && (

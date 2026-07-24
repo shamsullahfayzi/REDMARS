@@ -866,7 +866,14 @@
     "dispenseError": "ویش ونه شو.",
     "alreadyDispensed": "مخکې ویشل شوی",
     "printBill": "د بیل چاپ",
-    "dispensed": "وویشل شو · {{invoiceNo}} · {{total}} {{currency}}"
+    "dispensed": "وویشل شو · {{invoiceNo}} · {{total}} {{currency}}",
+    "return": "د درملو بیرته‌ورکړه",
+    "returnReason": "دلیل",
+    "returnReasonPlaceholder": "د درملو د بیرته‌ورکړې دلیل (اړین)",
+    "returning": "بیرته‌ورکړه کیږي…",
+    "confirmReturn": "بیرته‌ورکړه تایید",
+    "returnError": "درمل بیرته ونه ورکړل شول.",
+    "returned": "بیرته‌ورکړل‌شو · {{amount}} {{currency}} بیرته شو · {{receiptNo}}"
   },
   "queue": {
     "mine": "ستاسو ناروغان چې نن انتظار باسي، اوږد انتظار لومړی.",

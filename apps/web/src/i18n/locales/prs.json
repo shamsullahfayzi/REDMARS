@@ -866,7 +866,14 @@
     "dispenseError": "توزیع انجام نشد.",
     "alreadyDispensed": "قبلاً توزیع شده",
     "printBill": "چاپ صورت‌حساب",
-    "dispensed": "توزیع شد · {{invoiceNo}} · {{total}} {{currency}}"
+    "dispensed": "توزیع شد · {{invoiceNo}} · {{total}} {{currency}}",
+    "return": "بازگرداندن دوا",
+    "returnReason": "دلیل",
+    "returnReasonPlaceholder": "دلیل بازگرداندن دوا (الزامی)",
+    "returning": "در حال بازگرداندن…",
+    "confirmReturn": "تأیید بازگشت",
+    "returnError": "بازگرداندن دوا انجام نشد.",
+    "returned": "بازگردانده شد · {{amount}} {{currency}} مسترد شد · {{receiptNo}}"
   },
   "queue": {
     "mine": "بیماران شما که امروز منتظر اند، طولانی‌ترین انتظار اول.",

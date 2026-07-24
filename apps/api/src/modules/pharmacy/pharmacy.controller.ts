@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -9,10 +11,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import { returnMedicineRequestSchema } from '@redmars/shared';
 import type {
   DispenseResponse,
   PharmacyPrescription,
   PharmacyQueueResponse,
+  ReturnMedicineResponse,
 } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuditRead } from '../../audit/decorators/audit-read.decorator';
@@ -70,6 +74,30 @@ export class PharmacyController {
   dispense(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string): Promise<DispenseResponse> {
     const auth = this.auth(req);
     return this.dispensing.dispense(auth.facilityId, auth.userId, id);
+  }
+
+  /**
+   * Task 6.11 — return dispensed medicine, Rule R5. `pharmacy.return_medicine` is the
+   * pharmacist's alone and always same-day; the window is the service's to check, measured
+   * from when the medicine was dispensed. The reason is required and logged on the reversal.
+   */
+  @Post('prescriptions/:id/return')
+  @RequirePermission('pharmacy.return_medicine')
+  @HttpCode(200)
+  returnMedicine(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ): Promise<ReturnMedicineResponse> {
+    const parsed = returnMedicineRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid return',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    const auth = this.auth(req);
+    return this.dispensing.returnMedicine(auth.facilityId, auth.userId, id, parsed.data);
   }
 
   private auth(req: Request): AuthContext {

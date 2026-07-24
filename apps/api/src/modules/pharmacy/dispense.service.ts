@@ -1,11 +1,17 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { DispenseResponse } from '@redmars/shared';
+import type {
+  DispenseResponse,
+  ReturnMedicineRequest,
+  ReturnMedicineResponse,
+} from '@redmars/shared';
+import { facilityDayBounds } from '../../common/facility-time';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
 
@@ -148,6 +154,129 @@ export class DispenseService {
         unitPrice: item.unitPrice.toFixed(2),
         total: item.total.toFixed(2),
       })),
+    };
+  }
+
+  /**
+   * Task 6.11 — a medicine return, Rule R5. An unopened box comes back and the money goes
+   * back: the pharmacy bill is cancelled and every payment on it reversed the append-only way
+   * (the original marked, a negative row appended with its own receipt), exactly as a refund
+   * does it (6.6). R5 is same-day and the pharmacist's alone — the window is measured from
+   * when the medicine was DISPENSED, not from now. No stock is tracked in v1, so the return
+   * is the financial reversal plus the cancelled bill; the box coming back is a physical act
+   * the cancelled bill records.
+   */
+  async returnMedicine(
+    facilityId: string,
+    userId: string,
+    prescriptionId: string,
+    input: ReturnMedicineRequest,
+  ): Promise<ReturnMedicineResponse> {
+    const result = await this.prisma.db.$transaction(async (tx) => {
+      const prescription = await tx.prescription.findFirst({
+        where: { id: prescriptionId, visit: { facilityId } },
+        select: { id: true, status: true, dispensedAt: true, items: { select: { id: true } } },
+      });
+      if (!prescription) throw new NotFoundException('Prescription not found');
+      if (prescription.status !== 'completed' || prescription.dispensedAt === null) {
+        throw new BadRequestException({
+          message: 'This prescription has not been dispensed, so there is nothing to return.',
+          code: 'not_dispensed',
+        });
+      }
+
+      // R5's same-day window, measured from the dispense.
+      const { start, end } = facilityDayBounds();
+      const dispensedToday =
+        prescription.dispensedAt.getTime() >= start.getTime() &&
+        prescription.dispensedAt.getTime() < end.getTime();
+      if (!dispensedToday) {
+        throw new ForbiddenException({
+          message: 'Only medicine dispensed today can be returned here.',
+          code: 'outside_r5_window',
+        });
+      }
+
+      // The bill dispensing raised — the invoice these prescription lines were billed on.
+      const itemIds = prescription.items.map((item) => item.id);
+      const billedItem = await tx.invoiceItem.findFirst({
+        where: { refType: 'prescription_item', refId: { in: itemIds } },
+        select: { invoiceId: true },
+      });
+      if (!billedItem) {
+        throw new BadRequestException({
+          message: 'No pharmacy bill was found for this prescription.',
+          code: 'no_bill',
+        });
+      }
+      const invoice = await tx.invoice.findUniqueOrThrow({
+        where: { id: billedItem.invoiceId },
+        select: {
+          id: true,
+          invoiceNo: true,
+          status: true,
+          currency: true,
+          payments: {
+            where: { isReversed: false },
+            select: { id: true, amount: true, method: true },
+          },
+        },
+      });
+      if (invoice.status === 'cancelled') {
+        throw new BadRequestException({
+          message: 'This medicine has already been returned.',
+          code: 'already_returned',
+        });
+      }
+
+      // Guarded cancel: only if not already cancelled, so two benches cannot both return.
+      const cancelled = await tx.invoice.updateMany({
+        where: { id: invoice.id, status: { not: 'cancelled' } },
+        data: { status: 'cancelled', paidAmount: ZERO },
+      });
+      if (cancelled.count === 0) {
+        throw new ConflictException({
+          message: 'This medicine was just returned at another bench. Reload.',
+          code: 'already_returned',
+        });
+      }
+
+      // Reverse every live payment — the money going back out, each its own row and receipt.
+      let refunded = ZERO;
+      let receiptNo: string | null = null;
+      let refundedAt = new Date();
+      for (const payment of invoice.payments) {
+        await tx.payment.update({ where: { id: payment.id }, data: { isReversed: true } });
+        const receipt = await this.sequence.next(facilityId, 'receipt_no', undefined, tx);
+        const row = await tx.payment.create({
+          data: {
+            invoiceId: invoice.id,
+            amount: payment.amount.negated(),
+            method: payment.method,
+            reference: input.reason.slice(0, 120),
+            receiptNo: receipt.formatted,
+            receivedBy: userId,
+          },
+          select: { receivedAt: true },
+        });
+        refunded = refunded.add(payment.amount);
+        receiptNo = receipt.formatted;
+        refundedAt = row.receivedAt;
+      }
+
+      return { invoice, refunded, receiptNo, refundedAt };
+    });
+
+    return {
+      prescriptionId,
+      invoiceId: result.invoice.id,
+      invoiceNo: result.invoice.invoiceNo,
+      refundedAmount: result.refunded.toFixed(2),
+      refundReceiptNo: result.receiptNo,
+      refundedAt: result.refundedAt.toISOString(),
+      reason: input.reason,
+      currency: result.invoice.currency,
+      status: 'cancelled',
     };
   }
 }

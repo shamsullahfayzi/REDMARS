@@ -134,3 +134,32 @@ export const dispenseResponseSchema = z.object({
   items: z.array(dispenseLineSchema),
 })
 export type DispenseResponse = z.infer<typeof dispenseResponseSchema>
+
+// ---------------------------------------------------------------------------------
+// Medicine return — task 6.11 (Rule R5)
+// ---------------------------------------------------------------------------------
+
+export const returnMedicineRequestSchema = z.object({
+  /** Why the medicine came back — required by R5, logged on the reversal. */
+  reason: z.string().trim().min(3, 'Give a reason for the return').max(200),
+})
+export type ReturnMedicineRequest = z.infer<typeof returnMedicineRequestSchema>
+
+/**
+ * The result of a medicine return: the box came back and the money goes back. The pharmacy
+ * bill is cancelled and every payment on it reversed (a negative row apiece, R5 same-day and
+ * the pharmacist's alone). `refundedAmount` is what the pharmacist counts back out of the
+ * drawer — zero if the bill was never paid, in which case there is only the cancellation.
+ */
+export const returnMedicineResponseSchema = z.object({
+  prescriptionId: z.uuid(),
+  invoiceId: z.uuid(),
+  invoiceNo: z.string(),
+  refundedAmount: z.string(),
+  refundReceiptNo: z.string().nullable(),
+  refundedAt: z.string(),
+  reason: z.string(),
+  currency: z.string(),
+  status: z.string(),
+})
+export type ReturnMedicineResponse = z.infer<typeof returnMedicineResponseSchema>

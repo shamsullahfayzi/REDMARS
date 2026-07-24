@@ -10,6 +10,7 @@ import type {
   PharmacyPrescription,
   PharmacyQueueResponse,
   RecordPaymentResponse,
+  ReturnMedicineResponse,
 } from '@redmars/shared';
 import { AppModule } from './../src/app.module';
 
@@ -35,6 +36,9 @@ describe('Pharmacy queue (e2e)', () => {
   let detailPrescriptionId: string;
   let otherPrescriptionId: string;
   let dispensePrescriptionId: string;
+  let returnPrescriptionId: string;
+  let oldDispensedId: string;
+  let pharmId: string;
   const tokens: Record<string, string> = {};
 
   jest.setTimeout(60_000);
@@ -144,7 +148,7 @@ describe('Pharmacy queue (e2e)', () => {
       })
     ).id;
 
-    await seedActor('pharm', 'pharmacist');
+    pharmId = await seedActor('pharm', 'pharmacist');
     await seedActor('doctor', 'doctor');
 
     const dept = await prisma.department.create({
@@ -242,6 +246,78 @@ describe('Pharmacy queue (e2e)', () => {
         drugs: ['Amoxicillin 500mg', 'Vitamin C'],
       },
     );
+
+    // Another active prescription, for the medicine return (task 6.11): one 50 line.
+    returnPrescriptionId = await seedPrescription(
+      facilityId,
+      patientId,
+      dept.id,
+      practitionerId,
+      drugId,
+      {
+        visitNo: `${PREFIX}V5`,
+        visitStatus: 'arrived',
+        status: 'active',
+        drugs: ['Amoxicillin 500mg'],
+      },
+    );
+
+    // A prescription dispensed TWO DAYS AGO with its (unpaid) pharmacy bill — outside the R5
+    // return window, so even the pharmacist cannot return it.
+    const oldVisit = await prisma.visit.create({
+      data: {
+        facilityId,
+        patientId,
+        departmentId: dept.id,
+        visitNo: `${PREFIX}V6`,
+        type: 'opd_consult',
+        status: 'completed',
+      },
+    });
+    const oldRx = await prisma.prescription.create({
+      data: {
+        visitId: oldVisit.id,
+        practitionerId,
+        status: 'completed',
+        dispensedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000),
+        dispensedBy: pharmId,
+        items: {
+          create: {
+            drugId,
+            drugNameAtTime: 'Old drug',
+            frequency: 'OD',
+            duration: '5 days',
+            route: 'oral',
+            sequence: 0,
+          },
+        },
+      },
+      select: { id: true, items: { select: { id: true } } },
+    });
+    oldDispensedId = oldRx.id;
+    await prisma.invoice.create({
+      data: {
+        facilityId,
+        patientId,
+        visitId: oldVisit.id,
+        createdBy: pharmId,
+        invoiceNo: `${PREFIX}INVOLD`,
+        subtotal: '50',
+        total: '50',
+        paidAmount: '0',
+        status: 'issued',
+        items: {
+          create: {
+            refType: 'prescription_item',
+            refId: oldRx.items[0].id,
+            description: 'Old drug',
+            quantity: 1,
+            unitPrice: '50',
+            total: '50',
+          },
+        },
+      },
+    });
 
     // Another facility's active order — never seen here.
     const otherFacilityId = (
@@ -342,6 +418,11 @@ describe('Pharmacy queue (e2e)', () => {
       .post(`/invoices/${invoiceId}/payments`)
       .set('Authorization', `Bearer ${tokens[as]}`)
       .send(body);
+  const returnRx = (as: string, id: string, body: unknown) =>
+    request(server)
+      .post(`/pharmacy/prescriptions/${id}/return`)
+      .set('Authorization', `Bearer ${tokens[as]}`)
+      .send(body);
 
   it('the done-when (6.9): opens a prescription to drugs + allergies, and NOTHING else', async () => {
     const body = (await detail('pharm', detailPrescriptionId).expect(200))
@@ -422,9 +503,52 @@ describe('Pharmacy queue (e2e)', () => {
     expect(again.code).toBe('already_dispensed');
   });
 
-  it('denies a doctor — pharmacy.read_queue and pharmacy.dispense are not theirs', async () => {
+  it('the done-when (6.11): an unopened box comes back same-day, the money goes back', async () => {
+    // Dispense and pay for the medicine today.
+    const bill = (await dispense('pharm', returnPrescriptionId).expect(200))
+      .body as DispenseResponse;
+    await pay('pharm', bill.invoiceId, { amount: '50', method: 'cash' }).expect(200);
+
+    // Return it: the bill is cancelled and the money reversed.
+    const ret = (
+      await returnRx('pharm', returnPrescriptionId, { reason: 'Unopened, wrong medicine' }).expect(
+        200,
+      )
+    ).body as ReturnMedicineResponse;
+    expect(ret.refundedAmount).toBe('50.00');
+    expect(ret.refundReceiptNo).toMatch(/^RCP-/);
+    expect(ret.status).toBe('cancelled');
+
+    const invoice = await prisma.invoice.findUniqueOrThrow({
+      where: { id: bill.invoiceId },
+      select: { status: true, paidAmount: true, payments: { select: { amount: true } } },
+    });
+    expect(invoice.status).toBe('cancelled');
+    expect(invoice.paidAmount.toFixed(2)).toBe('0.00');
+    // The original payment stands and a negative reversal was appended.
+    expect(invoice.payments.some((p) => p.amount.toFixed(2) === '-50.00')).toBe(true);
+
+    // A second return is refused.
+    const again = (
+      await returnRx('pharm', returnPrescriptionId, { reason: 'again' }).expect(400)
+    ).body as { code?: string };
+    expect(again.code).toBe('already_returned');
+  });
+
+  it('holds the R5 window and requires a reason', async () => {
+    // Dispensed two days ago — outside the same-day window even for the pharmacist.
+    const closed = (
+      await returnRx('pharm', oldDispensedId, { reason: 'Too late' }).expect(403)
+    ).body as { code?: string };
+    expect(closed.code).toBe('outside_r5_window');
+    // No reason — refused at the contract.
+    await returnRx('pharm', dispensePrescriptionId, { reason: ' ' }).expect(400);
+  });
+
+  it('denies a doctor — pharmacy queue, dispense and return are not theirs', async () => {
     await queue('doctor').expect(403);
     await detail('doctor', detailPrescriptionId).expect(403);
     await dispense('doctor', detailPrescriptionId).expect(403);
+    await returnRx('doctor', returnPrescriptionId, { reason: 'nope' }).expect(403);
   });
 });

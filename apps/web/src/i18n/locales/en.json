@@ -866,7 +866,14 @@
     "dispenseError": "Could not dispense.",
     "alreadyDispensed": "Already dispensed",
     "printBill": "Print bill",
-    "dispensed": "Dispensed · {{invoiceNo}} · {{total}} {{currency}}"
+    "dispensed": "Dispensed · {{invoiceNo}} · {{total}} {{currency}}",
+    "return": "Return medicine",
+    "returnReason": "Reason",
+    "returnReasonPlaceholder": "Why the medicine is returned (required)",
+    "returning": "Returning…",
+    "confirmReturn": "Confirm return",
+    "returnError": "Could not return the medicine.",
+    "returned": "Returned · {{amount}} {{currency}} refunded · {{receiptNo}}"
   },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",

@@ -3,6 +3,8 @@ import {
   dispenseResponseSchema,
   pharmacyPrescriptionSchema,
   pharmacyQueueResponseSchema,
+  type ReturnMedicineRequest,
+  returnMedicineResponseSchema,
 } from '@redmars/shared'
 import { apiGet, apiPost } from '@/lib/api'
 import { queryClient } from '@/lib/queryClient'
@@ -47,6 +49,23 @@ export function useDispense() {
       void queryClient.invalidateQueries({ queryKey: ['pharmacy', 'queue'] })
       void queryClient.invalidateQueries({ queryKey: ['pharmacy', 'prescription', prescriptionId] })
       void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
+  })
+}
+
+/**
+ * Return dispensed medicine (task 6.11, Rule R5) — the box comes back, the money goes back.
+ * Cancels the pharmacy bill and reverses its payments, so the register and the invoice caches
+ * drop with it.
+ */
+export function useReturnMedicine(prescriptionId: string) {
+  return useMutation({
+    mutationFn: (input: ReturnMedicineRequest) =>
+      apiPost(`/pharmacy/prescriptions/${prescriptionId}/return`, input, returnMedicineResponseSchema),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      void queryClient.invalidateQueries({ queryKey: ['invoice'] })
+      void queryClient.invalidateQueries({ queryKey: ['visit-bills'] })
     },
   })
 }
