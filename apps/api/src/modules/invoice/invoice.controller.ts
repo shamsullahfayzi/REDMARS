@@ -16,12 +16,14 @@ import {
   applyDiscountRequestSchema,
   invoiceListQuerySchema,
   recordPaymentRequestSchema,
+  refundPaymentRequestSchema,
 } from '@redmars/shared';
 import type {
   ApplyDiscountResponse,
   InvoiceDetail,
   InvoiceListResponse,
   RecordPaymentResponse,
+  RefundPaymentResponse,
   VisitBillsResponse,
 } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
@@ -106,6 +108,39 @@ export class InvoiceController {
     }
     const auth = this.auth(req);
     return this.payments.pay(auth.facilityId, auth.userId, id, parsed.data);
+  }
+
+  /**
+   * Task 6.6 — refund one payment, Rule R5. `payment.refund` (admin, receptionist,
+   * pharmacist) opens the door; the same-day window is the service's to enforce, since the
+   * guard cannot see when the payment was taken. The reversal rows carry their own author,
+   * time and receipt, so the refund is logged by the write itself.
+   */
+  @Post(':id/payments/:paymentId/refund')
+  @RequirePermission('payment.refund')
+  @HttpCode(200)
+  refund(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('paymentId', ParseUUIDPipe) paymentId: string,
+    @Body() body: unknown,
+  ): Promise<RefundPaymentResponse> {
+    const parsed = refundPaymentRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid refund',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    const auth = this.auth(req);
+    return this.payments.refund(
+      auth.facilityId,
+      auth.userId,
+      auth.permissions,
+      id,
+      paymentId,
+      parsed.data,
+    );
   }
 
   /**

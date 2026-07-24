@@ -818,6 +818,27 @@
     "approveAndApply": "Approve & apply",
     "approvedBy": "approved by {{name}}"
   },
+  "refund": {
+    "trailTitle": "Payments",
+    "refundRow": "Refund",
+    "reversed": "Reversed",
+    "action": "Refund",
+    "reasonPlaceholder": "Reason for the refund (required)",
+    "refunding": "Refunding…",
+    "confirm": "Confirm refund",
+    "error": "Could not refund the payment.",
+    "print": "Print refund slip",
+    "done": "Done",
+    "slipTitle": "Refund slip",
+    "slipReceiptNo": "Receipt no.",
+    "slipInvoiceNo": "Invoice no.",
+    "slipPatient": "Patient",
+    "slipDate": "Date",
+    "slipMethod": "Method",
+    "slipReason": "Reason",
+    "slipAmount": "Refunded",
+    "slipBalance": "Balance owed"
+  },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",
     "everyone": "Everyone waiting today, longest wait first.",

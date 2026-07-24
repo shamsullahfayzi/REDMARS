@@ -6,6 +6,8 @@ import {
   invoiceListResponseSchema,
   type RecordPaymentRequest,
   recordPaymentResponseSchema,
+  type RefundPaymentRequest,
+  refundPaymentResponseSchema,
   visitBillsResponseSchema,
 } from '@redmars/shared'
 import { apiGet, apiPost } from '@/lib/api'
@@ -70,6 +72,26 @@ export function useRecordPayment(invoiceId: string) {
   return useMutation({
     mutationFn: (input: RecordPaymentRequest) =>
       apiPost(`/invoices/${invoiceId}/payments`, input, recordPaymentResponseSchema),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      void queryClient.invalidateQueries({ queryKey: ['visit-bills'] })
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
+  })
+}
+
+/**
+ * Refund one payment on a bill (task 6.6, Rule R5). Reverses the row and reshapes the
+ * balance, so the same three caches drop; the resolved value carries the refund receipt.
+ */
+export function useRefundPayment(invoiceId: string) {
+  return useMutation({
+    mutationFn: ({ paymentId, input }: { paymentId: string; input: RefundPaymentRequest }) =>
+      apiPost(
+        `/invoices/${invoiceId}/payments/${paymentId}/refund`,
+        input,
+        refundPaymentResponseSchema,
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       void queryClient.invalidateQueries({ queryKey: ['visit-bills'] })

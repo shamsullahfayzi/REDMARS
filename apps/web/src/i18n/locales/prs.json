@@ -818,6 +818,27 @@
     "approveAndApply": "تأیید و اعمال",
     "approvedBy": "تأیید توسط {{name}}"
   },
+  "refund": {
+    "trailTitle": "پرداخت‌ها",
+    "refundRow": "بازپرداخت",
+    "reversed": "برگشت‌خورده",
+    "action": "بازپرداخت",
+    "reasonPlaceholder": "دلیل بازپرداخت (الزامی)",
+    "refunding": "در حال بازپرداخت…",
+    "confirm": "تأیید بازپرداخت",
+    "error": "بازپرداخت انجام نشد.",
+    "print": "چاپ رسید بازپرداخت",
+    "done": "انجام شد",
+    "slipTitle": "رسید بازپرداخت",
+    "slipReceiptNo": "شماره رسید",
+    "slipInvoiceNo": "شماره صورت‌حساب",
+    "slipPatient": "مریض",
+    "slipDate": "تاریخ",
+    "slipMethod": "روش",
+    "slipReason": "دلیل",
+    "slipAmount": "بازپرداخت‌شده",
+    "slipBalance": "باقی‌مانده"
+  },
   "queue": {
     "mine": "بیماران شما که امروز منتظر اند، طولانی‌ترین انتظار اول.",
     "everyone": "همه کسانی که امروز منتظر اند، طولانی‌ترین انتظار اول.",

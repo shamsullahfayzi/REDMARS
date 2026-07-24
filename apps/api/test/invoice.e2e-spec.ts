@@ -40,6 +40,9 @@ describe('Invoice register + reprint (e2e)', () => {
   let refundGuardInvoiceId: string;
   let approvalInvoiceId: string;
   let adminId: string;
+  let refundInvoiceId: string;
+  let refundOldInvoiceId: string;
+  let oldPaymentId: string;
   const tokens: Record<string, string> = {};
 
   jest.setTimeout(60_000);
@@ -326,6 +329,67 @@ describe('Invoice register + reprint (e2e)', () => {
       })
     ).id;
 
+    // A 400 bill for the refund happy-path (paid today via the endpoint in the test).
+    refundInvoiceId = (
+      await prisma.invoice.create({
+        data: {
+          facilityId,
+          patientId: patient.id,
+          createdBy: receptionistId,
+          invoiceNo: `${PREFIX}INVR`,
+          subtotal: '400',
+          total: '400',
+          paidAmount: '0',
+          status: 'issued',
+          items: {
+            create: {
+              refType: 'service',
+              description: 'Ultrasound',
+              quantity: 1,
+              unitPrice: '400',
+              total: '400',
+            },
+          },
+        },
+      })
+    ).id;
+
+    // A paid bill whose payment is dated two days ago — outside the R5 same-day window, so a
+    // receptionist may not refund it but an admin may.
+    const oldInvoice = await prisma.invoice.create({
+      data: {
+        facilityId,
+        patientId: patient.id,
+        createdBy: receptionistId,
+        invoiceNo: `${PREFIX}INVRO`,
+        subtotal: '200',
+        total: '200',
+        paidAmount: '200',
+        status: 'paid',
+        items: {
+          create: {
+            refType: 'service',
+            description: 'Old visit',
+            quantity: 1,
+            unitPrice: '200',
+            total: '200',
+          },
+        },
+        payments: {
+          create: {
+            amount: '200',
+            method: 'cash',
+            receivedBy: receptionistId,
+            receiptNo: `${PREFIX}RCPOLD`,
+            receivedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000),
+          },
+        },
+      },
+      select: { id: true, payments: { select: { id: true } } },
+    });
+    refundOldInvoiceId = oldInvoice.id;
+    oldPaymentId = oldInvoice.payments[0].id;
+
     // A second facility's invoice, to prove the register is facility-scoped.
     const otherFacilityId = (
       await prisma.facility.create({ data: { code: `${PREFIX}fac2`, name: 'E2E Other' } })
@@ -375,6 +439,11 @@ describe('Invoice register + reprint (e2e)', () => {
   const discount = (as: string, id: string, body: unknown) =>
     request(server)
       .post(`/invoices/${id}/discount`)
+      .set('Authorization', `Bearer ${tokens[as]}`)
+      .send(body);
+  const refund = (as: string, id: string, paymentId: string, body: unknown) =>
+    request(server)
+      .post(`/invoices/${id}/payments/${paymentId}/refund`)
       .set('Authorization', `Bearer ${tokens[as]}`)
       .send(body);
 
@@ -609,11 +678,59 @@ describe('Invoice register + reprint (e2e)', () => {
     expect(self.code).toBe('approval_self');
   });
 
-  it('denies a doctor — invoice.read, payment.receive and discount.apply are not theirs', async () => {
+  it('the done-when: refunds a payment same-day, reverses it, gives a receipt', async () => {
+    // Take a payment now, so it is dated today, then give it back.
+    const paid = (await pay('recep', refundInvoiceId, { amount: '400', method: 'cash' }).expect(200))
+      .body as RecordPaymentResponse;
+    const paymentId = paid.payment.id;
+
+    const r = (
+      await refund('recep', refundInvoiceId, paymentId, { reason: 'Test billed by mistake' })
+        .expect(200)
+    ).body as RefundPaymentResponse;
+    expect(r.refundedAmount).toBe('400.00');
+    expect(r.refundReceiptNo).toMatch(/^RCP-/);
+    expect(r.method).toBe('cash');
+    expect(r.status).toBe('issued');
+    expect(r.paidAmount).toBe('0.00');
+    expect(r.outstanding).toBe('400.00');
+
+    // Reversed, not deleted: the original stands marked, a negative row records the money out.
+    const body = (await detail('recep', refundInvoiceId).expect(200)).body as InvoiceDetail;
+    const original = body.payments.find((p) => p.id === paymentId);
+    expect(original?.isReversed).toBe(true);
+    const refundRow = body.payments.find((p) => p.id === r.refundId);
+    expect(refundRow?.amount).toBe('-400.00');
+    expect(refundRow?.receiptNo).toBe(r.refundReceiptNo);
+
+    // A payment already reversed cannot be refunded again.
+    await refund('recep', refundInvoiceId, paymentId, { reason: 'once more' }).expect(400);
+  });
+
+  it('holds the R5 same-day window: old payments are an admin’s to refund, and a reason is required', async () => {
+    const closed = (
+      await refund('recep', refundOldInvoiceId, oldPaymentId, { reason: 'Too late for the desk' })
+        .expect(403)
+    ).body as { code?: string };
+    expect(closed.code).toBe('outside_r5_window');
+
+    // The same refund from an admin, who is not time-boxed, goes through.
+    const byAdmin = (
+      await refund('admin', refundOldInvoiceId, oldPaymentId, { reason: 'Approved late refund' })
+        .expect(200)
+    ).body as RefundPaymentResponse;
+    expect(byAdmin.refundedAmount).toBe('200.00');
+
+    // A refund with no real reason is refused at the contract.
+    await refund('admin', refundOldInvoiceId, oldPaymentId, { reason: ' ' }).expect(400);
+  });
+
+  it('denies a doctor — invoice.read, payment.receive, discount.apply and payment.refund are not theirs', async () => {
     await list('doctor').expect(403);
     await detail('doctor', invoiceId).expect(403);
     await byVisit('doctor', visitId).expect(403);
     await pay('doctor', payInvoiceId, { amount: '10', method: 'cash' }).expect(403);
     await discount('doctor', discountInvoiceId, { amount: '10', reason: 'no' }).expect(403);
+    await refund('doctor', refundInvoiceId, oldPaymentId, { reason: 'nope' }).expect(403);
   });
 });

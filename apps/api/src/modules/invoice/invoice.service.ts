@@ -258,7 +258,9 @@ export class InvoiceService {
       },
       createdAt: invoice.createdAt.toISOString(),
       createdByName: creator?.fullName ?? null,
-      payments: live.map((p) => ({
+      // The whole trail, reversed rows included, so the desk can see a refunded payment and
+      // the negative row that gave the money back — the refund UI (6.6) needs both.
+      payments: invoice.payments.map((p) => ({
         id: p.id,
         amount: money(p.amount),
         method: p.method,

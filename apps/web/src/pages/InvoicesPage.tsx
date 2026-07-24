@@ -6,10 +6,12 @@ import {
   INVOICE_STATUSES,
   type InvoiceListItem,
   type InvoiceOrigin,
+  type InvoicePayment,
   type InvoiceStatus,
   PAYMENT_TENDERS,
   type PaymentTender,
   type RecordPaymentResponse,
+  type RefundPaymentResponse,
   type VisitBill,
 } from '@redmars/shared'
 import { useAuth } from '@/auth/authContext'
@@ -27,6 +29,7 @@ import {
   useInvoiceDetail,
   useInvoiceList,
   useRecordPayment,
+  useRefundPayment,
   useVisitBills,
 } from '@/hooks/useInvoices'
 
@@ -104,6 +107,8 @@ export function InvoicesPage() {
         canReceive={isTill}
         canDiscount={canDiscount}
         discountUncapped={roles.includes('admin')}
+        canRefund={roles.includes('admin') || isTill}
+        canRefundPrint={isTill}
         onBack={() => setSelectedId(null)}
         onOpen={setSelectedId}
       />
@@ -274,6 +279,8 @@ function InvoiceDetailView({
   canReceive,
   canDiscount,
   discountUncapped,
+  canRefund,
+  canRefundPrint,
   onBack,
   onOpen,
 }: {
@@ -282,6 +289,8 @@ function InvoiceDetailView({
   canReceive: boolean
   canDiscount: boolean
   discountUncapped: boolean
+  canRefund: boolean
+  canRefundPrint: boolean
   onBack: () => void
   onOpen: (invoiceId: string) => void
 }) {
@@ -296,6 +305,9 @@ function InvoiceDetailView({
     currency: string
     settled: boolean
   } | null>(null)
+  // A just-issued refund, held to print its slip. While set, the bill receipt is hidden from
+  // print so the slip is the only sheet that comes out.
+  const [refundSlip, setRefundSlip] = useState<RefundPaymentResponse | null>(null)
 
   const outstanding = useMemo(() => {
     if (!detail) return null
@@ -381,7 +393,31 @@ function InvoiceDetailView({
               }
             />
           )}
-          <Card className="max-w-2xl p-6 print:max-w-none print:border-0 print:p-0 print:shadow-none">
+          {detail.payments.length > 0 && (
+            <PaymentsPanel
+              invoiceId={invoiceId}
+              payments={detail.payments}
+              currency={detail.invoice.currency}
+              canRefund={canRefund}
+              onRefunded={setRefundSlip}
+            />
+          )}
+          {refundSlip && (
+            <RefundSlip
+              slip={refundSlip}
+              facilityName={detail.facility.name}
+              patientName={detail.patient.name}
+              patientMrn={detail.patient.mrn}
+              invoiceNo={detail.invoice.invoiceNo}
+              canPrint={canRefundPrint}
+              onDone={() => setRefundSlip(null)}
+            />
+          )}
+          <Card
+            className={`max-w-2xl p-6 print:max-w-none print:border-0 print:p-0 print:shadow-none ${
+              refundSlip ? 'print:hidden' : ''
+            }`}
+          >
             <InvoiceReceipt
               facility={detail.facility}
               patient={detail.patient}
@@ -788,4 +824,219 @@ function errorCode(error: unknown): string | null {
     return typeof code === 'string' ? code : null
   }
   return null
+}
+
+const DATE_TIME = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Kabul',
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+/**
+ * Task 6.6 — the cash trail, with a refund on each payment that can still take one. Shows
+ * every row, the reversed ones struck through and the negative refund rows as money out;
+ * a positive, un-reversed payment carries a Refund control that asks for a reason (R5).
+ * Screen only.
+ */
+function PaymentsPanel({
+  invoiceId,
+  payments,
+  currency,
+  canRefund,
+  onRefunded,
+}: {
+  invoiceId: string
+  payments: InvoicePayment[]
+  currency: string
+  canRefund: boolean
+  onRefunded: (slip: RefundPaymentResponse) => void
+}) {
+  const { t } = useTranslation()
+  const refund = useRefundPayment(invoiceId)
+  const [openFor, setOpenFor] = useState<string | null>(null)
+  const [reason, setReason] = useState('')
+
+  function submit(paymentId: string) {
+    if (reason.trim().length < 3 || refund.isPending) return
+    refund.mutate(
+      { paymentId, input: { reason: reason.trim() } },
+      {
+        onSuccess: (slip) => {
+          onRefunded(slip)
+          setOpenFor(null)
+          setReason('')
+        },
+      },
+    )
+  }
+
+  return (
+    <Card className="max-w-2xl space-y-2 p-4 print:hidden">
+      <p className="text-sm font-medium text-foreground">{t('refund.trailTitle')}</p>
+      <ul className="space-y-1.5 text-sm">
+        {payments.map((p) => {
+          const isRefundRow = Number(p.amount) < 0
+          const refundable = canRefund && !p.isReversed && Number(p.amount) > 0
+          return (
+            <li key={p.id} className="space-y-1.5 border-b border-border pb-1.5 last:border-0">
+              <div className="flex items-center gap-3">
+                <span
+                  className={`font-mono ${p.isReversed ? 'text-muted-foreground line-through' : isRefundRow ? 'text-destructive' : 'text-foreground'}`}
+                  dir="ltr"
+                >
+                  {p.amount} {currency}
+                </span>
+                <span className="text-muted-foreground">
+                  {t(`payments.methodLabel.${p.method}`, { defaultValue: p.method })}
+                </span>
+                {p.receiptNo && (
+                  <span className="font-mono text-xs text-muted-foreground" dir="ltr">
+                    {p.receiptNo}
+                  </span>
+                )}
+                <span className="ms-auto text-xs text-muted-foreground" dir="ltr">
+                  {DATE_TIME.format(new Date(p.receivedAt))}
+                </span>
+                {isRefundRow ? (
+                  <Badge variant="danger">{t('refund.refundRow')}</Badge>
+                ) : p.isReversed ? (
+                  <Badge variant="muted">{t('refund.reversed')}</Badge>
+                ) : refundable ? (
+                  <Button
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => {
+                      setOpenFor(openFor === p.id ? null : p.id)
+                      setReason('')
+                    }}
+                  >
+                    {t('refund.action')}
+                  </Button>
+                ) : null}
+              </div>
+              {openFor === p.id && (
+                <div className="flex flex-wrap items-end gap-2">
+                  <Input
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder={t('refund.reasonPlaceholder')}
+                    className="min-w-56 flex-1"
+                    autoFocus
+                  />
+                  <Button
+                    variant="destructive"
+                    disabled={reason.trim().length < 3 || refund.isPending}
+                    onClick={() => submit(p.id)}
+                  >
+                    {refund.isPending ? t('refund.refunding') : t('refund.confirm')}
+                  </Button>
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      {refund.isError && (
+        <p className="text-sm text-destructive">
+          {serverMessage(refund.error) ?? t('refund.error')}
+        </p>
+      )}
+    </Card>
+  )
+}
+
+/** Task 6.6 — the printable refund slip: what went back, to whom, why, with a receipt no. */
+function RefundSlip({
+  slip,
+  facilityName,
+  patientName,
+  patientMrn,
+  invoiceNo,
+  canPrint,
+  onDone,
+}: {
+  slip: RefundPaymentResponse
+  facilityName: string
+  patientName: string
+  patientMrn: string
+  invoiceNo: string
+  canPrint: boolean
+  onDone: () => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
+        {canPrint && (
+          <Button onClick={() => window.print()}>
+            <Printer className="size-4" aria-hidden />
+            {t('refund.print')}
+          </Button>
+        )}
+        <Button variant="ghost" onClick={onDone}>
+          {t('refund.done')}
+        </Button>
+      </div>
+      <Card className="max-w-2xl p-6 print:max-w-none print:border-0 print:p-0 print:shadow-none">
+        <div className="receipt-bill space-y-3 text-sm text-foreground">
+          <div className="text-center">
+            <h2 className="text-lg font-bold">{facilityName}</h2>
+            <p className="font-medium">{t('refund.slipTitle')}</p>
+          </div>
+          <hr />
+          <SlipLine label={t('refund.slipReceiptNo')} value={slip.refundReceiptNo ?? '—'} mono />
+          <SlipLine label={t('refund.slipInvoiceNo')} value={invoiceNo} mono />
+          <SlipLine label={t('refund.slipPatient')} value={`${patientName} · ${patientMrn}`} />
+          <SlipLine
+            label={t('refund.slipDate')}
+            value={DATE_TIME.format(new Date(slip.refundedAt))}
+          />
+          <SlipLine
+            label={t('refund.slipMethod')}
+            value={t(`payments.methodLabel.${slip.method}`, { defaultValue: slip.method })}
+          />
+          <SlipLine label={t('refund.slipReason')} value={slip.reason} />
+          <hr />
+          <SlipLine
+            label={t('refund.slipAmount')}
+            value={`${slip.refundedAmount} ${slip.currency}`}
+            mono
+            strong
+          />
+          <SlipLine
+            label={t('refund.slipBalance')}
+            value={`${slip.outstanding} ${slip.currency}`}
+            mono
+          />
+        </div>
+      </Card>
+    </>
+  )
+}
+
+function SlipLine({
+  label,
+  value,
+  mono,
+  strong,
+}: {
+  label: string
+  value: string
+  mono?: boolean
+  strong?: boolean
+}) {
+  return (
+    <div className="flex justify-between gap-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span
+        className={`${mono ? 'font-mono' : ''} ${strong ? 'font-bold' : ''} text-end`}
+        dir={mono ? 'ltr' : undefined}
+      >
+        {value}
+      </span>
+    </div>
+  )
 }

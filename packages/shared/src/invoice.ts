@@ -251,3 +251,37 @@ export const applyDiscountResponseSchema = z.object({
   approvedByName: z.string().nullable(),
 })
 export type ApplyDiscountResponse = z.infer<typeof applyDiscountResponseSchema>
+
+// ---------------------------------------------------------------------------------
+// Giving the money back — task 6.6 (Rule R5)
+// ---------------------------------------------------------------------------------
+
+export const refundPaymentRequestSchema = z.object({
+  /** Why the money is going back — required by R5, logged on the reversal. */
+  reason: z.string().trim().min(3, 'Give a reason for the refund').max(200),
+})
+export type RefundPaymentRequest = z.infer<typeof refundPaymentRequestSchema>
+
+/**
+ * A refund reverses one payment. The original row is marked reversed and a negative payment
+ * is appended — the till's history shows money going back out as its own event, with its own
+ * time, author and receipt number for the slip. The response carries what the receptionist
+ * counts out of the drawer (a positive amount) and the bill's new standing.
+ */
+export const refundPaymentResponseSchema = z.object({
+  invoiceId: z.uuid(),
+  /** The original payment, now reversed. */
+  paymentId: z.uuid(),
+  /** The appended negative payment — the refund's own row. */
+  refundId: z.uuid(),
+  refundedAmount: z.string(),
+  refundReceiptNo: z.string().nullable(),
+  refundedAt: z.string(),
+  reason: z.string(),
+  method: paymentMethodSchema,
+  status: invoiceStatusSchema,
+  paidAmount: z.string(),
+  outstanding: z.string(),
+  currency: z.string(),
+})
+export type RefundPaymentResponse = z.infer<typeof refundPaymentResponseSchema>

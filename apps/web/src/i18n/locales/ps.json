@@ -818,6 +818,27 @@
     "approveAndApply": "تصویب او پلي کول",
     "approvedBy": "تصویب د {{name}} لخوا"
   },
+  "refund": {
+    "trailTitle": "تادیات",
+    "refundRow": "بیرته‌ورکړه",
+    "reversed": "بېرته اوښتی",
+    "action": "بیرته‌ورکړه",
+    "reasonPlaceholder": "د بیرته‌ورکړې دلیل (اړین)",
+    "refunding": "بیرته‌ورکړه کیږي…",
+    "confirm": "بیرته‌ورکړه تایید",
+    "error": "بیرته‌ورکړه ونه شوه.",
+    "print": "د بیرته‌ورکړې رسید چاپ",
+    "done": "ترسره شو",
+    "slipTitle": "د بیرته‌ورکړې رسید",
+    "slipReceiptNo": "د رسید شمېره",
+    "slipInvoiceNo": "د بیل شمېره",
+    "slipPatient": "ناروغ",
+    "slipDate": "نېټه",
+    "slipMethod": "طریقه",
+    "slipReason": "دلیل",
+    "slipAmount": "بیرته‌ورکړل‌شوی",
+    "slipBalance": "پاتې اندازه"
+  },
   "queue": {
     "mine": "ستاسو ناروغان چې نن انتظار باسي، اوږد انتظار لومړی.",
     "everyone": "ټول هغه چې نن انتظار باسي، اوږد انتظار لومړی.",
