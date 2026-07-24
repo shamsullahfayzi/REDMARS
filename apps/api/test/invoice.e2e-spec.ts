@@ -4,7 +4,12 @@ import { hash } from '@node-rs/argon2';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import type { InvoiceDetail, InvoiceListResponse, LoginResponse } from '@redmars/shared';
+import type {
+  InvoiceDetail,
+  InvoiceListResponse,
+  LoginResponse,
+  VisitBillsResponse,
+} from '@redmars/shared';
 import { AppModule } from './../src/app.module';
 
 /**
@@ -25,6 +30,7 @@ describe('Invoice register + reprint (e2e)', () => {
   let facilityId: string;
   let receptionistId: string;
   let patientId: string;
+  let visitId: string;
   let invoiceId: string;
   let invoiceNo: string;
   const tokens: Record<string, string> = {};
@@ -114,6 +120,7 @@ describe('Invoice register + reprint (e2e)', () => {
       },
     });
 
+    visitId = visit.id;
     invoiceNo = `${PREFIX}INV1`;
     const invoice = await prisma.invoice.create({
       data: {
@@ -156,6 +163,31 @@ describe('Invoice register + reprint (e2e)', () => {
     });
     invoiceId = invoice.id;
 
+    // A SECOND bill on the SAME visit, raised at the lab till and still unpaid — so the
+    // visit carries two bills across two windows (task 6.2).
+    await prisma.invoice.create({
+      data: {
+        facilityId,
+        patientId: patient.id,
+        visitId: visit.id,
+        createdBy: receptionistId,
+        invoiceNo: `${PREFIX}INV1L`,
+        subtotal: '250',
+        total: '250',
+        paidAmount: '0',
+        status: 'issued',
+        items: {
+          create: {
+            refType: 'lab_order_item',
+            description: 'CBC',
+            quantity: 1,
+            unitPrice: '250',
+            total: '250',
+          },
+        },
+      },
+    });
+
     // A second facility's invoice, to prove the register is facility-scoped.
     const otherFacilityId = (
       await prisma.facility.create({ data: { code: `${PREFIX}fac2`, name: 'E2E Other' } })
@@ -195,6 +227,8 @@ describe('Invoice register + reprint (e2e)', () => {
     request(server).get(`/invoices${qs}`).set('Authorization', `Bearer ${tokens[as]}`);
   const detail = (as: string, id: string) =>
     request(server).get(`/invoices/${id}`).set('Authorization', `Bearer ${tokens[as]}`);
+  const byVisit = (as: string, id: string) =>
+    request(server).get(`/invoices/by-visit/${id}`).set('Authorization', `Bearer ${tokens[as]}`);
 
   it('lists a facility’s invoices, newest first, with a one-line summary', async () => {
     const body = (await list('recep').expect(200)).body as InvoiceListResponse;
@@ -246,6 +280,31 @@ describe('Invoice register + reprint (e2e)', () => {
     expect(body.payments[0].amount).toBe('500.00');
   });
 
+  it('the done-when: gathers every bill one visit carries, with a running total', async () => {
+    const body = (await byVisit('recep', visitId).expect(200)).body as VisitBillsResponse;
+    expect(body.visit.visitNo).toBe(`${PREFIX}V1`);
+    expect(body.visit.patientName).toBe('Mr. Karim Noori');
+    expect(body.bills).toHaveLength(2);
+
+    const reception = body.bills.find((b) => b.invoiceNo === invoiceNo);
+    const lab = body.bills.find((b) => b.invoiceNo === `${PREFIX}INV1L`);
+    // Each bill is tagged by the till that raised it, read off its lines.
+    expect(reception!.origin).toBe('reception');
+    expect(reception!.outstanding).toBe('0.00');
+    expect(lab!.origin).toBe('lab');
+    expect(lab!.outstanding).toBe('250.00');
+
+    // Three tills, one running total: 500 charged and paid, 250 charged and open.
+    expect(body.totals.billed).toBe('750.00');
+    expect(body.totals.paid).toBe('500.00');
+    expect(body.totals.outstanding).toBe('250.00');
+    expect(body.totals.currency).toBe('AFN');
+  });
+
+  it('404s a visit belonging to another facility (or no visit at all)', async () => {
+    await byVisit('recep', '00000000-0000-4000-8000-000000000000').expect(404);
+  });
+
   it('404s an invoice belonging to another facility', async () => {
     const other = await prisma.invoice.findFirstOrThrow({
       where: { invoiceNo: `${PREFIX}INV2` },
@@ -257,5 +316,6 @@ describe('Invoice register + reprint (e2e)', () => {
   it('denies a doctor — invoice.read is not theirs', async () => {
     await list('doctor').expect(403);
     await detail('doctor', invoiceId).expect(403);
+    await byVisit('doctor', visitId).expect(403);
   });
 });

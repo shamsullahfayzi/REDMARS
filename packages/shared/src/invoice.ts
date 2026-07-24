@@ -108,3 +108,52 @@ export const invoiceDetailSchema = z.object({
   payments: z.array(invoicePaymentSchema),
 })
 export type InvoiceDetail = z.infer<typeof invoiceDetailSchema>
+
+// ---------------------------------------------------------------------------------
+// One visit, all its tills — task 6.2
+// ---------------------------------------------------------------------------------
+
+/**
+ * Which till raised a bill, read off its lines. One visit can gather three separate
+ * invoices — the consult and card at reception, the tests at the lab, the medicines at
+ * the pharmacy — each settled at its own window. The origin is not stored on the invoice;
+ * it is what the invoice is FOR, derived from the ref types of its items:
+ *  - `prescription_item` → pharmacy
+ *  - `lab_order_item`    → lab
+ *  - `service` / `card_registration` → reception
+ *  - anything else (or an empty bill) → other
+ */
+export const INVOICE_ORIGINS = ['reception', 'lab', 'pharmacy', 'other'] as const
+export const invoiceOriginSchema = z.enum(INVOICE_ORIGINS)
+export type InvoiceOrigin = z.infer<typeof invoiceOriginSchema>
+
+/** A register row, plus which till it belongs to and what is still owed on it. */
+export const visitBillSchema = invoiceListItemSchema.extend({
+  origin: invoiceOriginSchema,
+  /** total − paid, two places; '0.00' once the bill is settled. */
+  outstanding: z.string(),
+})
+export type VisitBill = z.infer<typeof visitBillSchema>
+
+/**
+ * Every bill one visit carries, across the three tills, with the visit's own running
+ * total: what was charged, what has been paid, and what is still open — so the desk sees
+ * the whole financial picture of a visit at once rather than one window at a time.
+ */
+export const visitBillsResponseSchema = z.object({
+  visit: z.object({
+    id: z.uuid(),
+    visitNo: z.string(),
+    patientId: z.uuid(),
+    patientName: z.string(),
+    patientMrn: z.string(),
+  }),
+  bills: z.array(visitBillSchema),
+  totals: z.object({
+    billed: z.string(),
+    paid: z.string(),
+    outstanding: z.string(),
+    currency: z.string(),
+  }),
+})
+export type VisitBillsResponse = z.infer<typeof visitBillsResponseSchema>

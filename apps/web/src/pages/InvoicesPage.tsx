@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, ChevronLeft, ChevronRight, Printer, Search } from 'lucide-react'
-import { INVOICE_STATUSES, type InvoiceListItem, type InvoiceStatus } from '@redmars/shared'
+import { ArrowLeft, ChevronLeft, ChevronRight, Layers, Printer, Search } from 'lucide-react'
+import {
+  INVOICE_STATUSES,
+  type InvoiceListItem,
+  type InvoiceOrigin,
+  type InvoiceStatus,
+  type VisitBill,
+} from '@redmars/shared'
 import { useAuth } from '@/auth/authContext'
 import { InvoiceReceipt } from '@/components/InvoiceReceipt'
 import { PageHeader } from '@/components/PageHeader'
@@ -11,7 +17,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { useDebounced } from '@/hooks/useDebounced'
-import { useInvoiceDetail, useInvoiceList } from '@/hooks/useInvoices'
+import { useInvoiceDetail, useInvoiceList, useVisitBills } from '@/hooks/useInvoices'
 
 /** Today, as the hospital reads it — the register opens to the day the desk is working. */
 function facilityToday(): string {
@@ -29,6 +35,17 @@ const STATUS_VARIANT: Record<InvoiceStatus, 'success' | 'warning' | 'muted' | 'd
   issued: 'muted',
   draft: 'muted',
   cancelled: 'danger',
+}
+
+/**
+ * The till that raised a bill, coloured so the three read apart at a glance (task 6.2).
+ * Kept clear of the status palette (success/warning/danger) — origin is not a state.
+ */
+const ORIGIN_VARIANT: Record<InvoiceOrigin, 'info' | 'active' | 'outline' | 'muted'> = {
+  reception: 'info',
+  lab: 'active',
+  pharmacy: 'outline',
+  other: 'muted',
 }
 
 /**
@@ -72,6 +89,7 @@ export function InvoicesPage() {
         invoiceId={selectedId}
         canPrint={roles.includes('receptionist') || roles.includes('pharmacist')}
         onBack={() => setSelectedId(null)}
+        onOpen={setSelectedId}
       />
     )
   }
@@ -238,10 +256,12 @@ function InvoiceDetailView({
   invoiceId,
   canPrint,
   onBack,
+  onOpen,
 }: {
   invoiceId: string
   canPrint: boolean
   onBack: () => void
+  onOpen: (invoiceId: string) => void
 }) {
   const { t } = useTranslation()
   const detailQuery = useInvoiceDetail(invoiceId)
@@ -287,6 +307,13 @@ function InvoiceDetailView({
               </Badge>
             </div>
           )}
+          {detail.visit && (
+            <VisitBillsPanel
+              visitId={detail.visit.id}
+              currentInvoiceId={invoiceId}
+              onOpen={onOpen}
+            />
+          )}
           <Card className="max-w-2xl p-6 print:max-w-none print:border-0 print:p-0 print:shadow-none">
             <InvoiceReceipt
               facility={detail.facility}
@@ -299,5 +326,112 @@ function InvoiceDetailView({
         </>
       )}
     </div>
+  )
+}
+
+/**
+ * Task 6.2 — the sibling bills a visit gathered, across the three tills. Shown only when
+ * there IS more than one, so a plain single-bill visit stays uncluttered; the current bill
+ * is marked, the others open on click. A running total sits on top: charged, paid, still
+ * open across every till at once. Screen only — the printed receipt is one bill, not the set.
+ */
+function VisitBillsPanel({
+  visitId,
+  currentInvoiceId,
+  onOpen,
+}: {
+  visitId: string
+  currentInvoiceId: string
+  onOpen: (invoiceId: string) => void
+}) {
+  const { t } = useTranslation()
+  const query = useVisitBills(visitId)
+  const data = query.data
+
+  if (!data || data.bills.length < 2) return null
+  const { visit, bills, totals } = data
+
+  return (
+    <Card className="max-w-2xl space-y-3 p-4 print:hidden">
+      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+        <Layers className="size-4 text-muted-foreground" aria-hidden />
+        {t('visitBills.title', { visitNo: visit.visitNo, count: bills.length })}
+      </div>
+
+      <ul className="space-y-1.5">
+        {bills.map((bill) => (
+          <VisitBillRow
+            key={bill.id}
+            bill={bill}
+            isCurrent={bill.id === currentInvoiceId}
+            onOpen={() => onOpen(bill.id)}
+          />
+        ))}
+      </ul>
+
+      <dl className="flex flex-wrap gap-x-6 gap-y-1 border-t border-border pt-3 text-sm">
+        <div className="flex gap-2">
+          <dt className="text-muted-foreground">{t('visitBills.billed')}</dt>
+          <dd className="font-mono text-foreground" dir="ltr">
+            {totals.billed} {totals.currency}
+          </dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="text-muted-foreground">{t('visitBills.paid')}</dt>
+          <dd className="font-mono text-foreground" dir="ltr">
+            {totals.paid} {totals.currency}
+          </dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="text-muted-foreground">{t('visitBills.outstanding')}</dt>
+          <dd
+            className={`font-mono ${Number(totals.outstanding) > 0 ? 'text-warning' : 'text-foreground'}`}
+            dir="ltr"
+          >
+            {totals.outstanding} {totals.currency}
+          </dd>
+        </div>
+      </dl>
+    </Card>
+  )
+}
+
+function VisitBillRow({
+  bill,
+  isCurrent,
+  onOpen,
+}: {
+  bill: VisitBill
+  isCurrent: boolean
+  onOpen: () => void
+}) {
+  const { t } = useTranslation()
+  const owed = Number(bill.outstanding) > 0
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={isCurrent ? undefined : onOpen}
+        aria-current={isCurrent ? 'true' : undefined}
+        className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-start text-sm ${
+          isCurrent ? 'bg-muted' : 'cursor-pointer hover:bg-muted/50'
+        }`}
+      >
+        <Badge variant={ORIGIN_VARIANT[bill.origin]}>{t(`visitBills.origin.${bill.origin}`)}</Badge>
+        <span className="font-mono text-xs text-muted-foreground" dir="ltr">
+          {bill.invoiceNo}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-muted-foreground">{bill.summary || '—'}</span>
+        <span className="font-mono text-foreground" dir="ltr">
+          {bill.total} {bill.currency}
+        </span>
+        <Badge variant={owed ? 'warning' : STATUS_VARIANT[bill.status]}>
+          {owed
+            ? t('visitBills.owed', { amount: bill.outstanding })
+            : t(`invoices.statusLabel.${bill.status}`)}
+        </Badge>
+      </button>
+    </li>
   )
 }

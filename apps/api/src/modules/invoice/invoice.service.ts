@@ -5,6 +5,9 @@ import type {
   InvoiceListItem,
   InvoiceListQuery,
   InvoiceListResponse,
+  InvoiceOrigin,
+  VisitBill,
+  VisitBillsResponse,
 } from '@redmars/shared';
 import { currentAgeYears } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -18,6 +21,19 @@ function money(value: Prisma.Decimal): string {
 /** A patient's display name from its parts, skipping the blanks. */
 function fullName(parts: (string | null | undefined)[]): string {
   return parts.filter((p) => p != null && p.trim().length > 0).join(' ');
+}
+
+/**
+ * Which till a bill belongs to, read off the ref types of its lines (task 6.2). The origin
+ * is not stored — it is what the invoice is FOR. Pharmacy wins over lab wins over
+ * reception when a bill somehow mixes them, though in practice each till raises its own.
+ */
+function originOf(refTypes: string[]): InvoiceOrigin {
+  const kinds = new Set(refTypes);
+  if (kinds.has('prescription_item')) return 'pharmacy';
+  if (kinds.has('lab_order_item')) return 'lab';
+  if (kinds.has('service') || kinds.has('card_registration')) return 'reception';
+  return 'other';
 }
 
 /**
@@ -251,6 +267,92 @@ export class InvoiceService {
         receivedAt: p.receivedAt.toISOString(),
         isReversed: p.isReversed,
       })),
+    };
+  }
+
+  /**
+   * Task 6.2 — every bill a single visit carries, across the three tills.
+   *
+   * One visit gathers separate invoices — consult and card at reception, tests at the lab,
+   * medicines at the pharmacy — each its own bill settled at its own window. This gives the
+   * desk all of them at once with a running total: charged, paid and still open. Same
+   * `invoice.read` gate as the register; the pharmacist holds it and reads their own line.
+   */
+  async byVisit(facilityId: string, visitId: string): Promise<VisitBillsResponse> {
+    const visit = await this.prisma.db.visit.findFirst({
+      where: { id: visitId, facilityId },
+      select: {
+        id: true,
+        visitNo: true,
+        patient: { select: { id: true, mrn: true, prefix: true, firstName: true, lastName: true } },
+      },
+    });
+    if (!visit) throw new NotFoundException('Visit not found');
+
+    const rows = await this.prisma.db.invoice.findMany({
+      where: { facilityId, visitId },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        invoiceNo: true,
+        status: true,
+        total: true,
+        paidAmount: true,
+        currency: true,
+        createdAt: true,
+        patient: {
+          select: { id: true, mrn: true, prefix: true, firstName: true, lastName: true },
+        },
+        visit: { select: { visitNo: true } },
+        items: { select: { description: true, refType: true }, orderBy: { description: 'asc' } },
+      },
+    });
+
+    let billed = new Prisma.Decimal(0);
+    let paid = new Prisma.Decimal(0);
+
+    const bills: VisitBill[] = rows.map((row) => {
+      billed = billed.plus(row.total);
+      paid = paid.plus(row.paidAmount);
+      const owed = Prisma.Decimal.max(0, row.total.minus(row.paidAmount));
+      return {
+        id: row.id,
+        invoiceNo: row.invoiceNo,
+        status: row.status,
+        patientId: row.patient.id,
+        patientName: fullName([row.patient.prefix, row.patient.firstName, row.patient.lastName]),
+        patientMrn: row.patient.mrn,
+        visitNo: row.visit?.visitNo ?? null,
+        summary: row.items[0]?.description ?? '',
+        itemCount: row.items.length,
+        total: money(row.total),
+        paidAmount: money(row.paidAmount),
+        currency: row.currency,
+        createdAt: row.createdAt.toISOString(),
+        origin: originOf(row.items.map((item) => item.refType)),
+        outstanding: money(owed),
+      };
+    });
+
+    return {
+      visit: {
+        id: visit.id,
+        visitNo: visit.visitNo,
+        patientId: visit.patient.id,
+        patientName: fullName([
+          visit.patient.prefix,
+          visit.patient.firstName,
+          visit.patient.lastName,
+        ]),
+        patientMrn: visit.patient.mrn,
+      },
+      bills,
+      totals: {
+        billed: money(billed),
+        paid: money(paid),
+        outstanding: money(Prisma.Decimal.max(0, billed.minus(paid))),
+        currency: rows[0]?.currency ?? 'AFN',
+      },
     };
   }
 }

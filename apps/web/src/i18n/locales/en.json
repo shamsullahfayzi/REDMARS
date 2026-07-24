@@ -768,6 +768,19 @@
     "detailError": "Could not load this invoice.",
     "outstanding": "Outstanding {{amount}} {{currency}}"
   },
+  "visitBills": {
+    "title": "This visit's bills · {{visitNo}} ({{count}})",
+    "billed": "Billed",
+    "paid": "Paid",
+    "outstanding": "Outstanding",
+    "owed": "{{amount}} owed",
+    "origin": {
+      "reception": "Reception",
+      "lab": "Lab",
+      "pharmacy": "Pharmacy",
+      "other": "Other"
+    }
+  },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",
     "everyone": "Everyone waiting today, longest wait first.",

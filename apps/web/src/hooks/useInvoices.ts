@@ -1,5 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { invoiceDetailSchema, invoiceListResponseSchema } from '@redmars/shared'
+import {
+  invoiceDetailSchema,
+  invoiceListResponseSchema,
+  visitBillsResponseSchema,
+} from '@redmars/shared'
 import { apiGet } from '@/lib/api'
 
 export interface InvoiceListParams {
@@ -36,5 +40,18 @@ export function useInvoiceDetail(invoiceId: string | null) {
     queryFn: () => apiGet(`/invoices/${invoiceId}`, invoiceDetailSchema),
     enabled: !!invoiceId,
     staleTime: 30_000,
+  })
+}
+
+/**
+ * Every bill one visit carries, across the three tills (task 6.2). Fetched only when an
+ * invoice tied to a visit is open, so the desk can see its siblings and the running total.
+ */
+export function useVisitBills(visitId: string | null) {
+  return useQuery({
+    queryKey: ['visit-bills', visitId],
+    queryFn: () => apiGet(`/invoices/by-visit/${visitId}`, visitBillsResponseSchema),
+    enabled: !!visitId,
+    staleTime: 0,
   })
 }

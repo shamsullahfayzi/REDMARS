@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { invoiceListQuerySchema } from '@redmars/shared';
-import type { InvoiceDetail, InvoiceListResponse } from '@redmars/shared';
+import type { InvoiceDetail, InvoiceListResponse, VisitBillsResponse } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuditRead } from '../../audit/decorators/audit-read.decorator';
 import { AuthContext } from '../../auth/auth-context';
@@ -39,6 +39,22 @@ export class InvoiceController {
       });
     }
     return this.invoices.list(this.auth(req).facilityId, parsed.data);
+  }
+
+  /**
+   * Task 6.2 — every bill one visit gathered, across the three tills. Declared before the
+   * `:id` detail below only for readability; `by-visit/:visitId` is two segments and never
+   * collides with the single-segment `:id`. Same `invoice.read` gate — the pharmacist reads
+   * their own line here too — and audited, since it opens a patient's whole visit ledger.
+   */
+  @Get('by-visit/:visitId')
+  @RequirePermission('invoice.read')
+  @AuditRead('Invoice')
+  byVisit(
+    @Req() req: Request,
+    @Param('visitId', ParseUUIDPipe) visitId: string,
+  ): Promise<VisitBillsResponse> {
+    return this.invoices.byVisit(this.auth(req).facilityId, visitId);
   }
 
   @Get(':id')
