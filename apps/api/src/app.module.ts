@@ -32,6 +32,7 @@ import { TemplateModule } from './modules/template/template.module';
 import { DiagnosisModule } from './modules/diagnosis/diagnosis.module';
 import { AllergyModule } from './modules/allergy/allergy.module';
 import { PrescriptionModule } from './modules/prescription/prescription.module';
+import { PharmacyModule } from './modules/pharmacy/pharmacy.module';
 import { ClinicalNoteModule } from './modules/clinical-note/clinical-note.module';
 import { HistoryModule } from './modules/history/history.module';
 import { FollowUpModule } from './modules/follow-up/follow-up.module';
@@ -73,6 +74,7 @@ import { FollowUpModule } from './modules/follow-up/follow-up.module';
     DiagnosisModule,
     AllergyModule,
     PrescriptionModule,
+    PharmacyModule,
     ClinicalNoteModule,
     HistoryModule,
     FollowUpModule,

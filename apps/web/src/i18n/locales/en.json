@@ -839,6 +839,19 @@
     "slipAmount": "Refunded",
     "slipBalance": "Balance owed"
   },
+  "pharmacy": {
+    "subtitle": "The doctor's orders, waiting to be dispensed.",
+    "error": "Could not load the queue.",
+    "empty": "No prescriptions waiting.",
+    "waiting": "{{count}} waiting",
+    "itemCount": "{{count}} items",
+    "col": {
+      "ordered": "Ordered",
+      "patient": "Patient",
+      "drugs": "Drugs",
+      "prescriber": "Prescriber"
+    }
+  },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",
     "everyone": "Everyone waiting today, longest wait first.",
