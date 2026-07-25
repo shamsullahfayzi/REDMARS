@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, useRef, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Check, ChevronDown, ChevronRight, Printer, Search, UserPlus, X } from 'lucide-react'
@@ -32,18 +32,6 @@ import { conflictFromError, fromMinor, toMinor, useCheckIn } from '@/hooks/useRe
 import { useVisitOptions } from '@/hooks/useVisits'
 import { cn } from '@/lib/utils'
 
-/**
- * Task 3.6 — the reception desk. Not four screens. One.
- *
- * A patient arrives once and is dealt with once: found or registered, put in the queue,
- * billed, and paid for. Splitting that across four screens would split one conversation
- * into four, and every state in between is wrong — a visit with no bill, a bill with no
- * cash. So the four steps are four sections of a single form with a single Save.
- *
- * The layout is the argument. Who and why on the left, what it costs and how they paid
- * on the right, the total and the one button always in view. The receptionist should be
- * able to work top-left to bottom-right without going looking for anything.
- */
 export function ReceptionPage() {
   const { t, i18n } = useTranslation()
   const optionsQuery = useVisitOptions()
@@ -59,12 +47,14 @@ export function ReceptionPage() {
   // --- Step 2: why ---------------------------------------------------------------
   const [visitType, setVisitType] = useState<VisitCreateType>('opd_consult')
   const [departmentId, setDepartmentId] = useState('')
+  const [departmentSearch, setDepartmentSearch] = useState('')
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
   const [practitionerId, setPractitionerId] = useState('')
   const [chiefComplaint, setChiefComplaint] = useState('')
 
   // --- Step 3: what it costs -----------------------------------------------------
   const [quantities, setQuantities] = useState<Record<string, number>>({})
-  const [showAllServices, setShowAllServices] = useState(false)
+  const [serviceSearch, setServiceSearch] = useState('')
   const [discount, setDiscount] = useState('')
   const [discountReason, setDiscountReason] = useState('')
 
@@ -74,21 +64,45 @@ export function ReceptionPage() {
 
   const [formError, setFormError] = useState<string | null>(null)
 
+  const departmentRef = useRef<HTMLDivElement>(null)
+
   const departments = optionsQuery.data?.departments ?? []
   const practitioners = optionsQuery.data?.practitioners ?? []
   const services = optionsQuery.data?.services ?? []
 
   const availableDoctors = practitioners.filter((p) => p.departmentIds.includes(departmentId))
   const departmentServices = services.filter((s) => s.departmentId === departmentId)
-  // The chosen department's prices first; the rest behind a toggle. A registration fee
-  // often lives under administration, so "the rest" has to be reachable — just not in
-  // the way on every single check-in.
   const otherServices = services.filter((s) => s.departmentId !== departmentId)
+
+  // Filter departments based on search
+  const filteredDepartments = departments.filter((d) => {
+    const name = departmentName(d).toLowerCase()
+    return name.includes(departmentSearch.toLowerCase())
+  })
+
+  // Filter services based on search
+  const filteredDeptServices = departmentServices.filter((s) =>
+    s.name.toLowerCase().includes(serviceSearch.toLowerCase())
+  )
+  const filteredOtherServices = otherServices.filter((s) =>
+    s.name.toLowerCase().includes(serviceSearch.toLowerCase())
+  )
 
   useEffect(() => {
     const list = optionsQuery.data?.departments
     if (!departmentId && list?.length === 1) setDepartmentId(list[0].id)
   }, [optionsQuery.data, departmentId])
+
+  // Close department dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (departmentRef.current && !departmentRef.current.contains(e.target as Node)) {
+        setShowDepartmentDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const chosenServices = services.filter((s) => (quantities[s.id] ?? 0) > 0)
   const subtotalMinor = chosenServices.reduce(
@@ -96,8 +110,6 @@ export function ReceptionPage() {
     0,
   )
   const discountMinor = discount.trim() === '' ? 0 : toMinor(discount.trim())
-  // R10's ceiling, shown at the same number the server refuses at, so the desk is never
-  // invited to type something that will bounce.
   const ceilingMinor = Math.floor((subtotalMinor * DISCOUNT_CEILING_PCT) / 100)
   const overCeiling = discountMinor > ceilingMinor
   const totalMinor = Math.max(0, subtotalMinor - discountMinor)
@@ -143,7 +155,7 @@ export function ReceptionPage() {
     const parsed = checkInRequestSchema.safeParse(buildPayload(overrides))
     if (!parsed.success) {
       setFormError(parsed.error.issues[0]?.message ?? t('reception.invalid'))
-      return // never fall through to mutate with undefined data
+      return
     }
     checkIn.mutate(parsed.data as CheckInRequest)
   }
@@ -176,32 +188,28 @@ export function ReceptionPage() {
   // --- Done: the slip ------------------------------------------------------------
   if (checkIn.data) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 p-4">
         <div className="print:hidden">
           <PageHeader title={t('reception.done.title')} />
         </div>
-
-        <Card className="max-w-2xl p-6 print:max-w-none print:border-0 print:p-0 print:shadow-none">
-          <div className="mb-4 flex items-center gap-2 text-success print:hidden">
-            <Check className="size-5" aria-hidden />
-            <p className="font-medium">{t('reception.done.saved')}</p>
+        <Card className="max-w-2xl p-4 print:max-w-none print:border-0 print:p-0 print:shadow-none">
+          <div className="mb-3 flex items-center gap-2 text-success print:hidden">
+            <Check className="size-4" aria-hidden />
+            <p className="text-sm font-medium">{t('reception.done.saved')}</p>
           </div>
-
           <CheckInReceipt result={checkIn.data} />
-
-          <div className="mt-6 flex flex-wrap gap-3 print:hidden">
-            <Button type="button" onClick={() => window.print()}>
-              <Printer className="size-4" aria-hidden />
+          <div className="mt-4 flex flex-wrap gap-2 print:hidden">
+            <Button type="button" size="sm" onClick={() => window.print()}>
+              <Printer className="size-3" aria-hidden />
               {t('reception.done.print')}
             </Button>
-            {/* Primary in practice: there is a queue at the window. */}
-            <Button type="button" variant="outline" onClick={startAnother}>
-              <UserPlus className="size-4" aria-hidden />
+            <Button type="button" size="sm" variant="outline" onClick={startAnother}>
+              <UserPlus className="size-3" aria-hidden />
               {t('reception.done.next')}
             </Button>
             <Link
               to={`/patients/${checkIn.data.patient.id}`}
-              className={cn(buttonVariants({ variant: 'ghost' }))}
+              className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
             >
               {t('reception.done.openRecord')}
             </Link>
@@ -215,83 +223,102 @@ export function ReceptionPage() {
   const patientReady = mode === 'new' ? patientForm.values.firstName.trim().length > 0 : chosen != null
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t('reception.title')} description={t('reception.subtitle')} />
+    <div className="flex h-[calc(100vh-4rem)] flex-col">
+      <div className="border-b px-4 py-2">
+        <PageHeader title={t('reception.title')} />
+      </div>
 
-      <form onSubmit={onSubmit} className="grid gap-6 lg:grid-cols-2" noValidate>
-        {/* Left: who, and why they came. */}
-        <div className="space-y-6">
-          <Section step={1} title={t('reception.steps.patient')}>
+      <form onSubmit={onSubmit} className="flex flex-1 gap-3 overflow-hidden p-3" noValidate>
+        {/* Left column: Patient + Visit details */}
+        <div className="flex w-[35%] flex-col gap-3 overflow-y-auto">
+          {/* Step 1: Patient */}
+          <div className="rounded-lg border bg-card p-3">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {t('reception.steps.patient')}
+            </h3>
             {mode === 'search' ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {chosen ? (
                   <ChosenPatient patient={chosen} onClear={() => setChosen(null)} />
                 ) : (
                   <>
                     <div className="relative">
-                      <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         value={term}
                         onChange={(e) => setTerm(e.target.value)}
                         placeholder={t('patients.search.placeholder')}
-                        className="ps-9"
+                        className="h-8 ps-8 text-sm"
                         autoFocus
                       />
                     </div>
                     {term.trim().length >= PATIENT_SEARCH_MIN && (
-                      <ul className="max-h-56 divide-y divide-border overflow-y-auto rounded-lg border border-border">
+                      <ul className="max-h-40 divide-y divide-border overflow-y-auto rounded border text-sm">
                         {(search.data?.patients ?? []).map((patient) => (
                           <li key={patient.id}>
                             <button
                               type="button"
                               onClick={() => setChosen(patient)}
-                              className="flex w-full items-baseline justify-between gap-3 p-3 text-start text-sm hover:bg-muted"
+                              className="flex w-full items-baseline justify-between gap-2 p-2 text-start hover:bg-muted"
                             >
-                              <span className="font-medium text-foreground">
+                              <span className="text-sm font-medium">
                                 {[patient.prefix, patient.firstName, patient.lastName]
                                   .filter(Boolean)
                                   .join(' ')}
                               </span>
-                              <span dir="ltr" className="font-mono text-xs text-muted-foreground">
+                              <span dir="ltr" className="text-xs font-mono text-muted-foreground">
                                 {patient.mrn}
-                                {patient.phone ? ` · ${patient.phone}` : ''}
                               </span>
                             </button>
                           </li>
                         ))}
                         {search.data?.patients.length === 0 && (
-                          <li className="p-3 text-sm text-muted-foreground">
+                          <li className="p-2 text-xs text-muted-foreground">
                             {t('patients.search.empty')}
                           </li>
                         )}
                       </ul>
                     )}
-                    <Button type="button" variant="outline" onClick={() => setMode('new')}>
-                      <UserPlus className="size-4" aria-hidden />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setMode('new')}
+                    >
+                      <UserPlus className="size-3" aria-hidden />
                       {t('reception.newPatient')}
                     </Button>
                   </>
                 )}
               </div>
             ) : (
-              <div className="space-y-5">
+              <div className="space-y-3">
                 <PatientFormFields
                   values={patientForm.values}
                   set={patientForm.set}
                   errors={patientForm.errors}
                   autoFocus
                 />
-                <Button type="button" variant="ghost" onClick={() => setMode('search')}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMode('search')}
+                >
                   {t('reception.searchInstead')}
                 </Button>
               </div>
             )}
-          </Section>
+          </div>
 
-          <Section step={2} title={t('reception.steps.visit')}>
-            <div className="space-y-1.5">
-              <Label>{t('visits.fields.type')}</Label>
-              <div className="flex flex-wrap gap-2">
+          {/* Step 2: Visit */}
+          <div className="rounded-lg border bg-card p-3">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {t('reception.steps.visit')}
+            </h3>
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1">
                 {VISIT_CREATE_TYPES.map((option) => (
                   <Chip
                     key={option}
@@ -301,290 +328,403 @@ export function ReceptionPage() {
                   />
                 ))}
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="departmentId">
-                {t('visits.fields.department')}
-                <span className="ms-0.5 text-destructive">*</span>
-              </Label>
-              <Select
-                id="departmentId"
-                value={departmentId}
-                onChange={(e) => {
-                  setDepartmentId(e.target.value)
-                  // The doctor and the prices both belong to the old department.
-                  setPractitionerId('')
-                  setQuantities({})
-                }}
-              >
-                <option value="">{t('visits.create.chooseDepartment')}</option>
-                {departments.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {departmentName(department)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="practitionerId">{t('visits.fields.practitioner')}</Label>
-              <Select
-                id="practitionerId"
-                value={practitionerId}
-                disabled={!departmentId}
-                onChange={(e) => setPractitionerId(e.target.value)}
-              >
-                <option value="">{t('visits.create.noDoctor')}</option>
-                {availableDoctors.map((practitioner) => (
-                  <option key={practitioner.id} value={practitioner.id}>
-                    {practitioner.name}
-                    {practitioner.specialityName ? ` — ${practitioner.specialityName}` : ''}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="chiefComplaint">{t('visits.fields.chiefComplaint')}</Label>
-              <Textarea
-                id="chiefComplaint"
-                rows={2}
-                value={chiefComplaint}
-                placeholder={t('visits.create.complaintPlaceholder')}
-                onChange={(e) => setChiefComplaint(e.target.value)}
-              />
-            </div>
-          </Section>
-        </div>
-
-        {/* Right: the money, and the one button. */}
-        <div className="space-y-6">
-          <Section step={3} title={t('reception.steps.bill')}>
-            {!departmentId ? (
-              <p className="text-sm text-muted-foreground">{t('reception.bill.chooseFirst')}</p>
-            ) : (
-              <>
-                <ServiceList
-                  services={departmentServices}
-                  quantities={quantities}
-                  setQuantity={setQuantity}
-                  emptyLabel={t('reception.bill.noneHere')}
-                />
-
-                {otherServices.length > 0 && (
-                  <div className="border-t border-border pt-3">
+              {/* Searchable Department Select */}
+              <div ref={departmentRef} className="relative">
+                <Label className="text-xs">
+                  {t('visits.fields.department')}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute start-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={
+                      showDepartmentDropdown
+                        ? departmentSearch
+                        : departmentId
+                          ? departmentName(departments.find((d) => d.id === departmentId)!)
+                          : ''
+                    }
+                    onChange={(e) => {
+                      setDepartmentSearch(e.target.value)
+                      setShowDepartmentDropdown(true)
+                    }}
+                    onFocus={() => {
+                      setShowDepartmentDropdown(true)
+                      setDepartmentSearch('')
+                    }}
+                    placeholder={t('visits.create.chooseDepartment')}
+                    className="h-8 ps-7 text-sm"
+                  />
+                  {departmentId && !showDepartmentDropdown && (
                     <button
                       type="button"
-                      onClick={() => setShowAllServices((open) => !open)}
-                      className="flex items-center gap-1.5 text-sm font-medium text-foreground"
-                      aria-expanded={showAllServices}
+                      onClick={() => {
+                        setDepartmentId('')
+                        setPractitionerId('')
+                        setQuantities({})
+                      }}
+                      className="absolute end-2 top-1/2 -translate-y-1/2"
                     >
-                      {showAllServices ? (
-                        <ChevronDown className="size-4" aria-hidden />
-                      ) : (
-                        <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />
-                      )}
-                      {t('reception.bill.moreServices')}
+                      <X className="size-3 text-muted-foreground hover:text-foreground" />
                     </button>
-                    {showAllServices && (
-                      <div className="mt-3">
-                        <ServiceList
-                          services={otherServices}
-                          quantities={quantities}
-                          setQuantity={setQuantity}
-                          emptyLabel=""
-                        />
-                      </div>
+                  )}
+                </div>
+                {showDepartmentDropdown && (
+                  <ul className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded border bg-popover shadow-lg">
+                    {filteredDepartments.map((dept) => (
+                      <li key={dept.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDepartmentId(dept.id)
+                            setDepartmentSearch('')
+                            setShowDepartmentDropdown(false)
+                            setPractitionerId('')
+                            setQuantities({})
+                          }}
+                          className={cn(
+                            'w-full px-3 py-1.5 text-start text-sm hover:bg-accent',
+                            dept.id === departmentId && 'bg-accent'
+                          )}
+                        >
+                          {departmentName(dept)}
+                        </button>
+                      </li>
+                    ))}
+                    {filteredDepartments.length === 0 && (
+                      <li className="px-3 py-2 text-xs text-muted-foreground">No departments found</li>
                     )}
-                  </div>
+                  </ul>
                 )}
+              </div>
 
-                <div className="space-y-3 border-t border-border pt-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="discount">{t('reception.bill.discount')}</Label>
+              <div>
+                <Label className="text-xs" htmlFor="practitionerId">
+                  {t('visits.fields.practitioner')}
+                </Label>
+                <Select
+                  id="practitionerId"
+                  value={practitionerId}
+                  disabled={!departmentId}
+                  onChange={(e) => setPractitionerId(e.target.value)}
+                  className="h-8 text-sm"
+                >
+                  <option value="">{t('visits.create.noDoctor')}</option>
+                  {availableDoctors.map((practitioner) => (
+                    <option key={practitioner.id} value={practitioner.id}>
+                      {practitioner.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs" htmlFor="chiefComplaint">
+                  {t('visits.fields.chiefComplaint')}
+                </Label>
+                <Textarea
+                  id="chiefComplaint"
+                  rows={2}
+                  value={chiefComplaint}
+                  placeholder={t('visits.create.complaintPlaceholder')}
+                  onChange={(e) => setChiefComplaint(e.target.value)}
+                  className="resize-none text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right column: Services + Payment */}
+        <div className="flex w-[65%] flex-col gap-3">
+          {/* Step 3: Services */}
+          <div className="flex-1 rounded-lg border bg-card p-3 overflow-hidden flex flex-col">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t('reception.steps.bill')}
+              </h3>
+              {chosenServices.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {chosenServices.length} selected
+                </span>
+              )}
+            </div>
+
+            {!departmentId ? (
+              <p className="text-xs text-muted-foreground">{t('reception.bill.chooseFirst')}</p>
+            ) : (
+              <>
+                <div className="relative mb-2">
+                  <Search className="pointer-events-none absolute start-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={serviceSearch}
+                    onChange={(e) => setServiceSearch(e.target.value)}
+                    placeholder="Search services..."
+                    className="h-7 ps-7 text-xs"
+                  />
+                </div>
+
+                <div className="flex-1 overflow-y-auto -mx-3 px-3">
+                  {filteredDeptServices.length > 0 && (
+                    <div className="mb-2">
+                      <p className="mb-1 text-[10px] font-medium uppercase text-muted-foreground">
+                        Department Services
+                      </p>
+                      <ServiceGrid
+                        services={filteredDeptServices}
+                        quantities={quantities}
+                        setQuantity={setQuantity}
+                      />
+                    </div>
+                  )}
+
+                  {filteredOtherServices.length > 0 && (
+                    <div>
+                      <p className="mb-1 text-[10px] font-medium uppercase text-muted-foreground">
+                        Other Services
+                      </p>
+                      <ServiceGrid
+                        services={filteredOtherServices}
+                        quantities={quantities}
+                        setQuantity={setQuantity}
+                      />
+                    </div>
+                  )}
+
+                  {filteredDeptServices.length === 0 && filteredOtherServices.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {serviceSearch ? 'No matching services' : 'No services available'}
+                    </p>
+                  )}
+                </div>
+
+                {/* Discount + Total */}
+                <div className="mt-2 border-t pt-2">
+                  <div className="mb-2 grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[10px]" htmlFor="discount">
+                        Discount
+                      </Label>
                       <Input
                         id="discount"
                         dir="ltr"
                         inputMode="decimal"
                         value={discount}
                         onChange={(e) => setDiscount(e.target.value)}
+                        className="h-7 text-xs"
                         aria-invalid={overCeiling}
                       />
-                      <p
-                        className={cn(
-                          'text-xs',
-                          overCeiling ? 'text-destructive' : 'text-muted-foreground',
-                        )}
-                      >
-                        {t('reception.bill.ceiling', {
-                          pct: DISCOUNT_CEILING_PCT,
-                          max: fromMinor(ceilingMinor),
-                        })}
-                      </p>
+                      {overCeiling && (
+                        <p className="mt-0.5 text-[10px] text-destructive">
+                          Max {DISCOUNT_CEILING_PCT}% ({fromMinor(ceilingMinor)})
+                        </p>
+                      )}
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="discountReason">{t('reception.bill.reason')}</Label>
+                    <div>
+                      <Label className="text-[10px]" htmlFor="discountReason">
+                        Reason
+                      </Label>
                       <Input
                         id="discountReason"
                         value={discountReason}
                         disabled={discountMinor <= 0}
                         onChange={(e) => setDiscountReason(e.target.value)}
+                        className="h-7 text-xs"
                       />
                     </div>
                   </div>
 
-                  <dl className="space-y-1 text-sm">
-                    <div className="flex items-baseline justify-between">
-                      <dt className="text-muted-foreground">{t('reception.bill.subtotal')}</dt>
-                      <dd className="font-mono text-foreground" dir="ltr">
-                        {fromMinor(subtotalMinor)}
-                      </dd>
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-mono">{fromMinor(subtotalMinor)}</span>
+                  </div>
+                  {discountMinor > 0 && (
+                    <div className="flex items-baseline justify-between text-xs">
+                      <span className="text-muted-foreground">Discount</span>
+                      <span className="font-mono text-destructive">−{fromMinor(discountMinor)}</span>
                     </div>
-                    {discountMinor > 0 && (
-                      <div className="flex items-baseline justify-between">
-                        <dt className="text-muted-foreground">{t('reception.bill.discount')}</dt>
-                        <dd className="font-mono text-foreground" dir="ltr">
-                          −{fromMinor(discountMinor)}
-                        </dd>
-                      </div>
-                    )}
-                    <div className="flex items-baseline justify-between border-t border-border pt-2">
-                      <dt className="font-semibold text-foreground">{t('reception.bill.total')}</dt>
-                      <dd className="font-mono text-xl font-bold text-foreground" dir="ltr">
-                        {fromMinor(totalMinor)}
-                      </dd>
-                    </div>
-                  </dl>
+                  )}
+                  <div className="mt-1 flex items-baseline justify-between border-t pt-1">
+                    <span className="font-semibold">Total</span>
+                    <span className="text-lg font-bold font-mono">{fromMinor(totalMinor)}</span>
+                  </div>
                 </div>
               </>
             )}
-          </Section>
+          </div>
 
-          <Section step={4} title={t('reception.steps.payment')}>
-            <div className="flex flex-wrap gap-2">
-              {PAYMENT_METHODS.map((method) => (
-                <Chip
-                  key={method}
-                  active={paymentMethod === method}
-                  onClick={() => setPaymentMethod(method)}
-                  label={t(`reception.payment.method.${method}`)}
-                />
-              ))}
+          {/* Step 4: Payment + Submit */}
+          <div className="rounded-lg border bg-card p-3">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {t('reception.steps.payment')}
+            </h3>
+            <div className="flex items-end justify-between gap-4">
+              <div className="flex-1">
+                <div className="mb-2 flex flex-wrap gap-1">
+                  {PAYMENT_METHODS.map((method) => (
+                    <Chip
+                      key={method}
+                      active={paymentMethod === method}
+                      onClick={() => setPaymentMethod(method)}
+                      label={t(`reception.payment.method.${method}`)}
+                    />
+                  ))}
+                </div>
+
+                {paymentMethod !== 'cash' && (
+                  <div>
+                    <Label className="text-[10px]" htmlFor="paymentReference">
+                      Reference
+                    </Label>
+                    <Input
+                      id="paymentReference"
+                      dir="ltr"
+                      value={paymentReference}
+                      onChange={(e) => setPaymentReference(e.target.value)}
+                      className="h-7 text-xs"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                size="lg"
+                className="h-12 px-8 text-base"
+                disabled={
+                  checkIn.isPending || !patientReady || !departmentId || chosenServices.length === 0
+                }
+              >
+                {checkIn.isPending ? t('reception.saving') : t('reception.submit', { amount: fromMinor(totalMinor) })}
+              </Button>
             </div>
 
-            {paymentMethod !== 'cash' && (
-              <div className="space-y-1.5">
-                <Label htmlFor="paymentReference">{t('reception.payment.reference')}</Label>
-                <Input
-                  id="paymentReference"
-                  dir="ltr"
-                  value={paymentReference}
-                  onChange={(e) => setPaymentReference(e.target.value)}
-                />
+            {/* Conflicts + Errors */}
+            {conflict?.kind === 'duplicate' && (
+              <div className="mt-2 rounded border border-warning/40 bg-warning/10 p-2">
+                <DuplicateNotice matches={conflict.matches} tone="blocking" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-1"
+                  onClick={() => submit({ acknowledgeDuplicate: true })}
+                  disabled={checkIn.isPending}
+                >
+                  {t('patients.duplicates.registerAnyway')}
+                </Button>
               </div>
             )}
-          </Section>
 
-          {/* The server refused and named what it found. Never a dead end. */}
-          {conflict?.kind === 'duplicate' && (
-            <div className="space-y-3 rounded-lg border border-warning/40 bg-warning/10 p-4">
-              <DuplicateNotice matches={conflict.matches} tone="blocking" />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => submit({ acknowledgeDuplicate: true })}
-                disabled={checkIn.isPending}
-              >
-                {t('patients.duplicates.registerAnyway')}
-              </Button>
-            </div>
-          )}
+            {conflict?.kind === 'openVisit' && (
+              <div className="mt-2 rounded border border-warning/40 bg-warning/10 p-2">
+                <p className="text-xs font-medium">{t('visits.open.title')}</p>
+                <ul className="mt-1 text-xs text-muted-foreground">
+                  {conflict.visits.map((visit) => (
+                    <li key={visit.id}>
+                      <span dir="ltr" className="font-mono">{visit.visitNo}</span>
+                      {' · '}{visit.departmentName}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-1"
+                  onClick={() => submit({ acknowledgeOpenVisit: true })}
+                  disabled={checkIn.isPending}
+                >
+                  {t('visits.open.startAnyway')}
+                </Button>
+              </div>
+            )}
 
-          {conflict?.kind === 'openVisit' && (
-            <div className="space-y-3 rounded-lg border border-warning/40 bg-warning/10 p-4">
-              <p className="text-sm font-medium text-foreground">{t('visits.open.title')}</p>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                {conflict.visits.map((visit) => (
-                  <li key={visit.id}>
-                    <span dir="ltr" className="font-mono">
-                      {visit.visitNo}
-                    </span>
-                    {' · '}
-                    {visit.departmentName}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => submit({ acknowledgeOpenVisit: true })}
-                disabled={checkIn.isPending}
-              >
-                {t('visits.open.startAnyway')}
-              </Button>
-            </div>
-          )}
-
-          {formError && <p className="text-sm text-destructive">{formError}</p>}
-          {checkIn.isError && !conflict && (
-            <p className="text-sm text-destructive">{t('reception.error')}</p>
-          )}
-          {optionsQuery.isError && (
-            <p className="text-sm text-destructive">{t('visits.create.optionsError')}</p>
-          )}
-
-          <Card className="p-4">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={
-                checkIn.isPending || !patientReady || !departmentId || chosenServices.length === 0
-              }
-            >
-              {checkIn.isPending
-                ? t('reception.saving')
-                : t('reception.submit', { amount: fromMinor(totalMinor) })}
-            </Button>
-            {/* Says out loud what the one button is about to do, because it does four things. */}
-            <p className="mt-2 text-center text-xs text-muted-foreground">
-              {t('reception.submitHint')}
-            </p>
-          </Card>
+            {formError && <p className="mt-2 text-xs text-destructive">{formError}</p>}
+            {checkIn.isError && !conflict && (
+              <p className="mt-2 text-xs text-destructive">{t('reception.error')}</p>
+            )}
+          </div>
         </div>
       </form>
     </div>
   )
 }
 
-function Section({
-  step,
-  title,
-  children,
+// Compact service grid with quantity controls
+function ServiceGrid({
+  services,
+  quantities,
+  setQuantity,
 }: {
-  step: number
-  title: string
-  children: React.ReactNode
+  services: readonly { id: string; name: string; fee: string }[]
+  quantities: Record<string, number>
+  setQuantity: (serviceId: string, quantity: number) => void
 }) {
   return (
-    <Card className="space-y-4 p-5">
-      <div className="flex items-center gap-2">
-        {/* Numbered because these ARE a sequence — the desk works through them in order,
-            and step 3 cannot be answered before step 2 names a department. */}
-        <span
-          className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
-          aria-hidden
-        >
-          {step}
-        </span>
-        <h2 className="font-medium text-foreground">{title}</h2>
-      </div>
-      {children}
-    </Card>
+    <div className="grid grid-cols-3 gap-1">
+      {services.map((service) => {
+        const quantity = quantities[service.id] ?? 0
+        const selected = quantity > 0
+        return (
+          <div
+            key={service.id}
+            className={cn(
+              'flex items-center gap-1 rounded border p-1.5 transition-colors',
+              'hover:border-primary/50',
+              selected ? 'border-primary bg-primary/5' : 'border-border'
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => setQuantity(service.id, selected ? 0 : 1)}
+              className={cn(
+                'flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border text-[10px] font-bold transition-colors',
+                selected
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-muted-foreground/30'
+              )}
+            >
+              {selected && <Check className="size-2.5" />}
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[11px] font-medium leading-tight">{service.name}</p>
+              <p className="text-[10px] font-mono text-muted-foreground">{service.fee}</p>
+            </div>
+            {selected && (
+              <div className="flex flex-shrink-0 items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setQuantity(service.id, Math.max(1, quantity - 1))
+                  }}
+                  className="flex h-5 w-5 items-center justify-center rounded border text-xs hover:bg-muted"
+                >
+                  −
+                </button>
+                <span className="w-5 text-center text-xs font-mono font-bold">{quantity}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setQuantity(service.id, Math.min(99, quantity + 1))
+                  }}
+                  className="flex h-5 w-5 items-center justify-center rounded border text-xs hover:bg-muted"
+                >
+                  +
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
+// Reusable chip component
 function Chip({
   active,
   onClick,
@@ -600,11 +740,11 @@ function Chip({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'rounded-lg border px-3 py-2 text-sm transition-colors',
-        'focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+        'rounded-md border px-2 py-1 text-xs font-medium transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         active
           ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-input bg-background text-foreground hover:bg-muted',
+          : 'border-input bg-background hover:bg-muted'
       )}
     >
       {label}
@@ -612,6 +752,7 @@ function Chip({
   )
 }
 
+// Chosen patient card
 function ChosenPatient({
   patient,
   onClear,
@@ -623,79 +764,27 @@ function ChosenPatient({
   const age = currentAgeYears(patient)
 
   return (
-    <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/50 p-3">
-      <div>
-        <p className="font-semibold text-foreground">
+    <div className="flex items-start justify-between gap-2 rounded border bg-muted/50 p-2">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">
           {[patient.prefix, patient.firstName, patient.lastName].filter(Boolean).join(' ')}
         </p>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          <span dir="ltr" className="font-mono">
-            {patient.mrn}
-          </span>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          <span dir="ltr" className="font-mono">{patient.mrn}</span>
           {' · '}
           {t(`patients.gender.${patient.gender}`)}
-          {age != null && ` · ${t('patients.search.years', { count: age })}`}
+          {age != null && ` · ${age}y`}
         </p>
       </div>
-      <Button type="button" variant="ghost" size="icon-sm" onClick={onClear} aria-label={t('reception.clearPatient')}>
-        <X className="size-4" />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        onClick={onClear}
+        aria-label={t('reception.clearPatient')}
+      >
+        <X className="size-3" />
       </Button>
     </div>
-  )
-}
-
-function ServiceList({
-  services,
-  quantities,
-  setQuantity,
-  emptyLabel,
-}: {
-  services: readonly { id: string; name: string; fee: string }[]
-  quantities: Record<string, number>
-  setQuantity: (serviceId: string, quantity: number) => void
-  emptyLabel: string
-}) {
-  if (services.length === 0) {
-    return emptyLabel ? <p className="text-sm text-muted-foreground">{emptyLabel}</p> : null
-  }
-
-  return (
-    <ul className="space-y-1">
-      {services.map((service) => {
-        const quantity = quantities[service.id] ?? 0
-        const picked = quantity > 0
-        return (
-          <li key={service.id} className="flex items-center gap-3">
-            <label className="flex flex-1 cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-muted">
-              <input
-                type="checkbox"
-                checked={picked}
-                onChange={(e) => setQuantity(service.id, e.target.checked ? 1 : 0)}
-                className="size-4 accent-primary"
-              />
-              <span className="flex-1 text-sm text-foreground">{service.name}</span>
-              <span dir="ltr" className="font-mono text-sm text-muted-foreground">
-                {service.fee}
-              </span>
-            </label>
-            {/* The quantity box only exists once the line does — an input that does
-                nothing is an input to skip past on every registration. */}
-            {picked && (
-              <Input
-                type="number"
-                min={1}
-                max={99}
-                dir="ltr"
-                inputMode="numeric"
-                value={quantity}
-                onChange={(e) => setQuantity(service.id, Number(e.target.value))}
-                className="w-16"
-                aria-label={`${service.name} quantity`}
-              />
-            )}
-          </li>
-        )
-      })}
-    </ul>
   )
 }
