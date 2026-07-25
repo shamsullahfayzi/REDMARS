@@ -339,7 +339,7 @@ export class LabResultService {
         referenceLow: band.low?.toString() ?? null,
         referenceHigh: band.high?.toString() ?? null,
         referenceText: band.text,
-        verifiedAt: row.result.verifiedAt.toISOString(),
+        verifiedAt: row.result.verifiedAt?.toISOString() ?? null,
         comment: row.result.comment,
       });
     }

@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { verify } from '@node-rs/argon2';
-import { Prisma } from '@prisma/client';
+import { InvoiceStatus, Prisma } from '@prisma/client';
 import { DISCOUNT_CEILING_PCT } from '@redmars/shared';
 import type {
   ApplyDiscountRequest,
@@ -50,6 +50,7 @@ export class DiscountService {
       const invoice = await tx.invoice.findFirst({
         where: { id: invoiceId, facilityId },
         select: { id: true, status: true, subtotal: true, paidAmount: true, currency: true },
+        
       });
       if (!invoice) throw new NotFoundException('Invoice not found');
       if (invoice.status === 'cancelled') {
@@ -69,7 +70,7 @@ export class DiscountService {
       // UNLESS a valid approver stands behind it (task 6.5). The approver's id, once
       // verified, is stamped on the bill as the second person the rule requires.
       const approver = await this.authoriseCeiling(
-        tx,
+         tx as any,
         facilityId,
         userId,
         permissions,
@@ -106,14 +107,14 @@ export class DiscountService {
           discountApprovedAt: approver ? new Date() : null,
         },
       });
-
-      return { invoice, discount, total, status, approvedByName: approver?.fullName ?? null };
+      const status_ = status as InvoiceStatus ;
+      return { invoice, discount, total,status_ , approvedByName: approver?.fullName ?? null };
     });
 
     const outstanding = Prisma.Decimal.max(0, result.total.minus(result.invoice.paidAmount));
     return {
       invoiceId,
-      status: result.status,
+      status:result.status_,
       subtotal: result.invoice.subtotal.toFixed(2),
       discount: result.discount.toFixed(2),
       discountReason: input.reason,

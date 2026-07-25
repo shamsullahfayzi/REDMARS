@@ -50,7 +50,7 @@ export function ReceptionPage() {
   const checkIn = useCheckIn()
 
   // --- Step 1: who ---------------------------------------------------------------
-  const [mode, setMode] = useState<'search' | 'new'>('search')
+  const [mode, setMode] = useState<'search' | 'new'>('new')
   const [term, setTerm] = useState('')
   const [chosen, setChosen] = useState<PatientSummary | null>(null)
   const search = usePatientSearch(useDebounced(term, 250), 1)

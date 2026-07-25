@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { InvoiceStatus, Prisma } from '@prisma/client';
 import type {
   RecordPaymentRequest,
   RecordPaymentResponse,
@@ -70,7 +70,7 @@ export class PaymentService {
       }
 
       const paidAmount = invoice.paidAmount.plus(amount);
-      const status = paidAmount.greaterThanOrEqualTo(invoice.total) ? 'paid' : 'partially_paid';
+      const status = paidAmount.greaterThanOrEqualTo(invoice.total) ? 'paid' : 'partially_paid' as InvoiceStatus
 
       // Optimistic guard: the update only lands if paidAmount is still what we read. If a
       // payment slipped in at another window (or the same button was double-clicked) the
@@ -224,7 +224,7 @@ export class PaymentService {
         ? 'paid'
         : paidAmount.greaterThan(0)
           ? 'partially_paid'
-          : 'issued';
+          : 'issued' as InvoiceStatus;
       await tx.invoice.update({ where: { id: invoiceId }, data: { paidAmount, status } });
 
       return { payment, refundRow, receipt, paidAmount, status };
