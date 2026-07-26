@@ -66,9 +66,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: 'clinical',
     roles: ['admin', 'receptionist', 'nurse', 'doctor', 'lab_tech', 'pharmacist'],
   },
-  // Receptionist only, matching `patient.create` — the desk registers, so there is one
-  // till and one duplicate-check path. Showing it to an admin would lead to a 403.
-  { key: 'patientNew', to: '/patients/new', group: 'clinical', roles: ['receptionist'] },
   { key: 'consultations', to: '/consultations', group: 'clinical', roles: ['doctor'] },
   // Task 4.15 — the recall list, matching `follow_up.read`. THE RECEPTIONIST IS HERE and
   // that is the point of the feature: the desk is who rings a patient who did not come

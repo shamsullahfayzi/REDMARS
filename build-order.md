@@ -192,13 +192,13 @@ things built too rigid the first time, plus two visibility gaps management flagg
 | # | Task | Touches | Done when |
 |---|---|---|---|
 | 6b.1 | Discount ceiling becomes an admin-set facility `Setting`, not a hardcoded 10% | Setting, discount.service, reception.service | Admin changes the number, reception is bound by it same day |
-| 6b.2 | Registration always creates a visit — retire the no-visit `/patients/new` door | CreatePatientPage, nav | Every registered patient has a department + service line, no exceptions |
+| 6b.2 | Registration always creates a visit — retire the no-visit `/patients/new` door | ~~CreatePatientPage~~ (removed), nav | Every registered patient has a department + service line, no exceptions |
 | 6b.3 | Reception check-in: minimum-mouse keyboard flow (type-ahead pickers, Enter commits, tab order matches the desk's conversation) | ReceptionPage | Whole check-in completable without touching the mouse |
 | 6b.4 | Auto-start consult on first clinical write, not on page open | ConsultPage, vitals/complaint/lab-order write paths | `arrived → in_progress` fires on the first saved field, never on merely opening the chart |
 | 6b.5 | Follow-up booking from the consult page; a doctor can only book themselves | BookFollowUp, appointment.service | Doctor's picker is locked to self, enforced server-side |
 | 6b.6 | Lab results join patient history; print previous + current results | history.ts, HistoryTab | The gap `history.ts` flagged as "a select away when 5.10 lands" is closed |
 | 6b.7 | Collections page: every unpaid lab + pharmacy bill in one list, badge for new arrivals, pay and print inline | new module | Reception finds an unpaid bill without opening the patient |
-| 6b.8 | Printable patient ID card after first registration | CreatePatientPage / ReceptionPage | MRN + name on a small print sheet, handed over on first visit |
+| 6b.8 | Printable patient ID card after first registration | ReceptionPage | MRN + name on a small print sheet, handed over on first visit |
 | 6b.9 | Visibility hardening: pharmacist/lab_tech lose free-text patient search; reception loses the facility-wide invoice list and any revenue total | nav.ts, permissions.ts | Neither role can see money that isn't theirs to see |
 | 6b.10 | Role-specific home pages | router.tsx, HomePage | Each role lands on their actual queue, not a dashboard |
 

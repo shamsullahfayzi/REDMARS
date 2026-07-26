@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router'
+import { createBrowserRouter, Navigate } from 'react-router'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { RootLayout } from '@/layouts/RootLayout'
 import { HomePage } from '@/pages/HomePage'
@@ -9,7 +9,6 @@ import { AppointmentsPage } from '@/pages/AppointmentsPage'
 import { ConsultPage } from '@/pages/ConsultPage'
 import { MyConsultationsPage } from '@/pages/MyConsultationsPage'
 import { FollowUpsPage } from '@/pages/FollowUpsPage'
-import { CreatePatientPage } from '@/pages/CreatePatientPage'
 import { DepartmentPage } from '@/pages/DepartmentsPage'
 import { DrugsPage } from '@/pages/DrugsPage'
 import { IcdLookupPage } from '@/pages/IcdLookupPage'
@@ -53,7 +52,10 @@ export const router = createBrowserRouter([
           { path: 'queue', element: <QueuePage /> },
           { path: 'appointments', element: <AppointmentsPage /> },
           { path: 'patients', element: <PatientsPage /> },
-          { path: 'patients/new', element: <CreatePatientPage /> },
+          // Task 6b.2 — registration without a visit is retired: it left patients created
+          // with no department and no billable line, and nothing ever forced reception to
+          // come back and add one. Every registration now goes through check-in instead.
+          { path: 'patients/new', element: <Navigate to="/reception" replace /> },
           { path: 'patients/:id', element: <PatientDetailPage /> },
           { path: 'patients/:id/visit', element: <StartVisitPage /> },
           // The doctor's own day. A placeholder since task 1.6 — the sidebar has pointed

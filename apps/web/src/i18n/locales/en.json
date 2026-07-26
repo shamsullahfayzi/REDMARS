@@ -45,7 +45,6 @@
     "dashboard": "Dashboard",
     "queue": "Queue",
     "patients": "Patients",
-    "patientNew": "Register patient",
     "consultations": "My consultations",
     "icd": "Diagnosis codes",
     "interactions": "Interactions",
@@ -505,22 +504,10 @@
   },
   "patients": {
     "create": {
-      "title": "Register patient",
-      "subtitle": "Ask the four fields below. Everything else is optional.",
       "moreDetails": "More details",
       "lastNameHint": "Leave blank if the patient has no family name.",
       "dobHint": "Only if the patient knows it. The age above is enough.",
-      "notSpecified": "Not specified",
-      "submit": "Register patient",
-      "saving": "Registering…",
-      "enterHint": "Press Enter to save",
-      "registered": "Patient registered",
-      "mrn": "Medical record number",
-      "copyMrn": "Copy medical record number",
-      "registerAnother": "Register another",
-      "error": "Could not register the patient. Nothing was saved — check the fields and try again.",
-      "invalid": "Please check the highlighted fields.",
-      "startVisit": "Start visit"
+      "notSpecified": "Not specified"
     },
     "search": {
       "subtitle": "Search by name, medical record number, or phone.",

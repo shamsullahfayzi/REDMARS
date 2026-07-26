@@ -60,7 +60,7 @@ export function PatientsPage() {
           />
         </div>
         {canRegister && (
-          <Link to="/patients/new" className={cn(buttonVariants())}>
+          <Link to="/reception" className={cn(buttonVariants())}>
             <UserPlus className="size-4" aria-hidden />
             {t('patients.search.register')}
           </Link>
@@ -80,10 +80,7 @@ export function PatientsPage() {
                 {term ? t('patients.search.empty') : t('patients.search.none')}
               </p>
               {canRegister && (
-                <Link
-                  to="/patients/new"
-                  className={cn(buttonVariants({ variant: 'outline' }))}
-                >
+                <Link to="/reception" className={cn(buttonVariants({ variant: 'outline' }))}>
                   <UserPlus className="size-4" aria-hidden />
                   {t('patients.search.registerInstead')}
                 </Link>
