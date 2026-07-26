@@ -27,6 +27,7 @@ import { TillPage } from '@/pages/TillPage'
 import { QueuePage } from '@/pages/QueuePage'
 import { ReceptionPage } from '@/pages/ReceptionPage'
 import { ServicesPage } from '@/pages/ServicesPage'
+import { SettingsPage } from '@/pages/SettingsPage'
 import { StartVisitPage } from '@/pages/StartVisitPage'
 import { UsersPage } from '@/pages/UsersPage'
 
@@ -73,6 +74,7 @@ export const router = createBrowserRouter([
           { path: 'till', element: <TillPage /> },
           { path: 'pharmacy', element: <PharmacyPage /> },
           { path: 'users', element: <UsersPage /> },
+          { path: 'settings', element: <SettingsPage /> },
           { path: 'modules', element: <ModulesPage /> },
           { path: 'departments', element: <DepartmentPage /> },
           { path: 'practitioners', element: <PractitionersPage /> },

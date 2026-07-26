@@ -52,6 +52,7 @@
     "lab": "Lab",
     "pharmacy": "Pharmacy",
     "users": "Users",
+    "settings": "Settings",
     "modules": "Modules",
     "departments": "Departments",
     "practitioners": "Practitioners",
@@ -470,6 +471,17 @@
       "moderate": "Moderate",
       "major": "Major",
       "contraindicated": "Contraindicated"
+    }
+  },
+  "settings": {
+    "subtitle": "Facility-wide settings.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "discountCeiling": {
+      "label": "Maximum discount without approval (%)",
+      "hint": "A receptionist or pharmacist can discount up to this percentage on their own. Above it, an administrator must approve at the till.",
+      "error": "Could not save the discount ceiling."
     }
   },
   "modules": {

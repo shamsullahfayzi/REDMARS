@@ -109,6 +109,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: ['admin', 'receptionist', 'pharmacist', 'management'],
   },
   { key: 'users', to: '/users', group: 'administration', roles: ['admin'] },
+  // Task 6b.1 — the R10 discount ceiling, an admin-set number now instead of a constant.
+  { key: 'settings', to: '/settings', group: 'administration', roles: ['admin'] },
   { key: 'modules', to: '/modules', group: 'administration', roles: ['admin'] },
   { key: 'departments', to: '/departments', group: 'administration', roles: ['admin'] },
   { key: 'practitioners', to: '/practitioners', group: 'administration', roles: ['admin'] },

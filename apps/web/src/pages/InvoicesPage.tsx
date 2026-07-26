@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ChevronLeft, ChevronRight, Layers, Printer, Search } from 'lucide-react'
 import {
-  DISCOUNT_CEILING_PCT,
+  DISCOUNT_MAX_PERCENT_DEFAULT,
   INVOICE_STATUSES,
   type InvoiceListItem,
   type InvoiceOrigin,
@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { ApiError, serverMessage } from '@/lib/api'
 import { useDebounced } from '@/hooks/useDebounced'
+import { useDiscountCeiling } from '@/hooks/useDiscountCeiling'
 import {
   useApplyDiscount,
   useInvoiceDetail,
@@ -559,6 +560,8 @@ function DiscountForm({
 }) {
   const { t } = useTranslation()
   const apply = useApplyDiscount(invoiceId)
+  const ceilingQuery = useDiscountCeiling()
+  const maxDiscountPercent = ceilingQuery.data?.maxPercent ?? DISCOUNT_MAX_PERCENT_DEFAULT
   const hasDiscount = Number(currentDiscount) > 0
   const [amount, setAmount] = useState(hasDiscount ? currentDiscount : '')
   const [reason, setReason] = useState(currentReason ?? '')
@@ -569,7 +572,7 @@ function DiscountForm({
   const [approverPassword, setApproverPassword] = useState('')
 
   const subtotalNum = Number(subtotal)
-  const ceiling = uncapped ? subtotalNum : (subtotalNum * DISCOUNT_CEILING_PCT) / 100
+  const ceiling = uncapped ? subtotalNum : (subtotalNum * maxDiscountPercent) / 100
   const value = Number(amount)
   // The amount is bounded by the subtotal here, not the ceiling: over-ceiling is allowed to
   // be typed on purpose, because it is what triggers the approval path below.
@@ -683,7 +686,7 @@ function DiscountForm({
         {uncapped
           ? t('discount.ceilingNone', { subtotal, currency })
           : t('discount.ceilingHint', {
-              pct: DISCOUNT_CEILING_PCT,
+              pct: maxDiscountPercent,
               max: ceiling.toFixed(2),
               currency,
             })}

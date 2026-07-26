@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { Check, ChevronDown, ChevronRight, Printer, Search, UserPlus, X } from 'lucide-react'
+import { Check, Printer, Search, UserPlus, X } from 'lucide-react'
 import {
-  DISCOUNT_CEILING_PCT,
+  DISCOUNT_MAX_PERCENT_DEFAULT,
   PATIENT_SEARCH_MIN,
   PAYMENT_METHODS,
   VISIT_CREATE_TYPES,
@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useDebounced } from '@/hooks/useDebounced'
+import { useDiscountCeiling } from '@/hooks/useDiscountCeiling'
 import { usePatientSearch } from '@/hooks/usePatientSearch'
 import { toPayload, usePatientForm } from '@/hooks/usePatientForm'
 import { conflictFromError, fromMinor, toMinor, useCheckIn } from '@/hooks/useReception'
@@ -36,6 +37,8 @@ export function ReceptionPage() {
   const { t, i18n } = useTranslation()
   const optionsQuery = useVisitOptions()
   const checkIn = useCheckIn()
+  const ceilingQuery = useDiscountCeiling()
+  const maxDiscountPercent = ceilingQuery.data?.maxPercent ?? DISCOUNT_MAX_PERCENT_DEFAULT
 
   // --- Step 1: who ---------------------------------------------------------------
   const [mode, setMode] = useState<'search' | 'new'>('new')
@@ -56,6 +59,7 @@ export function ReceptionPage() {
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [serviceSearch, setServiceSearch] = useState('')
   const [discount, setDiscount] = useState('')
+  const [discountPercentText, setDiscountPercentText] = useState('')
   const [discountReason, setDiscountReason] = useState('')
 
   // --- Step 4: how they paid -----------------------------------------------------
@@ -110,7 +114,7 @@ export function ReceptionPage() {
     0,
   )
   const discountMinor = discount.trim() === '' ? 0 : toMinor(discount.trim())
-  const ceilingMinor = Math.floor((subtotalMinor * DISCOUNT_CEILING_PCT) / 100)
+  const ceilingMinor = Math.floor((subtotalMinor * maxDiscountPercent) / 100)
   const overCeiling = discountMinor > ceilingMinor
   const totalMinor = Math.max(0, subtotalMinor - discountMinor)
 
@@ -118,6 +122,28 @@ export function ReceptionPage() {
 
   function setQuantity(serviceId: string, quantity: number) {
     setQuantities((prev) => ({ ...prev, [serviceId]: Math.max(0, quantity) }))
+  }
+
+  // Amount and percentage are two windows on the one number the server ever sees — the
+  // request carries only `discount` (task 6b.1's second field is UI convenience, not a
+  // second source of truth; the server still computes off the catalog subtotal).
+  function onDiscountAmountChange(text: string) {
+    setDiscount(text)
+    const minor = text.trim() === '' ? 0 : toMinor(text.trim())
+    setDiscountPercentText(
+      subtotalMinor > 0 ? String(Math.round((minor / subtotalMinor) * 10000) / 100) : '',
+    )
+  }
+
+  function onDiscountPercentChange(text: string) {
+    setDiscountPercentText(text)
+    if (text.trim() === '') {
+      setDiscount('')
+      return
+    }
+    const pct = Number(text)
+    if (!Number.isFinite(pct)) return
+    setDiscount(fromMinor(Math.round((subtotalMinor * pct) / 100)))
   }
 
   function buildPayload(overrides: Partial<CheckInRequest> = {}) {
@@ -174,6 +200,7 @@ export function ReceptionPage() {
     setChiefComplaint('')
     setQuantities({})
     setDiscount('')
+    setDiscountPercentText('')
     setDiscountReason('')
     setPaymentReference('')
     setFormError(null)
@@ -501,7 +528,21 @@ export function ReceptionPage() {
 
                 {/* Discount + Total */}
                 <div className="mt-2 border-t pt-2">
-                  <div className="mb-2 grid grid-cols-2 gap-2">
+                  <div className="mb-2 grid grid-cols-3 gap-2">
+                    <div>
+                      <Label className="text-[10px]" htmlFor="discountPercent">
+                        Discount %
+                      </Label>
+                      <Input
+                        id="discountPercent"
+                        dir="ltr"
+                        inputMode="decimal"
+                        value={discountPercentText}
+                        onChange={(e) => onDiscountPercentChange(e.target.value)}
+                        className="h-7 text-xs"
+                        aria-invalid={overCeiling}
+                      />
+                    </div>
                     <div>
                       <Label className="text-[10px]" htmlFor="discount">
                         Discount
@@ -511,13 +552,13 @@ export function ReceptionPage() {
                         dir="ltr"
                         inputMode="decimal"
                         value={discount}
-                        onChange={(e) => setDiscount(e.target.value)}
+                        onChange={(e) => onDiscountAmountChange(e.target.value)}
                         className="h-7 text-xs"
                         aria-invalid={overCeiling}
                       />
                       {overCeiling && (
                         <p className="mt-0.5 text-[10px] text-destructive">
-                          Max {DISCOUNT_CEILING_PCT}% ({fromMinor(ceilingMinor)})
+                          Max {maxDiscountPercent}% ({fromMinor(ceilingMinor)})
                         </p>
                       )}
                     </div>

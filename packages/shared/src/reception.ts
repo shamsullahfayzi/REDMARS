@@ -57,8 +57,6 @@ export const moneySchema = z
  * number the server refuses at, and the desk is never invited to type something that
  * will be rejected. The server is still the one that enforces it.
  */
-export const DISCOUNT_CEILING_PCT = 10
-
 export const checkInItemSchema = z.object({
   serviceId: z.uuid(),
   quantity: z.number().int().min(1).max(99).default(1),

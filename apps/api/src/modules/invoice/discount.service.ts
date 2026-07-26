@@ -7,13 +7,13 @@ import {
 } from '@nestjs/common';
 import { verify } from '@node-rs/argon2';
 import { InvoiceStatus, Prisma } from '@prisma/client';
-import { DISCOUNT_CEILING_PCT } from '@redmars/shared';
 import type {
   ApplyDiscountRequest,
   ApplyDiscountResponse,
   DiscountApproval,
 } from '@redmars/shared';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
+import { SettingService } from '../../services/setting.service';
 
 /** The R10-override permission an approver must hold to authorise an over-ceiling discount. */
 const APPROVE_PERMISSION = 'discount.approve_over_threshold';
@@ -35,7 +35,10 @@ const APPROVE_PERMISSION = 'discount.approve_over_threshold';
  */
 @Injectable()
 export class DiscountService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settings: SettingService,
+  ) {}
 
   async apply(
     facilityId: string,
@@ -46,11 +49,14 @@ export class DiscountService {
   ): Promise<ApplyDiscountResponse> {
     const discount = new Prisma.Decimal(input.amount);
 
+    // Read once, outside the transaction — the ceiling is reference data this save does
+    // not change (task 6b.1: an admin-set facility Setting, not the old hardcoded 10%).
+    const maxPercent = await this.settings.getDiscountMaxPercent(facilityId);
+
     const result = await this.prisma.db.$transaction(async (tx) => {
       const invoice = await tx.invoice.findFirst({
         where: { id: invoiceId, facilityId },
         select: { id: true, status: true, subtotal: true, paidAmount: true, currency: true },
-        
       });
       if (!invoice) throw new NotFoundException('Invoice not found');
       if (invoice.status === 'cancelled') {
@@ -70,12 +76,13 @@ export class DiscountService {
       // UNLESS a valid approver stands behind it (task 6.5). The approver's id, once
       // verified, is stamped on the bill as the second person the rule requires.
       const approver = await this.authoriseCeiling(
-         tx as any,
+        tx,
         facilityId,
         userId,
         permissions,
         invoice.subtotal,
         discount,
+        maxPercent,
         input.approval,
       );
 
@@ -90,7 +97,7 @@ export class DiscountService {
         });
       }
 
-      const status = total.lessThanOrEqualTo(invoice.paidAmount)
+      const status: InvoiceStatus = total.lessThanOrEqualTo(invoice.paidAmount)
         ? 'paid'
         : invoice.paidAmount.greaterThan(0)
           ? 'partially_paid'
@@ -107,14 +114,13 @@ export class DiscountService {
           discountApprovedAt: approver ? new Date() : null,
         },
       });
-      const status_ = status as InvoiceStatus ;
-      return { invoice, discount, total,status_ , approvedByName: approver?.fullName ?? null };
+      return { invoice, discount, total, status, approvedByName: approver?.fullName ?? null };
     });
 
     const outstanding = Prisma.Decimal.max(0, result.total.minus(result.invoice.paidAmount));
     return {
       invoiceId,
-      status:result.status_,
+      status: result.status,
       subtotal: result.invoice.subtotal.toFixed(2),
       discount: result.discount.toFixed(2),
       discountReason: input.reason,
@@ -129,30 +135,32 @@ export class DiscountService {
   /**
    * R10's ceiling. An unconditional `discount.apply`, or the authority to approve past the
    * threshold, means no cap — the caller is their own authority and the discount stands with
-   * no approver. Anyone else is held to 10% of subtotal: a discount within it passes freely;
-   * one over it is refused (`over_ceiling`, the signal for the till to summon an admin)
-   * unless a valid approver is supplied, in which case their verified identity is returned to
-   * be stamped on the bill.
+   * no approver. Anyone else is held to `maxPercent` of subtotal (task 6b.1: an admin-set
+   * facility Setting, no longer a constant): a discount within it passes freely; one over it
+   * is refused (`over_ceiling`, the signal for the till to summon an admin) unless a valid
+   * approver is supplied, in which case their verified identity is returned to be stamped on
+   * the bill.
    */
   private async authoriseCeiling(
-    tx: Prisma.TransactionClient,
+    tx: AuditedTx,
     facilityId: string,
     userId: string,
     permissions: ReadonlyMap<string, string | null>,
     subtotal: Prisma.Decimal,
     discount: Prisma.Decimal,
+    maxPercent: number,
     approval: DiscountApproval | undefined,
   ): Promise<{ id: string; fullName: string } | null> {
     const condition = permissions.get('discount.apply');
     const uncapped = condition === null || permissions.has(APPROVE_PERMISSION);
     if (uncapped) return null;
 
-    const ceiling = subtotal.mul(DISCOUNT_CEILING_PCT).div(100);
+    const ceiling = subtotal.mul(maxPercent).div(100);
     if (discount.lessThanOrEqualTo(ceiling)) return null;
 
     if (!approval) {
       throw new ForbiddenException({
-        message: `A discount over ${DISCOUNT_CEILING_PCT}% needs an administrator's approval (up to ${ceiling.toFixed(2)} without).`,
+        message: `A discount over ${maxPercent}% needs an administrator's approval (up to ${ceiling.toFixed(2)} without).`,
         code: 'over_ceiling',
       });
     }
@@ -167,7 +175,7 @@ export class DiscountService {
    * it cannot be told apart from an unknown user; a valid user without the authority is 403.
    */
   private async verifyApprover(
-    tx: Prisma.TransactionClient,
+    tx: AuditedTx,
     facilityId: string,
     userId: string,
     approval: DiscountApproval,

@@ -7,9 +7,10 @@ import type {
   PatientSummary,
   VisitSummary,
 } from '@redmars/shared';
-import { currentAgeYears, DISCOUNT_CEILING_PCT } from '@redmars/shared';
+import { currentAgeYears } from '@redmars/shared';
 import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
+import { SettingService } from '../../services/setting.service';
 import { AppointmentService } from '../appointment/appointment.service';
 import { PatientService } from '../patient/patient.service';
 import { VisitService } from '../visit/visit.service';
@@ -36,6 +37,7 @@ export class ReceptionService {
     private readonly patients: PatientService,
     private readonly visits: VisitService,
     private readonly appointments: AppointmentService,
+    private readonly settings: SettingService,
   ) {}
 
   /**
@@ -71,6 +73,10 @@ export class ReceptionService {
     // carries a serviceId and a quantity and nothing else about money: a price that
     // travelled through the browser is a price anyone with devtools sets to 1.
     const services = await this.loadServices(facilityId, input.items);
+
+    // R10's ceiling (task 6b.1: an admin-set facility Setting, no longer a constant). Read
+    // once, outside the transaction — it is reference data that this save does not change.
+    const maxDiscountPercent = await this.settings.getDiscountMaxPercent(facilityId);
 
     // The letterhead for the printed invoice. Read once, outside the transaction — it is
     // reference data that this save does not change.
@@ -132,7 +138,7 @@ export class ReceptionService {
         if (discount.greaterThan(subtotal)) {
           throw new BadRequestException('The discount is more than the bill.');
         }
-        this.assertWithinCeiling(permissions, subtotal, discount);
+        this.assertWithinCeiling(permissions, subtotal, discount, maxDiscountPercent);
         const total = subtotal.sub(discount);
 
         const invoiceNo = await this.sequence.next(facilityId, 'invoice_no', undefined, tx);
@@ -318,19 +324,20 @@ export class ReceptionService {
     permissions: ReadonlyMap<string, string | null>,
     subtotal: Prisma.Decimal,
     discount: Prisma.Decimal,
+    maxPercent: number,
   ): void {
     if (discount.lessThanOrEqualTo(ZERO)) return;
 
     // An unconditional grant, or the authority to approve past the threshold, means no
-    // ceiling. Anything else is R10's 10%.
+    // ceiling. Anything else is held to the facility's own R10 setting.
     const condition = permissions.get('discount.apply');
     const uncapped = condition === null || permissions.has('discount.approve_over_threshold');
     if (uncapped) return;
 
-    const ceiling = subtotal.mul(DISCOUNT_CEILING_PCT).div(100);
+    const ceiling = subtotal.mul(maxPercent).div(100);
     if (discount.greaterThan(ceiling)) {
       throw new ForbiddenException(
-        `A discount over ${DISCOUNT_CEILING_PCT}% needs approval (maximum ${money(ceiling)}).`,
+        `A discount over ${maxPercent}% needs approval (maximum ${money(ceiling)}).`,
       );
     }
   }
