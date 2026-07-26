@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, type FormEvent } from 'react'
+import { useEffect, useState, useRef, type FormEvent, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { Check, Printer, Search, UserPlus, X } from 'lucide-react'
@@ -69,6 +69,9 @@ export function ReceptionPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const departmentRef = useRef<HTMLDivElement>(null)
+  const patientSearchInputRef = useRef<HTMLInputElement>(null)
+  const departmentInputRef = useRef<HTMLInputElement>(null)
+  const serviceSearchInputRef = useRef<HTMLInputElement>(null)
 
   const departments = optionsQuery.data?.departments ?? []
   const practitioners = optionsQuery.data?.practitioners ?? []
@@ -122,6 +125,54 @@ export function ReceptionPage() {
 
   function setQuantity(serviceId: string, quantity: number) {
     setQuantities((prev) => ({ ...prev, [serviceId]: Math.max(0, quantity) }))
+  }
+
+  function chooseDepartment(dept: VisitDepartmentOption) {
+    setDepartmentId(dept.id)
+    setDepartmentSearch('')
+    setShowDepartmentDropdown(false)
+    setPractitionerId('')
+    setQuantities({})
+  }
+
+  // Everything on this screen lives in one <form>, so an Enter pressed anywhere would
+  // otherwise submit the whole check-in from whatever partial state it caught — a
+  // receptionist typing a service name and pressing Enter out of habit could check a
+  // patient in against the wrong bill. This is the one place that rule is enforced: Enter
+  // only ever does the thing each field's own handler below says it does, never a submit
+  // it wasn't asked for.
+  function onFormKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    const target = event.target
+    if (!(target instanceof HTMLElement)) return
+
+    if (event.key === 'Escape' && showDepartmentDropdown) {
+      setShowDepartmentDropdown(false)
+      return
+    }
+
+    if (event.key !== 'Enter') return
+    if (target.tagName === 'TEXTAREA' || target instanceof HTMLButtonElement) return
+    event.preventDefault()
+
+    if (target === patientSearchInputRef.current) {
+      const top = search.data?.patients[0]
+      if (top) setChosen(top)
+      return
+    }
+
+    if (target === departmentInputRef.current && showDepartmentDropdown) {
+      if (filteredDepartments.length === 1) chooseDepartment(filteredDepartments[0])
+      return
+    }
+
+    if (target === serviceSearchInputRef.current) {
+      const matches = [...filteredDeptServices, ...filteredOtherServices]
+      if (matches.length === 1) {
+        const match = matches[0]
+        setQuantity(match.id, (quantities[match.id] ?? 0) + 1)
+        setServiceSearch('')
+      }
+    }
   }
 
   // Amount and percentage are two windows on the one number the server ever sees — the
@@ -255,7 +306,12 @@ export function ReceptionPage() {
         <PageHeader title={t('reception.title')} />
       </div>
 
-      <form onSubmit={onSubmit} className="flex flex-1 gap-3 overflow-hidden p-3" noValidate>
+      <form
+        onSubmit={onSubmit}
+        onKeyDown={onFormKeyDown}
+        className="flex flex-1 gap-3 overflow-hidden p-3"
+        noValidate
+      >
         {/* Left column: Patient + Visit details */}
         <div className="flex w-[35%] flex-col gap-3 overflow-y-auto">
           {/* Step 1: Patient */}
@@ -272,6 +328,7 @@ export function ReceptionPage() {
                     <div className="relative">
                       <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                       <Input
+                        ref={patientSearchInputRef}
                         value={term}
                         onChange={(e) => setTerm(e.target.value)}
                         placeholder={t('patients.search.placeholder')}
@@ -365,6 +422,7 @@ export function ReceptionPage() {
                 <div className="relative">
                   <Search className="pointer-events-none absolute start-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
                   <Input
+                    ref={departmentInputRef}
                     value={
                       showDepartmentDropdown
                         ? departmentSearch
@@ -403,13 +461,7 @@ export function ReceptionPage() {
                       <li key={dept.id}>
                         <button
                           type="button"
-                          onClick={() => {
-                            setDepartmentId(dept.id)
-                            setDepartmentSearch('')
-                            setShowDepartmentDropdown(false)
-                            setPractitionerId('')
-                            setQuantities({})
-                          }}
+                          onClick={() => chooseDepartment(dept)}
                           className={cn(
                             'w-full px-3 py-1.5 text-start text-sm hover:bg-accent',
                             dept.id === departmentId && 'bg-accent'
@@ -485,6 +537,7 @@ export function ReceptionPage() {
                 <div className="relative mb-2">
                   <Search className="pointer-events-none absolute start-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
                   <Input
+                    ref={serviceSearchInputRef}
                     value={serviceSearch}
                     onChange={(e) => setServiceSearch(e.target.value)}
                     placeholder="Search services..."
