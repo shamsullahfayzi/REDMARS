@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useConsultSaver } from '@/hooks/useConsultSave'
+import { useLabPrintSelection } from '@/hooks/useLabPrintSelection'
 import {
   useLabOrder,
   useOrderableTests,
@@ -251,14 +252,20 @@ export function LabsTab({ visit }: { visit: VisitSummary }) {
  * shows its value and flag, anything earlier shows only where it is in the pipeline, because a
  * doctor should not act on a number the lab has not signed off. The report the patient carries
  * prints from here (the hidden sheet on the consult page renders the same verified results).
+ *
+ * Task 6b.6's other half: three verified results does not mean three results belong on the
+ * paper the patient carries out — a doctor un-ticks the ones that are not the point of this
+ * visit's report. Ticked is the default (see `useLabPrintSelection`), so a doctor who never
+ * touches the control gets everything, which is the common case.
  */
 function LabResultsView({ visitId }: { visitId: string }) {
   const { t } = useTranslation()
   const resultsQuery = useVisitLabResults(visitId, true)
+  const { isExcluded, toggle } = useLabPrintSelection()
   const items = resultsQuery.data?.items ?? []
   if (items.length === 0) return null
 
-  const anyVerified = items.some((item) => item.value != null)
+  const anyIncluded = items.some((item) => item.value != null && !isExcluded(item.itemId))
 
   return (
     <div className="space-y-2 border-t border-border pt-4">
@@ -268,7 +275,7 @@ function LabResultsView({ visitId }: { visitId: string }) {
           type="button"
           size="sm"
           variant="outline"
-          disabled={!anyVerified}
+          disabled={!anyIncluded}
           onClick={() => printTarget('lab')}
         >
           <Printer className="size-4" aria-hidden />
@@ -278,6 +285,15 @@ function LabResultsView({ visitId }: { visitId: string }) {
       <ul className="divide-y divide-border rounded-lg border border-border">
         {items.map((item) => (
           <li key={item.itemId} className="flex items-center gap-3 px-3 py-2">
+            {item.value != null && (
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                checked={!isExcluded(item.itemId)}
+                onChange={() => toggle(item.itemId)}
+                aria-label={t('labs.includeInPrint', { test: item.testName })}
+              />
+            )}
             <span className="flex-1 text-sm text-foreground">
               {item.testName}
               <span dir="ltr" className="ms-2 font-mono text-xs text-muted-foreground">

@@ -8,8 +8,12 @@
  *
  * The default F4 prescription flow calls `window.print()` with no target — the stylesheet
  * treats "no target" as the prescription, so that path is untouched.
+ *
+ * `history-lab` is task 6b.6's addition — a second, independent lab-report target so
+ * printing a PAST visit's results from the History tab can never collide with `lab`, the
+ * CURRENT visit's own report mounted on the same page.
  */
-export function printTarget(target: 'lab'): void {
+export function printTarget(target: 'lab' | 'history-lab'): void {
   const root = document.documentElement
   root.setAttribute('data-print-target', target)
   const clear = () => {

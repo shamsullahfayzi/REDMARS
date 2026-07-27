@@ -1195,7 +1195,8 @@
     "saving": "Saving…",
     "failed": "Could not save the lab order.",
     "resultsTitle": "Results",
-    "print": "Print results"
+    "print": "Print results",
+    "includeInPrint": "Include {{test}} on the printed report"
   },
   "labQueue": {
     "subtitle": "Ordered tests, oldest first. Collect the sample once the desk has been paid.",

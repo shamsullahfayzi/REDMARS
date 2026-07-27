@@ -318,4 +318,37 @@
   .lab-result-sheet thead {
     display: table-header-group;
   }
+
+  /*
+   * Task 6b.6 — the same report, printed for a visit that already closed. A separate
+   * target and class from `.lab-result-sheet`: both can be mounted on the consult page at
+   * once (the current visit's own sheet, plus whichever old one History just asked for),
+   * and each is off by default (see the base rule below), so only the one the stamp names
+   * ever turns on.
+   */
+  .history-lab-sheet {
+    display: none !important;
+  }
+
+  :root[data-print-target='history-lab'] .history-lab-sheet {
+    display: block !important;
+    color: #000;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+
+  :root[data-print-target='history-lab'] .rx-sheet {
+    display: none !important;
+  }
+
+  .history-lab-sheet table {
+    break-inside: auto;
+  }
+
+  .history-lab-sheet tr {
+    break-inside: avoid;
+  }
+
+  .history-lab-sheet thead {
+    display: table-header-group;
+  }
 }

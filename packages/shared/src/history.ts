@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { diagnosisCertaintySchema } from './diagnosis.js'
+import { labOrderItemStatusSchema } from './labOrder.js'
 import { visitStatusSchema, visitTypeSchema } from './visit.js'
 
 /**
@@ -30,12 +31,15 @@ import { visitStatusSchema, visitTypeSchema } from './visit.js'
  *    record R2 was written to keep from them, through a panel nobody would think to check.
  *    Reading a previous note means opening that visit, where the narrower permission
  *    applies. One door.
- *  - LAB RESULTS, which task 4.14's line in the build order names. `LabResult` exists in
- *    the schema and nothing writes to it until phase 5 — a section that is empty by
- *    construction teaches the doctor the panel is incomplete. It is a `select` away when
- *    5.10 lands.
  *  - VITALS. A weight trend on antipsychotics is worth having and is a chart rather than a
  *    list. Not this task.
+ *
+ * LAB RESULTS closed the gap this comment used to describe (task 6b.6): every non-cancelled
+ * test ordered on the visit rides along, following the exact rule 5.10's read-back already
+ * established — A VALUE APPEARS ONLY ONCE VERIFIED. A test still pending, drawn, or entered
+ * but not signed off shows its STATUS and nothing else; acting on an unverified number is the
+ * mistake verification exists to prevent, and that is no less true reading it a year later
+ * than reading it the day it was drawn.
  */
 
 /** Twelve months by default — the done-when. Five years is the ceiling, not a suggestion. */
@@ -91,6 +95,27 @@ export const historyPrescriptionSchema = z.object({
 })
 export type HistoryPrescription = z.infer<typeof historyPrescriptionSchema>
 
+/**
+ * One test on one visit, aged however many months. Mirrors `VisitLabResultItem`'s own
+ * verified-only rule exactly (labResult.ts) — the two panels show the same test the same
+ * way whether it was drawn today or last spring.
+ */
+export const historyLabResultSchema = z.object({
+  testName: z.string(),
+  status: labOrderItemStatusSchema,
+  /** Everything below is null/false until the result is verified. */
+  value: z.string().nullable(),
+  isNumeric: z.boolean(),
+  unit: z.string().nullable(),
+  flag: z.string().nullable(),
+  isAbnormal: z.boolean(),
+  referenceLow: z.string().nullable(),
+  referenceHigh: z.string().nullable(),
+  referenceText: z.string().nullable(),
+  verifiedAt: z.string().nullable(),
+})
+export type HistoryLabResult = z.infer<typeof historyLabResultSchema>
+
 export const historyVisitSchema = z.object({
   /** A place to navigate to, not a handle to write through. */
   id: z.uuid(),
@@ -110,6 +135,8 @@ export const historyVisitSchema = z.object({
   diagnoses: z.array(historyDiagnosisSchema),
   /** Null is the normal case for a visit where nothing was prescribed. */
   prescription: historyPrescriptionSchema.nullable(),
+  /** Empty for the normal case: a visit where nothing was ordered. */
+  labResults: z.array(historyLabResultSchema),
 })
 export type HistoryVisit = z.infer<typeof historyVisitSchema>
 

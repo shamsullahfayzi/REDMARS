@@ -51,6 +51,10 @@ describe('Patient history (e2e)', () => {
   let opdId: string;
   let sertralineId: string;
   let olanzapineId: string;
+  let glucoseId: string;
+  let cbcId: string;
+  let altId: string;
+  let malariaId: string;
 
   const tokens: Record<string, string> = {};
 
@@ -116,6 +120,64 @@ describe('Patient history (e2e)', () => {
     return visit.id;
   }
 
+  /**
+   * One order on the visit, one of each pipeline stage — the same fixture shape
+   * `visit-lab-results.e2e-spec.ts` uses for the CURRENT-visit read-back, because history's
+   * verified-only rule (task 6b.6) has to hold exactly as well for a visit that closed
+   * months ago.
+   */
+  async function stageLabResults(visitId: string): Promise<void> {
+    counter += 1;
+    const order = await prisma.labOrder.create({
+      data: { facilityId, visitId, orderNo: `${PREFIX}LAB${counter}` },
+    });
+
+    const gItem = await prisma.labOrderItem.create({
+      data: {
+        labOrderId: order.id,
+        testId: glucoseId,
+        testNameAtTime: 'Fasting Glucose',
+        status: 'verified',
+      },
+    });
+    await prisma.labResult.create({
+      data: {
+        labOrderItemId: gItem.id,
+        valueNumeric: '90',
+        unit: 'mg/dL',
+        isAbnormal: false,
+        enteredBy: doctorId,
+        verifiedBy: doctorId,
+        verifiedAt: new Date(),
+      },
+    });
+
+    const cItem = await prisma.labOrderItem.create({
+      data: {
+        labOrderId: order.id,
+        testId: cbcId,
+        testNameAtTime: 'Complete Blood Count',
+        status: 'resulted',
+      },
+    });
+    await prisma.labResult.create({
+      data: { labOrderItemId: cItem.id, valueNumeric: '5', isAbnormal: false, enteredBy: doctorId },
+    });
+
+    await prisma.labOrderItem.create({
+      data: { labOrderId: order.id, testId: altId, testNameAtTime: 'ALT', status: 'ordered' },
+    });
+
+    await prisma.labOrderItem.create({
+      data: {
+        labOrderId: order.id,
+        testId: malariaId,
+        testNameAtTime: 'Malaria Film',
+        status: 'cancelled',
+      },
+    });
+  }
+
   const getHistory = (patientId: string, query = '', as = 'doctor') =>
     request(server)
       .get(`/patients/${patientId}/history${query}`)
@@ -130,10 +192,17 @@ describe('Patient history (e2e)', () => {
     await prisma.prescription.deleteMany({ where: { visit: facilityFilter } });
     await prisma.clinicalNote.deleteMany({ where: { visit: facilityFilter } });
     await prisma.diagnosis.deleteMany({ where: { visit: facilityFilter } });
+    await prisma.labResult.deleteMany({
+      where: { labOrderItem: { labOrder: { visit: facilityFilter } } },
+    });
+    await prisma.labOrderItem.deleteMany({ where: { labOrder: { visit: facilityFilter } } });
+    await prisma.labOrder.deleteMany({ where: { visit: facilityFilter } });
+    await prisma.referenceRange.deleteMany({ where: { test: { code: { startsWith: PREFIX } } } });
     await prisma.visitStatusHistory.deleteMany({ where: { visit: facilityFilter } });
     await prisma.visit.deleteMany({ where: facilityFilter });
     await prisma.patient.deleteMany({ where: facilityFilter });
     await prisma.drug.deleteMany({ where: { code: { startsWith: PREFIX } } });
+    await prisma.labTest.deleteMany({ where: { code: { startsWith: PREFIX } } });
     await prisma.practitioner.deleteMany({ where: { code: { startsWith: PREFIX } } });
     await prisma.department.deleteMany({ where: { code: { startsWith: PREFIX } } });
     await prisma.auditLog.deleteMany({ where: { facility: { code: { startsWith: PREFIX } } } });
@@ -201,6 +270,28 @@ describe('Patient history (e2e)', () => {
           strength: '5mg',
           form: 'tablet',
         },
+      })
+    ).id;
+
+    glucoseId = (
+      await prisma.labTest.create({
+        data: { facilityId, code: `${PREFIX}GLU`, name: 'Fasting Glucose', unit: 'mg/dL' },
+      })
+    ).id;
+    await prisma.referenceRange.create({
+      data: { testId: glucoseId, lowValue: '70', highValue: '110' },
+    });
+    cbcId = (
+      await prisma.labTest.create({
+        data: { facilityId, code: `${PREFIX}CBC`, name: 'Complete Blood Count' },
+      })
+    ).id;
+    altId = (
+      await prisma.labTest.create({ data: { facilityId, code: `${PREFIX}ALT`, name: 'ALT' } })
+    ).id;
+    malariaId = (
+      await prisma.labTest.create({
+        data: { facilityId, code: `${PREFIX}MP`, name: 'Malaria Film' },
       })
     ).id;
   });
@@ -474,6 +565,65 @@ describe('Patient history (e2e)', () => {
     // The visit's own id stays — a place to navigate to, and that screen re-checks
     // every permission itself.
     expect(visit.id).toBe(visitId);
+  });
+
+  // --- Lab results (task 6b.6) ---------------------------------------------------------
+
+  it('the done-when: a verified result from months ago comes back with its value, flag and band', async () => {
+    const patientId = await stagePatient();
+    const visitId = await stageVisit(patientId, { startedAt: monthsAgo(3) });
+    await stageLabResults(visitId);
+
+    const visit = ((await getHistory(patientId).expect(200)).body as PatientHistoryResponse)
+      .visits[0];
+    const byName = Object.fromEntries(visit.labResults.map((r) => [r.testName, r]));
+
+    const glucose = byName['Fasting Glucose'];
+    expect(glucose.status).toBe('verified');
+    expect(glucose.value).toBe('90');
+    expect(glucose.isNumeric).toBe(true);
+    expect(glucose.unit).toBe('mg/dL');
+    expect(glucose.flag).toBeNull(); // 90 is within 70–110
+    expect(glucose.referenceLow).toBe('70');
+    expect(glucose.referenceHigh).toBe('110');
+    expect(glucose.verifiedAt).not.toBeNull();
+  });
+
+  it('an unverified result shows its status but NOT its value, however old the visit', async () => {
+    const patientId = await stagePatient();
+    const visitId = await stageVisit(patientId, { startedAt: monthsAgo(6) });
+    await stageLabResults(visitId);
+
+    const visit = ((await getHistory(patientId).expect(200)).body as PatientHistoryResponse)
+      .visits[0];
+    const cbc = visit.labResults.find((r) => r.testName === 'Complete Blood Count')!;
+    expect(cbc.status).toBe('resulted');
+    expect(cbc.value).toBeNull(); // entered but not verified — withheld, same as 5.10's rule
+    expect(cbc.verifiedAt).toBeNull();
+  });
+
+  it('an ordered test is pending with no value; a cancelled test is absent', async () => {
+    const patientId = await stagePatient();
+    const visitId = await stageVisit(patientId, { startedAt: monthsAgo(2) });
+    await stageLabResults(visitId);
+
+    const visit = ((await getHistory(patientId).expect(200)).body as PatientHistoryResponse)
+      .visits[0];
+    const names = visit.labResults.map((r) => r.testName);
+    expect(names).toContain('ALT');
+    expect(names).not.toContain('Malaria Film'); // cancelled — gone
+    const alt = visit.labResults.find((r) => r.testName === 'ALT')!;
+    expect(alt.status).toBe('ordered');
+    expect(alt.value).toBeNull();
+  });
+
+  it('a visit with nothing ordered has an empty lab list, not a missing one', async () => {
+    const patientId = await stagePatient();
+    await stageVisit(patientId);
+
+    const visit = ((await getHistory(patientId).expect(200)).body as PatientHistoryResponse)
+      .visits[0];
+    expect(visit.labResults).toEqual([]);
   });
 
   // --- Who -----------------------------------------------------------------------------

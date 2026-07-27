@@ -1,20 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { ArrowUpRight, CalendarClock, Pill, Stethoscope } from 'lucide-react'
+import { ArrowUpRight, CalendarClock, FlaskConical, Pill, Printer, Stethoscope } from 'lucide-react'
 import {
   HISTORY_MONTHS,
+  type ConsultPatient,
+  type HistoryLabResult,
   type HistoryPrescription,
   type HistoryVisit,
   type PatientHistoryResponse,
 } from '@redmars/shared'
 import { Badge } from '@/components/ui/badge'
 import { BookFollowUp } from '@/components/BookFollowUp'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { HistoryLabResultSheet } from '@/components/HistoryLabResultSheet'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { useAuth } from '@/auth/authContext'
 import { usePatientHistory } from '@/hooks/useHistory'
+import { printTarget } from '@/lib/print'
+import { cn } from '@/lib/utils'
 
 /**
  * Task 4.14 — the last twelve months, on one screen.
@@ -38,18 +44,29 @@ import { usePatientHistory } from '@/hooks/useHistory'
 const WINDOWS = [12, 24, HISTORY_MONTHS.max] as const
 
 export function HistoryTab({
-  patientId,
+  patient,
   currentVisitId,
   departmentId,
 }: {
-  patientId: string
+  patient: ConsultPatient
   currentVisitId: string
   departmentId: string
 }) {
   const { t } = useTranslation()
   const { roles } = useAuth()
   const [months, setMonths] = useState<number>(HISTORY_MONTHS.default)
-  const history = usePatientHistory(patientId, months)
+  const history = usePatientHistory(patient.id, months)
+  // Task 6b.6 — which past visit's lab report the print dialog is being asked for, if any.
+  // Set on a click and consumed by the effect below, never read back into the UI: the
+  // sheet is print-only, so there is nothing on screen for this state to drive.
+  const [printVisit, setPrintVisit] = useState<HistoryVisit | null>(null)
+
+  // Fires after the state above has committed and `HistoryLabResultSheet` has re-rendered
+  // with the chosen visit — printing one render tick earlier would print last visit's sheet,
+  // or an empty one on the very first click.
+  useEffect(() => {
+    if (printVisit) printTarget('history-lab')
+  }, [printVisit])
 
   /**
    * Courtesy, not control — `patient.read_history` is doctor and admin, and the server
@@ -108,7 +125,7 @@ export function HistoryTab({
         <ol className="space-y-3">
           {visits.map((visit) => (
             <li key={visit.id}>
-              <VisitCard visit={visit} />
+              <VisitCard visit={visit} onPrintLabResults={setPrintVisit} />
             </li>
           ))}
         </ol>
@@ -118,8 +135,11 @@ export function HistoryTab({
           not on a separate screen. Doctor only: admin can read this tab but does not
           hold appointment.create, and the desk is not the one sitting in this room. */}
       {roles.includes('doctor') && (
-        <BookFollowUp patientId={patientId} defaultDepartmentId={departmentId} lockToSelf />
+        <BookFollowUp patientId={patient.id} defaultDepartmentId={departmentId} lockToSelf />
       )}
+
+      {/* Print-only, task 6b.6 — hidden until a card's Print button names a visit. */}
+      <HistoryLabResultSheet patient={patient} visit={printVisit} />
     </div>
   )
 }
@@ -139,8 +159,18 @@ function Summary({ data, shown }: { data: PatientHistoryResponse; shown: number 
   )
 }
 
-function VisitCard({ visit }: { visit: HistoryVisit }) {
+function VisitCard({
+  visit,
+  onPrintLabResults,
+}: {
+  visit: HistoryVisit
+  onPrintLabResults: (visit: HistoryVisit) => void
+}) {
   const { t, i18n } = useTranslation()
+  // Which of THIS visit's lab results are left off the paper if it gets printed — local to
+  // the card, not the tab: closing and reopening the tab is a fresh read of the past, and
+  // a tick from a card no longer on screen has nothing to mean.
+  const [excluded, setExcluded] = useState<ReadonlySet<number>>(() => new Set())
 
   return (
     <Card className="space-y-3 p-4">
@@ -211,6 +241,27 @@ function VisitCard({ visit }: { visit: HistoryVisit }) {
       )}
 
       {visit.prescription && <PrescriptionBlock prescription={visit.prescription} />}
+
+      {visit.labResults.length > 0 && (
+        <LabResultsBlock
+          labResults={visit.labResults}
+          excluded={excluded}
+          onToggle={(index) =>
+            setExcluded((current) => {
+              const next = new Set(current)
+              if (next.has(index)) next.delete(index)
+              else next.add(index)
+              return next
+            })
+          }
+          onPrint={() =>
+            onPrintLabResults({
+              ...visit,
+              labResults: visit.labResults.filter((_, index) => !excluded.has(index)),
+            })
+          }
+        />
+      )}
     </Card>
   )
 }
@@ -265,6 +316,98 @@ function PrescriptionBlock({ prescription }: { prescription: HistoryPrescription
         <p className="text-xs text-muted-foreground">{prescription.advice}</p>
       )}
     </div>
+  )
+}
+
+/**
+ * Every test ordered on this old visit, same verified-only rule as the doctor's own
+ * read-back (LabsTab). A doctor un-ticks whichever of them are not the point of THIS
+ * report before printing — the same control task 6b.6 added to the current visit, so a
+ * doctor moving between the two uses the same gesture either way.
+ */
+function LabResultsBlock({
+  labResults,
+  excluded,
+  onToggle,
+  onPrint,
+}: {
+  labResults: HistoryLabResult[]
+  excluded: ReadonlySet<number>
+  onToggle: (index: number) => void
+  onPrint: () => void
+}) {
+  const { t } = useTranslation()
+  const anyIncluded = labResults.some((item, index) => item.value != null && !excluded.has(index))
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <FlaskConical className="size-3.5" aria-hidden />
+          {t('labs.resultsTitle')}
+        </p>
+        <Button type="button" size="sm" variant="outline" disabled={!anyIncluded} onClick={onPrint}>
+          <Printer className="size-4" aria-hidden />
+          {t('labs.print')}
+        </Button>
+      </div>
+      <ul className="divide-y divide-border rounded-lg border border-border">
+        {labResults.map((item, index) => (
+          <li key={index} className="flex items-center gap-3 px-3 py-2">
+            {item.value != null && (
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                checked={!excluded.has(index)}
+                onChange={() => onToggle(index)}
+                aria-label={t('labs.includeInPrint', { test: item.testName })}
+              />
+            )}
+            <span className="flex-1 text-sm text-foreground">{item.testName}</span>
+            {item.value != null ? (
+              <HistoryResultValue item={item} />
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                {t(`labQueue.status.${item.status}`)}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function HistoryResultValue({ item }: { item: HistoryLabResult }) {
+  const reference =
+    item.referenceLow != null || item.referenceHigh != null
+      ? `${item.referenceLow ?? ''}–${item.referenceHigh ?? ''}`
+      : item.referenceText
+  return (
+    <span className="flex items-center gap-2">
+      {reference && (
+        <span dir="ltr" className="text-xs text-muted-foreground">
+          {reference}
+        </span>
+      )}
+      <span
+        className={cn('text-sm font-semibold tabular-nums', item.isAbnormal && 'text-destructive')}
+        dir="ltr"
+      >
+        {item.value}
+        {item.unit ? ` ${item.unit}` : ''}
+      </span>
+      {(item.flag === 'H' || item.flag === 'L') && (
+        <span
+          className={cn(
+            'rounded px-1.5 py-0.5 text-xs font-bold',
+            item.flag === 'H' ? 'bg-destructive/15 text-destructive' : 'bg-info/15 text-info',
+          )}
+        >
+          {item.flag}
+        </span>
+      )}
+    </span>
   )
 }
 

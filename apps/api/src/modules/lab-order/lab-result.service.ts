@@ -5,7 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { Gender } from '@prisma/client';
 import type {
   LabResult,
   SaveLabResultRequest,
@@ -17,6 +16,7 @@ import type {
 } from '@redmars/shared';
 import { currentAgeYears } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { bandFor, type Band } from './reference-band';
 
 /**
  * Entering a result (Phase 5, fourth slice).
@@ -31,13 +31,6 @@ import { PrismaService } from '../../prisma/prisma.service';
  * typing it again, not by a separate correction — but once a result is `verified` it is the
  * amender's job (lab.amend_result), not this one, so entry refuses a verified test.
  */
-
-/** The chosen band, or null when none of a test's ranges fit this patient. */
-interface Band {
-  low: Prisma.Decimal | null;
-  high: Prisma.Decimal | null;
-  text: string | null;
-}
 
 @Injectable()
 export class LabResultService {
@@ -110,7 +103,7 @@ export class LabResultService {
         estimatedAgeMonths: patient.estimatedAgeMonths,
         ageRecordedAt: patient.ageRecordedAt?.toISOString() ?? null,
       });
-      band = await this.bandFor(item.testId, patient.gender, ageYears);
+      band = await bandFor(this.prisma, item.testId, patient.gender, ageYears);
       const value = new Prisma.Decimal(input.valueNumeric);
       if (band.low != null && value.lessThan(band.low)) {
         flag = 'L';
@@ -121,7 +114,7 @@ export class LabResultService {
       }
     } else if (input.valueText != null) {
       // A text band ("Negative") makes anything else abnormal, case-insensitively.
-      band = await this.bandFor(item.testId, patient.gender, null);
+      band = await bandFor(this.prisma, item.testId, patient.gender, null);
       if (band.text != null) {
         isAbnormal = input.valueText.trim().toLowerCase() !== band.text.trim().toLowerCase();
       }
@@ -328,7 +321,12 @@ export class LabResultService {
       const numeric = row.result.valueNumeric != null;
       // The band is recomputed for display; a numeric result uses the patient's age band, a
       // text result only its text band.
-      const band = await this.bandFor(row.testId, visit.patient.gender, numeric ? ageYears : null);
+      const band = await bandFor(
+        this.prisma,
+        row.testId,
+        visit.patient.gender,
+        numeric ? ageYears : null,
+      );
       items.push({
         ...base,
         value: row.result.valueNumeric?.toString() ?? row.result.valueText ?? '',
@@ -346,50 +344,4 @@ export class LabResultService {
 
     return { visitId: visit.id, items };
   }
-
-  /**
-   * The normal band for a test that fits this patient, most specific first.
-   *
-   * A range applies when its gender matches (or is unset = any) and the patient's age falls
-   * inside its bounds (an unset bound is open on that side; an unknown patient age cannot
-   * satisfy a bounded range). Among the fits, the most specific wins — a gender-named band
-   * over an any-gender one, an age-bounded band over an open one — so "13–17 male" beats a
-   * generic fallback.
-   */
-  private async bandFor(testId: string, gender: Gender, ageYears: number | null): Promise<Band> {
-    const ranges = await this.prisma.db.referenceRange.findMany({
-      where: { testId },
-      select: {
-        gender: true,
-        minAge: true,
-        maxAge: true,
-        lowValue: true,
-        highValue: true,
-        textValue: true,
-      },
-    });
-
-    const fits = ranges.filter((range) => {
-      if (range.gender != null && range.gender !== gender) return false;
-      if (range.minAge != null && (ageYears == null || ageYears < range.minAge)) return false;
-      if (range.maxAge != null && (ageYears == null || ageYears > range.maxAge)) return false;
-      return true;
-    });
-    if (fits.length === 0) return { low: null, high: null, text: null };
-
-    fits.sort((a, b) => specificity(b) - specificity(a));
-    const best = fits[0];
-    return { low: best.lowValue, high: best.highValue, text: best.textValue };
-  }
-}
-
-/** How narrowly a range is targeted — gender named, and each age bound, each count. */
-function specificity(range: {
-  gender: Gender | null;
-  minAge: number | null;
-  maxAge: number | null;
-}): number {
-  return (
-    (range.gender != null ? 2 : 0) + (range.minAge != null ? 1 : 0) + (range.maxAge != null ? 1 : 0)
-  );
 }

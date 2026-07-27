@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useConsultContext } from '@/hooks/useConsult'
 import { ConsultSaveProvider } from '@/components/ConsultSaveProvider'
+import { LabPrintSelectionProvider } from '@/components/LabPrintSelectionProvider'
 import { useChangeVisitStatus } from '@/hooks/useVisitStatus'
 import { cn } from '@/lib/utils'
 
@@ -109,58 +110,64 @@ export function ConsultPage() {
   }
 
   return (
-    // The provider wraps the tabs AND the key bar, because the keys save what the tabs
-    // register (task 4.2) and neither half means anything without the other.
-    <ConsultSaveProvider>
-      {/* The whole working screen disappears on paper. What prints is the sheet below it,
-          and nothing else — a printed screenshot of a consulting-room UI is not a document
-          anybody can be handed. */}
-      <div className="space-y-4 print:hidden">
-        <BackToQueue />
-        {/* ABOVE the patient header, not below it (task 4.6). It is the first thing on the
-            screen because it is the first thing that should stop a doctor, and it came in
-            the same request as the header so it paints at the same moment. */}
-        <AllergyBanner allergies={context.allergies} />
-        <PatientBanner context={context} />
-        <AllergyEditor patientId={context.patient.id} />
-        <ConsultTabs
-          tabs={tabs}
-          active={tab}
-          onChange={setTab}
-          panels={{
-            vitals: <VitalsTab visit={context.visit} />,
-            complaint: <ComplaintTab visit={context.visit} />,
-            diagnosis: <DiagnosisTab visit={context.visit} />,
-            prescription: <PrescriptionTab visit={context.visit} />,
-            labs: <LabsTab visit={context.visit} />,
-            notes: <NotesTab visit={context.visit} />,
-            history: (
-              <HistoryTab
-                patientId={context.patient.id}
-                currentVisitId={context.visit.id}
-                departmentId={context.visit.departmentId}
-              />
-            ),
-          }}
-        />
-        <ConsultActions visit={context.visit} />
-      </div>
+    // LabPrintSelectionProvider sits outside ConsultSaveProvider because it has to reach
+    // both the Labs tab (where a result is ticked off) and LabResultSheet (the hidden sheet
+    // that filters by the same ticks at print time) — cousins under this component, not
+    // parent and child, so a shared ancestor is the only place the two can meet.
+    <LabPrintSelectionProvider>
+      {/* The provider wraps the tabs AND the key bar, because the keys save what the tabs
+          register (task 4.2) and neither half means anything without the other. */}
+      <ConsultSaveProvider>
+        {/* The whole working screen disappears on paper. What prints is the sheet below it,
+            and nothing else — a printed screenshot of a consulting-room UI is not a document
+            anybody can be handed. */}
+        <div className="space-y-4 print:hidden">
+          <BackToQueue />
+          {/* ABOVE the patient header, not below it (task 4.6). It is the first thing on the
+              screen because it is the first thing that should stop a doctor, and it came in
+              the same request as the header so it paints at the same moment. */}
+          <AllergyBanner allergies={context.allergies} />
+          <PatientBanner context={context} />
+          <AllergyEditor patientId={context.patient.id} />
+          <ConsultTabs
+            tabs={tabs}
+            active={tab}
+            onChange={setTab}
+            panels={{
+              vitals: <VitalsTab visit={context.visit} />,
+              complaint: <ComplaintTab visit={context.visit} />,
+              diagnosis: <DiagnosisTab visit={context.visit} />,
+              prescription: <PrescriptionTab visit={context.visit} />,
+              labs: <LabsTab visit={context.visit} />,
+              notes: <NotesTab visit={context.visit} />,
+              history: (
+                <HistoryTab
+                  patient={context.patient}
+                  currentVisitId={context.visit.id}
+                  departmentId={context.visit.departmentId}
+                />
+              ),
+            }}
+          />
+          <ConsultActions visit={context.visit} />
+        </div>
 
-      {/*
-        Task 4.10 — mounted always, visible only on paper.
+        {/*
+          Task 4.10 — mounted always, visible only on paper.
 
-        Kept here rather than on a route of its own because everything it needs is already
-        in this screen's cache, which makes F4 a save followed by window.print() with no
-        navigation, no second round of fetches and no spinner between the doctor and the
-        page. Settings come from the shared defaults — Farhat's sheet — until the admin
-        screen that writes them per facility exists.
-      */}
-      <PrescriptionSheet context={context} settings={defaultPrintSettings()} />
-      {/* The lab result report — a second hidden sheet. Which one prints is chosen by the
-          data-print-target stamp (lib/print.ts); F4 prints the prescription, the Labs tab's
-          Print prints this. Mounted only where the lab is on. */}
-      {enabledModules.includes('lab') && <LabResultSheet context={context} />}
-    </ConsultSaveProvider>
+          Kept here rather than on a route of its own because everything it needs is already
+          in this screen's cache, which makes F4 a save followed by window.print() with no
+          navigation, no second round of fetches and no spinner between the doctor and the
+          page. Settings come from the shared defaults — Farhat's sheet — until the admin
+          screen that writes them per facility exists.
+        */}
+        <PrescriptionSheet context={context} settings={defaultPrintSettings()} />
+        {/* The lab result report — a second hidden sheet. Which one prints is chosen by the
+            data-print-target stamp (lib/print.ts); F4 prints the prescription, the Labs tab's
+            Print prints this. Mounted only where the lab is on. */}
+        {enabledModules.includes('lab') && <LabResultSheet context={context} />}
+      </ConsultSaveProvider>
+    </LabPrintSelectionProvider>
   )
 }
 
