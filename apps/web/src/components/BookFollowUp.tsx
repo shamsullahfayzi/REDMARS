@@ -20,17 +20,33 @@ import { useVisitOptions } from '@/hooks/useVisits'
  * Lives on the patient's record rather than on a booking screen, because that is where
  * the sentence is actually said — the doctor has the patient in front of them and the
  * chart already open. Sending them to a separate screen to find the same patient again
- * is how a follow-up ends up existing only as something the patient was told.
+ * is how a follow-up ends up existing only as something the patient was told. Task 6b.5
+ * put it on the consult page itself for exactly this reason — the room the sentence gets
+ * said in.
  *
  * A day, not a time. Farhat does not run slots, and a booking that promises 10:15 the
  * clinic has no way to honour is worse than a date the patient can be sure of.
+ *
+ * `lockToSelf` is task 6b.5: a doctor books a follow-up with themselves, never on
+ * another practitioner's behalf. The picker disappears rather than showing a disabled
+ * name we cannot reliably know from here — the server resolves "self" from the caller's
+ * own session, which is the only place that is actually authoritative, and rejects
+ * anything else. Only the desk (never true here) still gets the full picker.
  */
-export function BookFollowUp({ patientId }: { patientId: string }) {
+export function BookFollowUp({
+  patientId,
+  defaultDepartmentId,
+  lockToSelf = false,
+}: {
+  patientId: string
+  defaultDepartmentId?: string
+  lockToSelf?: boolean
+}) {
   const { t, i18n } = useTranslation()
   const optionsQuery = useVisitOptions()
   const create = useCreateAppointment()
 
-  const [departmentId, setDepartmentId] = useState('')
+  const [departmentId, setDepartmentId] = useState(defaultDepartmentId ?? '')
   const [practitionerId, setPractitionerId] = useState('')
   const [scheduledOn, setScheduledOn] = useState('')
   const [reason, setReason] = useState('')
@@ -53,7 +69,9 @@ export function BookFollowUp({ patientId }: { patientId: string }) {
     const parsed = createAppointmentRequestSchema.safeParse({
       patientId,
       departmentId,
-      practitionerId: practitionerId || null,
+      // Locked: send nothing and let the server fill in the caller's own practitioner —
+      // it is the only side that can say who "self" actually is.
+      practitionerId: lockToSelf ? null : practitionerId || null,
       scheduledOn,
       reason: reason.trim() || null,
     })
@@ -114,23 +132,27 @@ export function BookFollowUp({ patientId }: { patientId: string }) {
           </Select>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="apptPractitioner">{t('visits.fields.practitioner')}</Label>
-          <Select
-            id="apptPractitioner"
-            value={practitionerId}
-            disabled={!departmentId}
-            onChange={(e) => setPractitionerId(e.target.value)}
-          >
-            {/* A follow-up with whoever is on that day is a real answer, not a gap. */}
-            <option value="">{t('appointments.book.anyDoctor')}</option>
-            {available.map((practitioner) => (
-              <option key={practitioner.id} value={practitioner.id}>
-                {practitioner.name}
-              </option>
-            ))}
-          </Select>
-        </div>
+        {lockToSelf ? (
+          <p className="text-sm text-muted-foreground">{t('appointments.book.withYou')}</p>
+        ) : (
+          <div className="space-y-1.5">
+            <Label htmlFor="apptPractitioner">{t('visits.fields.practitioner')}</Label>
+            <Select
+              id="apptPractitioner"
+              value={practitionerId}
+              disabled={!departmentId}
+              onChange={(e) => setPractitionerId(e.target.value)}
+            >
+              {/* A follow-up with whoever is on that day is a real answer, not a gap. */}
+              <option value="">{t('appointments.book.anyDoctor')}</option>
+              {available.map((practitioner) => (
+                <option key={practitioner.id} value={practitioner.id}>
+                  {practitioner.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <Label htmlFor="apptReason">{t('appointments.fields.reason')}</Label>

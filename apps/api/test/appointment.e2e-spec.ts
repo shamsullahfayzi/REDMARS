@@ -45,6 +45,7 @@ describe('Appointments (e2e)', () => {
   let facilityId: string;
   let otherFacilityId: string;
   let doctorToken: string;
+  let doctorTwoToken: string;
   let receptionistToken: string;
   let nurseToken: string;
   let pharmacistToken: string;
@@ -53,6 +54,7 @@ describe('Appointments (e2e)', () => {
   let labId: string;
   let closedDeptId: string;
   let drOpdId: string;
+  let drOtherId: string;
   let drRetiredId: string;
   let consultId: string;
 
@@ -162,11 +164,13 @@ describe('Appointments (e2e)', () => {
       await prisma.facility.create({ data: { code: `${PREFIX}other`, name: 'E2E Appt Other' } })
     ).id;
 
-    await seedActor('doctor', 'doctor');
+    const doctorId = await seedActor('doctor', 'doctor');
+    const doctorTwoId = await seedActor('doctor-two', 'doctor');
     await seedActor('receptionist', 'receptionist');
     await seedActor('nurse', 'nurse');
     await seedActor('pharmacist', 'pharmacist');
     doctorToken = await login(`${PREFIX}doctor`);
+    doctorTwoToken = await login(`${PREFIX}doctor-two`);
     receptionistToken = await login(`${PREFIX}receptionist`);
     nurseToken = await login(`${PREFIX}nurse`);
     pharmacistToken = await login(`${PREFIX}pharmacist`);
@@ -200,6 +204,21 @@ describe('Appointments (e2e)', () => {
           code: `${PREFIX}DR1`,
           firstName: 'Hafizullah',
           lastName: 'Sherzai',
+          // Linked to doctorToken's own AppUser — task 6b.5's self-lock resolves "who
+          // is booking" through this row, exactly like every other practitionerIdOf.
+          userId: doctorId,
+          departments: { create: { departmentId: opdId } },
+        },
+      })
+    ).id;
+    drOtherId = (
+      await prisma.practitioner.create({
+        data: {
+          facilityId,
+          code: `${PREFIX}DR3`,
+          firstName: 'Another',
+          lastName: 'Doctor',
+          userId: doctorTwoId,
           departments: { create: { departmentId: opdId } },
         },
       })
@@ -258,9 +277,37 @@ describe('Appointments (e2e)', () => {
   it('the desk books one too', () =>
     book(body({ scheduledOn: kabulDate(7) }), receptionistToken).expect(201));
 
-  it('books without naming a doctor: come back and see whoever is on', async () => {
-    const res = await book(body({ practitionerId: null, scheduledOn: kabulDate(9) })).expect(201);
+  it('the desk books without naming a doctor: come back and see whoever is on', async () => {
+    const res = await book(
+      body({ practitionerId: null, scheduledOn: kabulDate(9) }),
+      receptionistToken,
+    ).expect(201);
     expect((res.body as AppointmentSummary).practitionerName).toBeNull();
+  });
+
+  // --- Task 6b.5: a doctor books a follow-up with themselves, never anyone else ---
+
+  it('a doctor booking without naming anyone still gets themselves, not "whoever is on"', async () => {
+    const res = await book(body({ practitionerId: null, scheduledOn: kabulDate(11) })).expect(201);
+    expect((res.body as AppointmentSummary).practitionerName).toBe('Hafizullah Sherzai');
+  });
+
+  it('a doctor may not name another practitioner, even one active in that department', () =>
+    book(body({ practitionerId: drOtherId, scheduledOn: kabulDate(12) })).expect(403));
+
+  it('a doctor naming their own id explicitly is exactly the same as naming no one', async () => {
+    const res = await book(body({ practitionerId: drOpdId, scheduledOn: kabulDate(13) })).expect(
+      201,
+    );
+    expect((res.body as AppointmentSummary).practitionerName).toBe('Hafizullah Sherzai');
+  });
+
+  it("a second doctor's self-lock resolves to their own practitioner, not the first doctor's", async () => {
+    const res = await book(
+      body({ practitionerId: null, scheduledOn: kabulDate(15) }),
+      doctorTwoToken,
+    ).expect(201);
+    expect((res.body as AppointmentSummary).practitionerName).toBe('Another Doctor');
   });
 
   // --- Listing ----------------------------------------------------------------
@@ -325,7 +372,7 @@ describe('Appointments (e2e)', () => {
     book(body({ departmentId: labId, practitionerId: drOpdId })).expect(400));
 
   it('refuses a deactivated practitioner', () =>
-    book(body({ practitionerId: drRetiredId })).expect(400));
+    book(body({ practitionerId: drRetiredId }), receptionistToken).expect(400));
 
   it("another facility's patient is a 404, never a 403", () =>
     book(body({ patientId: foreignPatientId })).expect(404));
@@ -439,7 +486,9 @@ describe('Appointments (e2e)', () => {
 
   it('links NEITHER when the day is ambiguous: two bookings, one patient', async () => {
     const patient = await seedPatient();
-    await book(body({ patientId: patient, scheduledOn: kabulDate(0) })).expect(201);
+    await book(body({ patientId: patient, scheduledOn: kabulDate(0) }), receptionistToken).expect(
+      201,
+    );
     await book(
       body({
         patientId: patient,
@@ -447,6 +496,7 @@ describe('Appointments (e2e)', () => {
         departmentId: labId,
         practitionerId: null,
       }),
+      receptionistToken,
     ).expect(201);
 
     const checkIn = (

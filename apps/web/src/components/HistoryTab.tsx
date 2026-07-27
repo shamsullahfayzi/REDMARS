@@ -9,6 +9,7 @@ import {
   type PatientHistoryResponse,
 } from '@redmars/shared'
 import { Badge } from '@/components/ui/badge'
+import { BookFollowUp } from '@/components/BookFollowUp'
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
@@ -39,9 +40,11 @@ const WINDOWS = [12, 24, HISTORY_MONTHS.max] as const
 export function HistoryTab({
   patientId,
   currentVisitId,
+  departmentId,
 }: {
   patientId: string
   currentVisitId: string
+  departmentId: string
 }) {
   const { t } = useTranslation()
   const { roles } = useAuth()
@@ -109,6 +112,13 @@ export function HistoryTab({
             </li>
           ))}
         </ol>
+      )}
+
+      {/* Task 6b.5 — "come back on the fifth" belongs at the end of reading the past,
+          not on a separate screen. Doctor only: admin can read this tab but does not
+          hold appointment.create, and the desk is not the one sitting in this room. */}
+      {roles.includes('doctor') && (
+        <BookFollowUp patientId={patientId} defaultDepartmentId={departmentId} lockToSelf />
       )}
     </div>
   )

@@ -68,13 +68,13 @@ import { cn } from '@/lib/utils'
 const TABS = [
   { key: 'vitals', icon: Activity },
   { key: 'complaint', icon: MessageSquare },
-  { key: 'diagnosis', icon: ClipboardList },
-  { key: 'prescription', icon: Pill },
+  { key: 'history', icon: History },
   // Module-gated: the laboratory is optional (task 2.13), so this tab is present only when
   // the facility has it on. The server re-checks the module on every lab route regardless.
   { key: 'labs', icon: TestTube, module: 'lab' },
+  { key: 'diagnosis', icon: ClipboardList },
+  { key: 'prescription', icon: Pill },
   { key: 'notes', icon: FileText },
-  { key: 'history', icon: History },
 ] as const
 
 type Tab = (typeof TABS)[number]
@@ -134,7 +134,13 @@ export function ConsultPage() {
             prescription: <PrescriptionTab visit={context.visit} />,
             labs: <LabsTab visit={context.visit} />,
             notes: <NotesTab visit={context.visit} />,
-            history: <HistoryTab patientId={context.patient.id} currentVisitId={context.visit.id} />,
+            history: (
+              <HistoryTab
+                patientId={context.patient.id}
+                currentVisitId={context.visit.id}
+                departmentId={context.visit.departmentId}
+              />
+            ),
           }}
         />
         <ConsultActions visit={context.visit} />

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type {
   AppointmentListQuery,
   AppointmentListResponse,
@@ -82,9 +87,21 @@ export class AppointmentService {
     if (!department) throw new BadRequestException('Unknown department');
     if (!department.isActive) throw new BadRequestException('Department is not active');
 
-    if (input.practitionerId) {
+    /**
+     * Task 6b.5 — a doctor books a follow-up with themselves, never on another
+     * practitioner's behalf. The desk keeps the full picker (name anyone, or no one —
+     * "whoever is on that day"); a caller who IS a practitioner has theirs filled in
+     * automatically and may not name a different one.
+     */
+    const ownPractitionerId = await this.practitionerIdOf(facilityId, userId);
+    if (ownPractitionerId && input.practitionerId && input.practitionerId !== ownPractitionerId) {
+      throw new ForbiddenException('A doctor may only book a follow-up with themselves.');
+    }
+    const practitionerId = ownPractitionerId ?? input.practitionerId ?? null;
+
+    if (practitionerId) {
       const practitioner = await this.prisma.db.practitioner.findFirst({
-        where: { id: input.practitionerId, facilityId },
+        where: { id: practitionerId, facilityId },
         select: {
           isActive: true,
           departments: {
@@ -115,7 +132,7 @@ export class AppointmentService {
         createdBy: userId,
         patientId: input.patientId,
         departmentId: input.departmentId,
-        practitionerId: input.practitionerId ?? null,
+        practitionerId,
         scheduledAt: start,
         reason: input.reason ?? null,
         status: 'booked',
@@ -231,6 +248,14 @@ export class AppointmentService {
     // second visit can never claim the same booking.
     await tx.visit.update({ where: { id: visitId }, data: { appointmentId } });
     return appointmentId;
+  }
+
+  private async practitionerIdOf(facilityId: string, userId: string): Promise<string | null> {
+    const practitioner = await this.prisma.db.practitioner.findFirst({
+      where: { facilityId, userId },
+      select: { id: true },
+    });
+    return practitioner?.id ?? null;
   }
 
   private toSummary(row: AppointmentRow): AppointmentSummary {

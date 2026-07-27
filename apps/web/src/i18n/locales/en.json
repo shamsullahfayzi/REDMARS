@@ -968,6 +968,7 @@
       "title": "Book a follow-up",
       "hint": "A day, not a time. The patient is told the date and comes when the clinic is open.",
       "anyDoctor": "Any doctor",
+      "withYou": "With you, when the patient returns.",
       "reasonPlaceholder": "Review medication",
       "submit": "Book",
       "saving": "Booking…",
