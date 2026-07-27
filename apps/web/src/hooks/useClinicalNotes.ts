@@ -27,6 +27,8 @@ export function useSaveClinicalNote(visitId: string) {
   return useMutation({
     mutationFn: (input: SaveClinicalNoteRequest) =>
       apiPut(`/visits/${visitId}/notes`, input, clinicalNoteSchema),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['visits', 'notes', visitId] }),
+    // Task 6b.4 — a first note on an `arrived` visit starts it server-side, so the whole
+    // visit tree is invalidated rather than just this tab's own slice.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['visits'] }),
   })
 }

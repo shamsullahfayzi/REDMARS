@@ -18,12 +18,12 @@ export function useDiagnoses(visitId: string | undefined) {
 }
 
 /**
- * All three writers invalidate the same list, because all three can change more than the
- * row they name: adding or updating a primary diagnosis takes the flag off another one.
+ * All three writers invalidate the whole visit tree, not just this list: adding or
+ * updating a primary diagnosis takes the flag off another one, and (task 6b.4) a first
+ * diagnosis on an `arrived` visit starts it server-side, which the header needs to hear.
  */
 export function useDiagnosisWriters(visitId: string) {
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['visits', 'diagnoses', visitId] })
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['visits'] })
 
   const add = useMutation({
     mutationFn: (input: RecordDiagnosisRequest) =>

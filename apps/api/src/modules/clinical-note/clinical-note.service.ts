@@ -14,6 +14,7 @@ import {
   riskAssessmentContentSchema,
 } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { VisitService } from '../visit/visit.service';
 
 const noteSelect = {
   id: true,
@@ -39,7 +40,10 @@ type NoteRow = {
 
 @Injectable()
 export class ClinicalNoteService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly visits: VisitService,
+  ) {}
 
   /**
    * Every note on the visit, in one request. There are at most four, so paging this would
@@ -91,6 +95,8 @@ export class ClinicalNoteService {
         data: { content: input.content },
         select: noteSelect,
       });
+      // Task 6b.4 — a first note can arrive as an edit to nothing, same as a create.
+      await this.visits.autoStart(facilityId, userId, visitId);
       return this.toNote(updated);
     }
 
@@ -105,6 +111,8 @@ export class ClinicalNoteService {
       },
       select: noteSelect,
     });
+    // Task 6b.4 — after the write commits, not before.
+    await this.visits.autoStart(facilityId, userId, visitId);
     return this.toNote(created);
   }
 

@@ -22,8 +22,9 @@ export function useSaveLabOrder(visitId: string) {
   return useMutation({
     mutationFn: (input: SaveLabOrderRequest) =>
       apiPut(`/visits/${visitId}/lab-order`, input, labOrderResponseSchema),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['visits', 'lab-order', visitId] }),
+    // Task 6b.4 — ordering a test on an `arrived` visit starts it server-side, so the whole
+    // visit tree is invalidated rather than just this tab's own slice.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['visits'] }),
   })
 }
 

@@ -5,6 +5,7 @@ import { isVisitOpen } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AuditedTx } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
+import { VisitService } from '../visit/visit.service';
 
 /**
  * Phase 5, first slice — the doctor's lab order, hung off the visit like the prescription.
@@ -44,6 +45,7 @@ export class LabOrderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sequence: NumberSequenceService,
+    private readonly visits: VisitService,
   ) {}
 
   async find(facilityId: string, visitId: string): Promise<LabOrderResponse> {
@@ -109,6 +111,10 @@ export class LabOrderService {
 
       // Nothing asked for and nothing on file — no order to write.
       if (testIds.length === 0 && !order) return;
+
+      // Task 6b.4 — ordering a test is a clinical write like any other; an `arrived`
+      // visit becomes `in_progress` in the same transaction as the order it produced.
+      await this.visits.autoStart(facilityId, userId, visitId, tx);
 
       if (!order) {
         const orderNo = await this.sequence.next(facilityId, 'lab_order_no', undefined, tx);

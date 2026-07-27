@@ -24,6 +24,9 @@ export function useRecordVitals(visitId: string) {
   return useMutation({
     mutationFn: (input: RecordVitalsRequest) =>
       apiPost(`/visits/${visitId}/vitals`, input, vitalsReadingSchema),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['visits', 'vitals', visitId] }),
+    // Task 6b.4 — the first reading of an `arrived` visit starts it server-side, so the
+    // whole visit tree is invalidated (same as useUpdateComplaint) rather than just this
+    // tab's own slice, and the header's badge and Start button hear about it too.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['visits'] }),
   })
 }

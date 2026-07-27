@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import type { RecordVitalsRequest, VitalsListResponse, VitalsReading } from '@redmars/shared';
 import { isVisitOpen } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { VisitService } from '../visit/visit.service';
 
 /** Everything `VitalsReading` promises, plus the name behind `recordedBy`. */
 const vitalsSelect = {
@@ -37,7 +38,10 @@ type VitalsRow = {
 
 @Injectable()
 export class VitalsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly visits: VisitService,
+  ) {}
 
   /**
    * Append a reading. There is no update and no delete, by design: a re-taken blood
@@ -86,6 +90,10 @@ export class VitalsService {
       },
       select: vitalsSelect,
     });
+
+    // Task 6b.4 — after the write commits, not before: a vitals row that failed to save
+    // must not have called the patient in.
+    await this.visits.autoStart(facilityId, userId, visitId);
 
     return this.toReading(created, await this.nameOf(created.recordedBy));
   }

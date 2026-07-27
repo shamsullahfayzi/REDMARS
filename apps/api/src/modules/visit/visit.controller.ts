@@ -154,7 +154,8 @@ export class VisitController {
       });
     }
 
-    return this.visits.updateComplaint(this.auth(req).facilityId, id, parsed.data);
+    const auth = this.auth(req);
+    return this.visits.updateComplaint(auth.facilityId, auth.userId, id, parsed.data);
   }
 
   /**

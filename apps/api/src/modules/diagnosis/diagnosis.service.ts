@@ -8,6 +8,7 @@ import type {
 } from '@redmars/shared';
 import { isVisitOpen } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { VisitService } from '../visit/visit.service';
 
 const diagnosisSelect = {
   id: true,
@@ -39,7 +40,10 @@ type DiagnosisRow = {
 
 @Injectable()
 export class DiagnosisService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly visits: VisitService,
+  ) {}
 
   async list(facilityId: string, visitId: string): Promise<DiagnosisListResponse> {
     await this.requireVisit(facilityId, visitId);
@@ -77,6 +81,11 @@ export class DiagnosisService {
     });
 
     if (created.isPrimary) await this.clearOtherPrimaries(visitId, created.id);
+
+    // Task 6b.4 — after the write commits, not before: a diagnosis that failed validation
+    // must not have called the patient in.
+    await this.visits.autoStart(facilityId, userId, visitId);
+
     return this.toDiagnosis(created);
   }
 

@@ -23,6 +23,7 @@ import {
 } from '@redmars/shared';
 import { facilityDateString } from '../../common/facility-time';
 import { PrismaService } from '../../prisma/prisma.service';
+import { VisitService } from '../visit/visit.service';
 
 const prescriptionSelect = {
   id: true,
@@ -81,7 +82,10 @@ type PrescriptionRow = {
 
 @Injectable()
 export class PrescriptionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly visits: VisitService,
+  ) {}
 
   async find(facilityId: string, visitId: string): Promise<PrescriptionResponse> {
     await this.requireVisit(facilityId, visitId);
@@ -213,6 +217,11 @@ export class PrescriptionService {
     }
 
     const followUpDate = this.resolveFollowUpDate(input.followUpDate, visit.startedAt);
+
+    // Task 6b.4 — every validation that can still refuse this save has run; from here the
+    // sheet is going to be written, so this is the point an `arrived` visit becomes
+    // `in_progress`.
+    await this.visits.autoStart(facilityId, userId, visitId);
 
     const prescriptionId =
       existing?.id ??

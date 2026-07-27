@@ -50,8 +50,9 @@ export function useSavePrescription(visitId: string) {
   return useMutation({
     mutationFn: (input: SavePrescriptionRequest) =>
       apiPut(`/visits/${visitId}/prescription`, input, prescriptionResponseSchema),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['visits', 'prescription', visitId] }),
+    // Task 6b.4 — a first prescription on an `arrived` visit starts it server-side, so the
+    // whole visit tree is invalidated rather than just this tab's own slice.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['visits'] }),
   })
 }
 

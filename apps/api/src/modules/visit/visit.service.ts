@@ -334,6 +334,7 @@ export class VisitService {
    */
   async updateComplaint(
     facilityId: string,
+    userId: string,
     id: string,
     input: UpdateComplaintRequest,
   ): Promise<VisitSummary> {
@@ -353,9 +354,23 @@ export class VisitService {
       });
     }
 
+    // Task 6b.4 — writing the doctor's own version of the complaint IS the first clinical
+    // act of the consultation. An `arrived` visit moves to `in_progress` in the same write
+    // rather than waiting for a separate click on Start, folded into one statement so it is
+    // one audit row, not two.
+    const startingNow = visit.status === 'arrived';
+
     const updated = await this.prisma.db.visit.update({
       where: { id },
-      data: { chiefComplaint: input.chiefComplaint },
+      data: {
+        chiefComplaint: input.chiefComplaint,
+        ...(startingNow
+          ? {
+              status: 'in_progress',
+              statusHistory: { create: { status: 'in_progress', changedBy: userId } },
+            }
+          : {}),
+      },
       select: visitSummarySelect,
     });
     return this.toSummary(updated);
@@ -431,6 +446,38 @@ export class VisitService {
           code: 'status_changed',
         });
       }
+      throw error;
+    }
+  }
+
+  /**
+   * Task 6b.4 — an `arrived` visit becomes `in_progress` the moment anything clinical is
+   * actually written against it: a vital sign, a diagnosis, a prescription, a note, a lab
+   * order. Called by those services as the last step before their own write commits, so a
+   * rejected save (an allergy conflict, an unknown code) never starts a consultation that
+   * did not happen.
+   *
+   * A NO-OP, not an error, once the visit has already moved — the Start button was
+   * pressed, or another tab's save got here first. The WHERE carries the race: whoever's
+   * update matches `status: 'arrived'` wins, and P2025 from the loser is exactly the
+   * "someone already called this patient in" case, which needs no one told.
+   */
+  async autoStart(
+    facilityId: string,
+    userId: string,
+    visitId: string,
+    tx: AuditedTx = this.prisma.db,
+  ): Promise<void> {
+    try {
+      await tx.visit.update({
+        where: { id: visitId, facilityId, status: 'arrived' },
+        data: {
+          status: 'in_progress',
+          statusHistory: { create: { status: 'in_progress', changedBy: userId } },
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') return;
       throw error;
     }
   }

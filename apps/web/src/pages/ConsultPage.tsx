@@ -52,6 +52,13 @@ import { cn } from '@/lib/utils'
  * queue is sorted by and the number an operational report is built from. So the move is a
  * button, and it is the loudest thing in the header.
  *
+ * TASK 6b.4 adds a second, quieter door to `in_progress`: the first vital sign, complaint,
+ * diagnosis, prescription, note or lab order actually SAVED against an `arrived` visit
+ * starts it too, server-side, in the same write. That is not this screen deciding to start
+ * the consultation — it is the server recognising that one already started, because a
+ * clinical fact now exists that did not before. Opening the chart still does nothing; the
+ * button above stays for the doctor who wants to call a patient in before writing anything.
+ *
  * KEYBOARD-FIRST is half of this task. Task 4.2 owns the save keys (F2/F4/F9/Esc); this
  * owns getting around: a real ARIA tablist with roving tabindex, arrows and Home/End
  * inside it, and Alt+1…6 to jump straight to a tab from anywhere on the page — including
@@ -243,7 +250,10 @@ function PatientBanner({ context }: { context: ConsultContext }) {
 }
 
 /**
- * The one move this screen makes to the visit: calling the patient in.
+ * The explicit move this screen offers for calling the patient in — for the doctor who
+ * wants the queue to say "in progress" before typing anything. Task 6b.4 gives the same
+ * move a second, implicit door (the first clinical save), so this button simply stops
+ * rendering once either one has fired; it does not need to know which.
  *
  * Offered only from `arrived`, which is the only status it is true from. Everything else
  * — holding, completing, cancelling — belongs to the queue (tasks 3.9 and 3.11), and task
