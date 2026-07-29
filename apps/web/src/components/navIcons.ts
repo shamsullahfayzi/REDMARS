@@ -1,4 +1,5 @@
 import {
+  Banknote,
   BarChart3,
   BookText,
   ConciergeBell,
@@ -34,6 +35,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   interactions: ShieldAlert,
   lab: FlaskConical,
   pharmacy: Pill,
+  collections: Banknote,
   users: UserCog,
   settings: Settings,
   modules: SlidersHorizontal,

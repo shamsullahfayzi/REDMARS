@@ -14,12 +14,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { facilityDayBoundsFor } from '../../common/facility-time';
 
 /** Money out, always to two places — the shape of Decimal(12,2). */
-function money(value: Prisma.Decimal): string {
+export function money(value: Prisma.Decimal): string {
   return value.toFixed(2);
 }
 
 /** A patient's display name from its parts, skipping the blanks. */
-function fullName(parts: (string | null | undefined)[]): string {
+export function fullName(parts: (string | null | undefined)[]): string {
   return parts.filter((p) => p != null && p.trim().length > 0).join(' ');
 }
 
@@ -27,8 +27,12 @@ function fullName(parts: (string | null | undefined)[]): string {
  * Which till a bill belongs to, read off the ref types of its lines (task 6.2). The origin
  * is not stored — it is what the invoice is FOR. Pharmacy wins over lab wins over
  * reception when a bill somehow mixes them, though in practice each till raises its own.
+ *
+ * Exported: task 6b.7's collections list is the same derivation over a different filter of
+ * invoices, and a second copy of "what makes a bill pharmacy vs lab" is exactly the kind of
+ * drift the reference-band extraction (6b.6) already showed the cost of.
  */
-function originOf(refTypes: string[]): InvoiceOrigin {
+export function originOf(refTypes: string[]): InvoiceOrigin {
   const kinds = new Set(refTypes);
   if (kinds.has('prescription_item')) return 'pharmacy';
   if (kinds.has('lab_order_item')) return 'lab';

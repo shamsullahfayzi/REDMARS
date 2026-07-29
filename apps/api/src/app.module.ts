@@ -38,6 +38,7 @@ import { ClinicalNoteModule } from './modules/clinical-note/clinical-note.module
 import { HistoryModule } from './modules/history/history.module';
 import { FollowUpModule } from './modules/follow-up/follow-up.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { CollectionsModule } from './modules/collections/collections.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { SettingsModule } from './modules/settings/settings.module';
     HistoryModule,
     FollowUpModule,
     SettingsModule,
+    CollectionsModule,
   ],
   providers: [
     // Global. Runs after the guards on every route, so request.auth is already

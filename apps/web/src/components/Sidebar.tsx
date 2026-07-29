@@ -3,6 +3,9 @@ import { NavLink } from 'react-router'
 import type { ModuleKey } from '@redmars/shared'
 import { NAV_GROUPS, navItemsForRoles } from '@/auth/nav'
 import { NAV_ICONS } from '@/components/navIcons'
+import { Badge } from '@/components/ui/badge'
+import { useCollectionsList } from '@/hooks/useCollections'
+import { getCollectionsLastSeen } from '@/lib/collectionsSeen'
 import { cn } from '@/lib/utils'
 
 /**
@@ -80,7 +83,8 @@ export function Sidebar({ roles, enabledModules, open, onClose }: SidebarProps) 
                       }
                     >
                       {Icon && <Icon className="size-4 shrink-0" />}
-                      <span className="truncate">{t(`nav.${item.key}`)}</span>
+                      <span className="min-w-0 flex-1 truncate">{t(`nav.${item.key}`)}</span>
+                      {item.key === 'collections' && <CollectionsNavBadge />}
                     </NavLink>
                   )
                 })}
@@ -90,5 +94,26 @@ export function Sidebar({ roles, enabledModules, open, onClose }: SidebarProps) 
         </nav>
       </aside>
     </>
+  )
+}
+
+/**
+ * Task 6b.7 — "a badge for new arrivals". Counts unpaid lab/pharmacy bills raised since the
+ * desk last opened Collections (getCollectionsLastSeen, cleared to "now" by that page on
+ * mount) — not the whole outstanding pile, just what showed up since it was last checked.
+ * Only mounted when the collections nav item is, so no role that cannot see the page ever
+ * fires the request.
+ */
+function CollectionsNavBadge() {
+  const query = useCollectionsList()
+  const bills = query.data?.bills ?? []
+  const lastSeen = getCollectionsLastSeen()
+  const newCount = bills.filter((bill) => bill.createdAt > lastSeen).length
+
+  if (newCount === 0) return null
+  return (
+    <Badge variant="active" className="shrink-0">
+      {newCount}
+    </Badge>
   )
 }

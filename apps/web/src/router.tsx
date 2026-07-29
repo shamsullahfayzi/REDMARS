@@ -6,6 +6,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { AppointmentsPage } from '@/pages/AppointmentsPage'
+import { CollectionsPage } from '@/pages/CollectionsPage'
 import { ConsultPage } from '@/pages/ConsultPage'
 import { MyConsultationsPage } from '@/pages/MyConsultationsPage'
 import { FollowUpsPage } from '@/pages/FollowUpsPage'
@@ -73,6 +74,7 @@ export const router = createBrowserRouter([
           { path: 'interactions', element: <InteractionCheckerPage /> },
           { path: 'lab', element: <LabQueuePage /> },
           { path: 'invoices', element: <InvoicesPage /> },
+          { path: 'collections', element: <CollectionsPage /> },
           { path: 'till', element: <TillPage /> },
           { path: 'pharmacy', element: <PharmacyPage /> },
           { path: 'users', element: <UsersPage /> },

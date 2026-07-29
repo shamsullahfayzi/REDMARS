@@ -68,6 +68,7 @@
     "appointments": "Appointments",
     "followUps": "Follow-ups",
     "invoices": "Invoices",
+    "collections": "Collections",
     "till": "Till"
   },
   "theme": {
@@ -767,6 +768,19 @@
     "loading": "Loading…",
     "detailError": "Could not load this invoice.",
     "outstanding": "Outstanding {{amount}} {{currency}}"
+  },
+  "collections": {
+    "subtitle": "Every unpaid lab or pharmacy bill, in one list.",
+    "searchPlaceholder": "Invoice number, patient name or MRN",
+    "error": "Could not load collections.",
+    "empty": "Nothing outstanding right now.",
+    "noMatch": "No bills match.",
+    "count": "{{count}} outstanding",
+    "new": "New",
+    "col": {
+      "origin": "Till",
+      "outstanding": "Outstanding"
+    }
   },
   "visitBills": {
     "title": "This visit's bills · {{visitNo}} ({{count}})",

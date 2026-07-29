@@ -68,6 +68,7 @@
     "appointments": "وعدې",
     "followUps": "بیا کتنې",
     "invoices": "بیلونه",
+    "collections": "غوښتنې",
     "till": "صندوق"
   },
   "theme": {
@@ -767,6 +768,19 @@
     "loading": "بارېږي…",
     "detailError": "د دې بیل بارول ناکام شو.",
     "outstanding": "پاتې {{amount}} {{currency}}"
+  },
+  "collections": {
+    "subtitle": "د لابراتوار یا فارمسۍ ټول ناتادیه بیلونه، په یوه لیست کې.",
+    "searchPlaceholder": "د بیل شمېره، د ناروغ نوم یا فایل شمېره",
+    "error": "د غوښتنو بارول ناکام شو.",
+    "empty": "اوس مهال هیڅ پاتې نه دی.",
+    "noMatch": "هیڅ بیل سمون نه خوري.",
+    "count": "{{count}} پاتې",
+    "new": "نوی",
+    "col": {
+      "origin": "کاونټر",
+      "outstanding": "پاتې"
+    }
   },
   "visitBills": {
     "title": "د دې لیدنې بیلونه · {{visitNo}} ({{count}})",

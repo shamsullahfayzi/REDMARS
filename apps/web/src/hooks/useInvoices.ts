@@ -76,6 +76,7 @@ export function useRecordPayment(invoiceId: string) {
       void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       void queryClient.invalidateQueries({ queryKey: ['visit-bills'] })
       void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      void queryClient.invalidateQueries({ queryKey: ['collections'] })
     },
   })
 }
@@ -96,6 +97,7 @@ export function useRefundPayment(invoiceId: string) {
       void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       void queryClient.invalidateQueries({ queryKey: ['visit-bills'] })
       void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      void queryClient.invalidateQueries({ queryKey: ['collections'] })
     },
   })
 }
@@ -112,6 +114,7 @@ export function useApplyDiscount(invoiceId: string) {
       void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       void queryClient.invalidateQueries({ queryKey: ['visit-bills'] })
       void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      void queryClient.invalidateQueries({ queryKey: ['collections'] })
     },
   })
 }

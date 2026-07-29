@@ -96,6 +96,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: 'administration',
     roles: ['admin', 'receptionist', 'pharmacist', 'management'],
   },
+  // Task 6b.7 — every unpaid lab or pharmacy bill, one list, no patient search needed first.
+  // Same audience as the register above: it is that same read, pre-filtered to the two
+  // tills reception cannot watch directly.
+  {
+    key: 'collections',
+    to: '/collections',
+    group: 'administration',
+    roles: ['admin', 'receptionist', 'pharmacist', 'management'],
+  },
   // Task 6.12 — the daily till. The receptionist and pharmacist reconcile their own drawer
   // (payment.receive); an admin or manager sees every till (report.financial). Same set as
   // the people who touch money, so the menu matches who has a drawer to close.
