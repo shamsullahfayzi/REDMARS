@@ -60,11 +60,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     group: 'clinical',
     roles: ['admin', 'receptionist', 'nurse', 'doctor', 'management'],
   },
+  // Task 6b.9 narrowed this to the roles that go looking for a patient not already in
+  // front of them (`patient.search`). Lab tech and pharmacist work their own queue —
+  // a lab order or a prescription that already names one — and lost the free-text box.
   {
     key: 'patients',
     to: '/patients',
     group: 'clinical',
-    roles: ['admin', 'receptionist', 'nurse', 'doctor', 'lab_tech', 'pharmacist'],
+    roles: ['admin', 'receptionist', 'nurse', 'doctor'],
   },
   { key: 'consultations', to: '/consultations', group: 'clinical', roles: ['doctor'] },
   // Task 4.15 — the recall list, matching `follow_up.read`. THE RECEPTIONIST IS HERE and
@@ -86,19 +89,24 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   { key: 'lab', to: '/lab', group: 'clinical', roles: ['admin', 'lab_tech'], module: 'lab' },
   { key: 'pharmacy', to: '/pharmacy', group: 'clinical', roles: ['pharmacist'] },
-  // Task 6.1 — the billing register, matching `invoice.read`. Grouped with the other
-  // money-and-numbers screens (reports) rather than the clinical desk, though the
-  // receptionist works from it daily. Not module-gated, for the same reason the reception
-  // desk is not: reading an OPD bill is core, not the billing module's later apparatus.
+  // Task 6.1 — the billing register, matching `invoice.list`. Grouped with the other
+  // money-and-numbers screens (reports) rather than the clinical desk. Not module-gated,
+  // for the same reason the reception desk is not: reading an OPD bill is core, not the
+  // billing module's later apparatus.
+  //
+  // Task 6b.9 removed the receptionist: browsing every bill the facility ever raised is
+  // how the front desk would back into the hospital's revenue, and Farhat's owner and
+  // management were explicit that is not the desk's to see. Collections (below) is the
+  // desk's actual daily tool — an outstanding-bills worklist, not a revenue ledger.
   {
     key: 'invoices',
     to: '/invoices',
     group: 'administration',
-    roles: ['admin', 'receptionist', 'pharmacist', 'management'],
+    roles: ['admin', 'pharmacist', 'management'],
   },
   // Task 6b.7 — every unpaid lab or pharmacy bill, one list, no patient search needed first.
-  // Same audience as the register above: it is that same read, pre-filtered to the two
-  // tills reception cannot watch directly.
+  // Reception keeps this: money still OWED is a worklist, not the revenue ledger 6b.9 took
+  // the register away over.
   {
     key: 'collections',
     to: '/collections',

@@ -173,13 +173,22 @@ export const PERMISSION_MATRIX = {
   // ---- 3. Patient ----------------------------------------------------------
   'patient.create': { receptionist: YES },
   'patient.edit_demographics': { admin: YES, receptionist: YES },
+  /**
+   * Free-text search over the whole patient register (task 6b.9).
+   *
+   * Narrowed from every clinical role to the two that actually go looking for a patient
+   * who is not already in front of them: the desk finds who is walking in, a doctor or
+   * nurse pulls up a name mid-consult. The lab tech and the pharmacist work their own
+   * queue — a lab order or a prescription that already names a patient — and never had a
+   * reason to browse the register by name; `patient.read_demographics` still lets either
+   * open the patient THEIR queue handed them, which is a different, task-scoped act from
+   * typing a name into a box that searches everyone.
+   */
   'patient.search': {
     admin: YES,
     receptionist: YES,
     nurse: YES,
     doctor: YES,
-    lab_tech: YES,
-    pharmacist: YES,
   },
   'patient.read_demographics': {
     admin: YES,
@@ -350,6 +359,16 @@ export const PERMISSION_MATRIX = {
   // ---- 9. Billing ----------------------------------------------------------
   'invoice.create': { receptionist: YES, pharmacist: YES },
   'invoice.read': { admin: YES, receptionist: YES, pharmacist: YES, management: YES },
+  /**
+   * Task 6b.9 — the facility-wide register (`GET /invoices`, no invoice id), split off
+   * from `invoice.read`. Every OTHER `invoice.read` route already names one invoice or one
+   * visit the caller reached through their own work — a bill Collections showed them
+   * unpaid, a visit they are servicing — and stays theirs. Browsing every bill the
+   * facility has ever raised, filterable by day, is a different act: it is how a
+   * receptionist would back into the hospital's revenue, which Farhat's owner and
+   * management were explicit is not the front desk's to see.
+   */
+  'invoice.list': { admin: YES, pharmacist: YES, management: YES },
   'invoice.print': { receptionist: YES, pharmacist: YES },
   'payment.receive': { receptionist: YES, pharmacist: YES },
   'payment.refund': { admin: YES, receptionist: 'R5', pharmacist: 'R5' },

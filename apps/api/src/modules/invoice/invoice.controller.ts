@@ -38,8 +38,13 @@ import { PaymentService } from './payment.service';
  *
  * No @RequiresModule: the same reasoning as the reception desk (3.6). Billing-as-a-module
  * gates panels and statements, not the act of reading an OPD bill; Farhat has it off, and a
- * tag here would 403 the desk that raised the invoice in the first place. `invoice.read`
- * (admin, receptionist, pharmacist, management) is the gate.
+ * tag here would 403 the desk that raised the invoice in the first place.
+ *
+ * Task 6b.9 split the gate in two. `list` — the facility-wide register, browsable by day —
+ * is `invoice.list` (admin, pharmacist, management); a receptionist reading it could back
+ * into the hospital's revenue, which is not the front desk's to see. Every other route here
+ * names one invoice or one visit the caller already reached through their own work, and
+ * stays on the wider `invoice.read` (admin, receptionist, pharmacist, management).
  */
 @Controller('invoices')
 export class InvoiceController {
@@ -50,7 +55,7 @@ export class InvoiceController {
   ) {}
 
   @Get()
-  @RequirePermission('invoice.read')
+  @RequirePermission('invoice.list')
   list(@Req() req: Request, @Query() rawQuery: unknown): Promise<InvoiceListResponse> {
     const parsed = invoiceListQuerySchema.safeParse(rawQuery);
     if (!parsed.success) {

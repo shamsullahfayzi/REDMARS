@@ -32,6 +32,8 @@ describe('Patient search (e2e)', () => {
   let receptionistToken: string;
   let doctorToken: string;
   let managementToken: string;
+  let labTechToken: string;
+  let pharmacistToken: string;
   /** The one Najila we will go looking for. */
   const TARGET_PHONE = '0700555111';
   let targetId: string;
@@ -100,9 +102,13 @@ describe('Patient search (e2e)', () => {
     await seedActor('receptionist', 'receptionist');
     await seedActor('doctor', 'doctor');
     await seedActor('management', 'management');
+    await seedActor('labtech', 'lab_tech');
+    await seedActor('pharmacist', 'pharmacist');
     receptionistToken = await login(`${PREFIX}receptionist`);
     doctorToken = await login(`${PREFIX}doctor`);
     managementToken = await login(`${PREFIX}management`);
+    labTechToken = await login(`${PREFIX}labtech`);
+    pharmacistToken = await login(`${PREFIX}pharmacist`);
 
     // Twelve Najilas. Same first name, different numbers — exactly the situation the
     // desk faces, and the reason searching by name alone is not enough.
@@ -272,6 +278,11 @@ describe('Patient search (e2e)', () => {
 
   it('denies management, who holds no patient.search', () =>
     search('Najila', managementToken).expect(403));
+
+  it('task 6b.9: denies a lab tech and a pharmacist — they work their own queue, not the register', async () => {
+    await search('Najila', labTechToken).expect(403);
+    await search('Najila', pharmacistToken).expect(403);
+  });
 
   it('rejects an unauthenticated search (401)', () =>
     request(server).get('/patients').query({ q: 'Najila' }).expect(401));

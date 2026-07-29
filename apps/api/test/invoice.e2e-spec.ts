@@ -448,7 +448,7 @@ describe('Invoice register + reprint (e2e)', () => {
       .send(body);
 
   it('lists a facility’s invoices, newest first, with a one-line summary', async () => {
-    const body = (await list('recep').expect(200)).body as InvoiceListResponse;
+    const body = (await list('admin').expect(200)).body as InvoiceListResponse;
     const row = body.invoices.find((i) => i.invoiceNo === invoiceNo);
     expect(row).toBeDefined();
     expect(row!.patientName).toBe('Mr. Karim Noori');
@@ -462,21 +462,21 @@ describe('Invoice register + reprint (e2e)', () => {
   });
 
   it('finds an invoice by its number, and by the patient’s name', async () => {
-    const byNo = (await list('recep', `?q=${PREFIX}INV1`).expect(200)).body as InvoiceListResponse;
+    const byNo = (await list('admin', `?q=${PREFIX}INV1`).expect(200)).body as InvoiceListResponse;
     expect(byNo.invoices.map((i) => i.invoiceNo)).toContain(invoiceNo);
 
-    const byName = (await list('recep', '?q=Noori').expect(200)).body as InvoiceListResponse;
+    const byName = (await list('admin', '?q=Noori').expect(200)).body as InvoiceListResponse;
     expect(byName.invoices.map((i) => i.invoiceNo)).toContain(invoiceNo);
   });
 
   it('filters by patient and by status', async () => {
-    const byPatient = (await list('recep', `?patientId=${patientId}`).expect(200))
+    const byPatient = (await list('admin', `?patientId=${patientId}`).expect(200))
       .body as InvoiceListResponse;
     expect(byPatient.invoices.every((i) => i.patientMrn === `${PREFIX}MRN1`)).toBe(true);
 
-    const paid = (await list('recep', '?status=paid').expect(200)).body as InvoiceListResponse;
+    const paid = (await list('admin', '?status=paid').expect(200)).body as InvoiceListResponse;
     expect(paid.invoices.every((i) => i.status === 'paid')).toBe(true);
-    const cancelled = (await list('recep', '?status=cancelled').expect(200))
+    const cancelled = (await list('admin', '?status=cancelled').expect(200))
       .body as InvoiceListResponse;
     expect(cancelled.invoices.some((i) => i.invoiceNo === invoiceNo)).toBe(false);
   });
@@ -732,5 +732,13 @@ describe('Invoice register + reprint (e2e)', () => {
     await pay('doctor', payInvoiceId, { amount: '10', method: 'cash' }).expect(403);
     await discount('doctor', discountInvoiceId, { amount: '10', reason: 'no' }).expect(403);
     await refund('doctor', refundInvoiceId, oldPaymentId, { reason: 'nope' }).expect(403);
+  });
+
+  it('task 6b.9: denies a receptionist the register — invoice.list is no longer theirs — while a specific bill they can still reach stays open', async () => {
+    await list('recep').expect(403);
+    await list('recep', `?q=${PREFIX}INV1`).expect(403);
+    // Unaffected: a bill reached by id, or a visit's own bills, is still invoice.read.
+    await detail('recep', invoiceId).expect(200);
+    await byVisit('recep', visitId).expect(200);
   });
 });

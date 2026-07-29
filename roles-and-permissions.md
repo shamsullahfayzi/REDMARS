@@ -53,7 +53,7 @@
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | `patient.create` | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | `patient.edit_demographics` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| `patient.search` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `patient.search` | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | *(task 6b.9 — lab/pharm work their own queue, never the register)* |
 | `patient.read_demographics` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | **`patient.read_clinical`** | ⚠️ R2 | ❌ | ⚠️ R7 | ✅ R1 | ⚠️ R8 | ⚠️ R6 | ❌ |
 | `patient.read_history` (> 1 month) | ⚠️ R2 | ❌ | ❌ | ✅ R1 R3 | ❌ | ❌ | ❌ |
@@ -127,6 +127,7 @@
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | `invoice.create` | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | `invoice.read` | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| `invoice.list` (facility register, browsable by day) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | *(task 6b.9 — split off invoice.read; reception would back into revenue by browsing it)* |
 | `invoice.print` | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | `payment.receive` | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | `payment.refund` | ✅ | ⚠️ R5 | ❌ | ❌ | ❌ | ⚠️ R5 | ❌ |
