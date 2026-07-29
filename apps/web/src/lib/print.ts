@@ -12,8 +12,12 @@
  * `history-lab` is task 6b.6's addition — a second, independent lab-report target so
  * printing a PAST visit's results from the History tab can never collide with `lab`, the
  * CURRENT visit's own report mounted on the same page.
+ *
+ * `id-card` is task 6b.8's addition — the reception "done" screen mounts the check-in
+ * receipt (no stamp needed) alongside the new ID card sheet; asking for `id-card` swaps
+ * which one the print stylesheet shows.
  */
-export function printTarget(target: 'lab' | 'history-lab'): void {
+export function printTarget(target: 'lab' | 'history-lab' | 'id-card'): void {
   const root = document.documentElement
   root.setAttribute('data-print-target', target)
   const clear = () => {

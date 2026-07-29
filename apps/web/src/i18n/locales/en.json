@@ -730,9 +730,15 @@
       "title": "Checked in",
       "saved": "Patient registered, visit started, payment logged.",
       "print": "Print receipt",
+      "printIdCard": "Print ID card",
       "next": "Next patient",
       "openRecord": "Open the patient record"
     }
+  },
+  "idCard": {
+    "title": "Patient ID card",
+    "mrn": "MRN",
+    "issued": "Issued {{date}}"
   },
   "invoices": {
     "subtitle": "Find a bill and reprint the receipt.",

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, type FormEvent, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { Check, Printer, Search, UserPlus, X } from 'lucide-react'
+import { Check, CreditCard, Printer, Search, UserPlus, X } from 'lucide-react'
 import {
   DISCOUNT_MAX_PERCENT_DEFAULT,
   PATIENT_SEARCH_MIN,
@@ -19,6 +19,7 @@ import { CheckInReceipt } from '@/components/CheckInReceipt'
 import { DuplicateNotice } from '@/components/DuplicateNotice'
 import { PageHeader } from '@/components/PageHeader'
 import { PatientFormFields } from '@/components/PatientFormFields'
+import { PatientIdCard } from '@/components/PatientIdCard'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -31,6 +32,7 @@ import { usePatientSearch } from '@/hooks/usePatientSearch'
 import { toPayload, usePatientForm } from '@/hooks/usePatientForm'
 import { conflictFromError, fromMinor, toMinor, useCheckIn } from '@/hooks/useReception'
 import { useVisitOptions } from '@/hooks/useVisits'
+import { printTarget } from '@/lib/print'
 import { cn } from '@/lib/utils'
 
 export function ReceptionPage() {
@@ -276,11 +278,23 @@ export function ReceptionPage() {
             <p className="text-sm font-medium">{t('reception.done.saved')}</p>
           </div>
           <CheckInReceipt result={checkIn.data} />
+          {checkIn.data.patient.isNew && <PatientIdCard result={checkIn.data} />}
           <div className="mt-4 flex flex-wrap gap-2 print:hidden">
             <Button type="button" size="sm" onClick={() => window.print()}>
               <Printer className="size-3" aria-hidden />
               {t('reception.done.print')}
             </Button>
+            {checkIn.data.patient.isNew && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => printTarget('id-card')}
+              >
+                <CreditCard className="size-3" aria-hidden />
+                {t('reception.done.printIdCard')}
+              </Button>
+            )}
             <Button type="button" size="sm" variant="outline" onClick={startAnother}>
               <UserPlus className="size-3" aria-hidden />
               {t('reception.done.next')}

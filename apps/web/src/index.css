@@ -351,4 +351,38 @@
   .history-lab-sheet thead {
     display: table-header-group;
   }
+
+  /*
+   * Task 6b.8 — the patient ID card. Reception's "done" screen mounts the check-in
+   * receipt (.receipt-bill, no stamp needed — see the top of this block) and this card
+   * together; the stamp on the root picks which one the print stylesheet shows, same
+   * mechanism as `lab` / `history-lab` above.
+   *
+   * No named @page: a full-size bill is worth its own page geometry, but a card this
+   * small is meant to be cut out of whatever the printer's default sheet is, not to
+   * dictate one.
+   */
+  .id-card-sheet {
+    display: none !important;
+  }
+
+  :root[data-print-target='id-card'] .id-card-sheet {
+    display: flex !important;
+    color: #000;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+
+  :root[data-print-target='id-card'] .receipt-bill {
+    display: none !important;
+  }
+
+  /* Credit-card proportions, big enough to hold an MRN legibly. A dashed line marks
+     where to cut it off the rest of the sheet. */
+  .id-card {
+    width: 85mm;
+    height: 54mm;
+    border: 1px dashed #000;
+    padding: 4mm;
+    break-inside: avoid;
+  }
 }
