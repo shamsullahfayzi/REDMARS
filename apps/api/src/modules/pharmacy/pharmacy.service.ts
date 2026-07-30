@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type {
   PharmacyAllergy,
   PharmacyPrescription,
+  PharmacyPrescriptionSearchResponse,
   PharmacyQueueItem,
   PharmacyQueueResponse,
 } from '@redmars/shared';
@@ -87,6 +88,84 @@ export class PharmacyService {
     });
 
     return { items, total: items.length };
+  }
+
+  /**
+   * The pharmacist's own finder — a prescription by the patient's MRN, name or phone, not
+   * a browse of the whole register. Every status is searchable (not just `active`): a
+   * patient who paid and left with a dispensed sheet may come back for a return, or reception
+   * may need to reprint that bill, and neither is on the active queue any more. Newest
+   * first, capped, so a common name does not scroll forever.
+   */
+  async search(facilityId: string, q: string): Promise<PharmacyPrescriptionSearchResponse> {
+    const rows = await this.prisma.db.prescription.findMany({
+      where: {
+        visit: {
+          facilityId,
+          patient: {
+            OR: [
+              { mrn: { contains: q, mode: 'insensitive' } },
+              { firstName: { contains: q, mode: 'insensitive' } },
+              { lastName: { contains: q, mode: 'insensitive' } },
+              { phone: { contains: q.replace(/\s+/g, ''), mode: 'insensitive' } },
+            ],
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        practitioner: { select: { firstName: true, lastName: true } },
+        visit: {
+          select: {
+            id: true,
+            visitNo: true,
+            patient: {
+              select: {
+                id: true,
+                mrn: true,
+                prefix: true,
+                firstName: true,
+                lastName: true,
+                dateOfBirth: true,
+                estimatedAgeYears: true,
+                estimatedAgeMonths: true,
+                ageRecordedAt: true,
+              },
+            },
+          },
+        },
+        items: { select: { drugNameAtTime: true }, orderBy: { sequence: 'asc' } },
+      },
+    });
+
+    const items: PharmacyQueueItem[] = rows.map((row) => {
+      const patient = row.visit.patient;
+      return {
+        prescriptionId: row.id,
+        visitId: row.visit.id,
+        visitNo: row.visit.visitNo,
+        patientId: patient.id,
+        patientName: fullName([patient.prefix, patient.firstName, patient.lastName]),
+        patientMrn: patient.mrn,
+        ageYears: currentAgeYears({
+          dateOfBirth: patient.dateOfBirth ? patient.dateOfBirth.toISOString().slice(0, 10) : null,
+          estimatedAgeYears: patient.estimatedAgeYears,
+          estimatedAgeMonths: patient.estimatedAgeMonths,
+          ageRecordedAt: patient.ageRecordedAt ? patient.ageRecordedAt.toISOString() : null,
+        }),
+        practitionerName: fullName([row.practitioner.firstName, row.practitioner.lastName]),
+        orderedAt: row.createdAt.toISOString(),
+        itemCount: row.items.length,
+        summary: summarise(row.items.map((item) => item.drugNameAtTime)),
+        status: row.status,
+      };
+    });
+
+    return { items };
   }
 
   /**

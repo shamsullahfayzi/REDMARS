@@ -154,6 +154,7 @@ describe('Lab billing / reception settlement (e2e)', () => {
     doctorId = await seedActor('doctor', 'doctor');
     await seedActor('receptionist', 'receptionist');
     await seedActor('lab_tech', 'lab_tech');
+    await seedActor('pharmacist', 'pharmacist');
 
     opdId = (
       await prisma.department.create({
@@ -267,5 +268,11 @@ describe('Lab billing / reception settlement (e2e)', () => {
     const { patientId, order } = await placeOrder([tests.cbc]);
     await getCharges(patientId, false, 'doctor').expect(403);
     await pay([order.items[0].id], 'doctor').expect(403);
+  });
+
+  it('a pharmacist may neither read nor pay a lab charge — R12: a lab bill is not theirs, unlike their own till', async () => {
+    const { patientId, order } = await placeOrder([tests.cbc]);
+    await getCharges(patientId, false, 'pharmacist').expect(403);
+    await pay([order.items[0].id], 'pharmacist').expect(403);
   });
 });

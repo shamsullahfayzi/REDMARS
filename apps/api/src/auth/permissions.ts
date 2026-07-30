@@ -70,7 +70,7 @@ export type RoleCode = (typeof ROLES)[number]['code'];
  * obstruction R1 exists to prevent. They are implemented by the AuditInterceptor
  * in tasks 1.4 and 1.5.
  */
-export type RuleCode = 'R2' | 'R4' | 'R5' | 'R6' | 'R7' | 'R8' | 'R9' | 'R10' | 'R11';
+export type RuleCode = 'R2' | 'R4' | 'R5' | 'R6' | 'R7' | 'R8' | 'R9' | 'R10' | 'R11' | 'R12';
 
 /**
  * An unconditional grant — ✅ in the document. Reads as `admin: YES`.
@@ -358,7 +358,11 @@ export const PERMISSION_MATRIX = {
 
   // ---- 9. Billing ----------------------------------------------------------
   'invoice.create': { receptionist: YES, pharmacist: YES },
-  'invoice.read': { admin: YES, receptionist: YES, pharmacist: YES, management: YES },
+  /**
+   * Pharmacist is R12 here, not YES — see R12 below. Every OTHER role that holds this
+   * (admin, receptionist, management) reads any origin.
+   */
+  'invoice.read': { admin: YES, receptionist: YES, pharmacist: 'R12', management: YES },
   /**
    * Task 6b.9 — the facility-wide register (`GET /invoices`, no invoice id), split off
    * from `invoice.read`. Every OTHER `invoice.read` route already names one invoice or one
@@ -367,8 +371,11 @@ export const PERMISSION_MATRIX = {
    * facility has ever raised, filterable by day, is a different act: it is how a
    * receptionist would back into the hospital's revenue, which Farhat's owner and
    * management were explicit is not the front desk's to see.
+   *
+   * Pharmacist is R12 here too (see below) — the register they may still browse excludes
+   * lab bills, same as everywhere else `invoice.read`/`invoice.list` reaches.
    */
-  'invoice.list': { admin: YES, pharmacist: YES, management: YES },
+  'invoice.list': { admin: YES, pharmacist: 'R12', management: YES },
   'invoice.print': { receptionist: YES, pharmacist: YES },
   'payment.receive': { receptionist: YES, pharmacist: YES },
   'payment.refund': { admin: YES, receptionist: 'R5', pharmacist: 'R5' },
@@ -377,6 +384,16 @@ export const PERMISSION_MATRIX = {
   'discount.apply': { admin: YES, receptionist: 'R10', pharmacist: 'R10' },
   'discount.approve_over_threshold': { admin: YES },
   'invoice.void': { admin: YES },
+  /**
+   * A lab order's own bill — read it, and take payment for the tests a patient chooses
+   * (5.6's per-line settlement). Its own permissions, not folded into `invoice.read` /
+   * `payment.receive`: a pharmacist holds both of those for their own till, but R12 says a
+   * lab bill is not theirs to see at all, and a permission a pharmacist held unconditionally
+   * cannot be the one this gates on. Management reads (oversight, like everything else
+   * money); it does not collect (nobody at the till desk is management).
+   */
+  'lab_charge.read': { admin: YES, receptionist: YES, management: YES },
+  'lab_charge.collect': { receptionist: YES },
 
   // ---- 10. Reports, audit & data -------------------------------------------
   /** Census, wait times. */

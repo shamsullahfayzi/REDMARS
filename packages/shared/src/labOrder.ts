@@ -54,6 +54,12 @@ export const labOrderItemSchema = z.object({
   name: z.string(),
   status: labOrderItemStatusSchema,
   price: z.string().nullable(),
+  /**
+   * Task: a test is cancelable from the consult tab only while its charge is still
+   * unpaid — once reception has taken the money, the trash icon goes away and the order
+   * can only move forward. True for a free test (nothing to pay).
+   */
+  isPaid: z.boolean(),
 })
 export type LabOrderItem = z.infer<typeof labOrderItemSchema>
 

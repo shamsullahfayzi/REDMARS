@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Pill, Printer, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, Pill, Printer, Search, TriangleAlert } from 'lucide-react'
 import type {
   AllergySeverity,
   DispenseResponse,
@@ -18,11 +18,13 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { serverMessage } from '@/lib/api'
+import { useDebounced } from '@/hooks/useDebounced'
 import { useInvoiceDetail } from '@/hooks/useInvoices'
 import {
   useDispense,
   usePharmacyPrescription,
   usePharmacyQueue,
+  usePharmacySearch,
   useReturnMedicine,
 } from '@/hooks/usePharmacy'
 
@@ -51,6 +53,11 @@ export function PharmacyPage() {
   const items = query.data?.items ?? []
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  const [term, setTerm] = useState('')
+  const searchQuery = usePharmacySearch(useDebounced(term, 250))
+  const searching = term.trim().length >= 2
+  const results = searchQuery.data?.items ?? []
+
   if (selectedId) {
     return <PrescriptionView prescriptionId={selectedId} onBack={() => setSelectedId(null)} />
   }
@@ -59,19 +66,25 @@ export function PharmacyPage() {
     <div className="space-y-6">
       <PageHeader title={t('nav.pharmacy')} description={t('pharmacy.subtitle')} />
 
-      {query.isError && <p className="text-sm text-destructive">{t('pharmacy.error')}</p>}
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder={t('pharmacy.search.placeholder')}
+          className="ps-9"
+        />
+      </div>
 
-      {!query.isError &&
-        (items.length === 0 && !query.isPending ? (
-          <Card className="flex flex-col items-center gap-2 p-10 text-center text-muted-foreground">
-            <Pill className="size-8" aria-hidden />
-            <p>{t('pharmacy.empty')}</p>
-          </Card>
-        ) : (
-          <section className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {t('pharmacy.waiting', { count: items.length })}
-            </p>
+      {searching ? (
+        <section className="space-y-3">
+          {searchQuery.isError && (
+            <p className="text-sm text-destructive">{t('pharmacy.search.error')}</p>
+          )}
+          {!searchQuery.isError && !searchQuery.isPending && results.length === 0 && (
+            <p className="text-muted-foreground">{t('pharmacy.search.empty')}</p>
+          )}
+          {results.length > 0 && (
             <Card className="overflow-x-auto p-0">
               <table className="w-full text-sm">
                 <thead className="border-b border-border text-muted-foreground">
@@ -83,7 +96,7 @@ export function PharmacyPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => (
+                  {results.map((item) => (
                     <QueueRow
                       key={item.prescriptionId}
                       item={item}
@@ -93,8 +106,50 @@ export function PharmacyPage() {
                 </tbody>
               </table>
             </Card>
-          </section>
-        ))}
+          )}
+        </section>
+      ) : (
+        <>
+          {query.isError && <p className="text-sm text-destructive">{t('pharmacy.error')}</p>}
+
+          {!query.isError &&
+            (items.length === 0 && !query.isPending ? (
+              <Card className="flex flex-col items-center gap-2 p-10 text-center text-muted-foreground">
+                <Pill className="size-8" aria-hidden />
+                <p>{t('pharmacy.empty')}</p>
+              </Card>
+            ) : (
+              <section className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  {t('pharmacy.waiting', { count: items.length })}
+                </p>
+                <Card className="overflow-x-auto p-0">
+                  <table className="w-full text-sm">
+                    <thead className="border-b border-border text-muted-foreground">
+                      <tr>
+                        <th className="p-3 text-start font-medium">{t('pharmacy.col.ordered')}</th>
+                        <th className="p-3 text-start font-medium">{t('pharmacy.col.patient')}</th>
+                        <th className="p-3 text-start font-medium">{t('pharmacy.col.drugs')}</th>
+                        <th className="p-3 text-start font-medium">
+                          {t('pharmacy.col.prescriber')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item) => (
+                        <QueueRow
+                          key={item.prescriptionId}
+                          item={item}
+                          onOpen={() => setSelectedId(item.prescriptionId)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </Card>
+              </section>
+            ))}
+        </>
+      )}
     </div>
   )
 }
@@ -118,6 +173,13 @@ function QueueRow({ item, onOpen }: { item: PharmacyQueueItem; onOpen: () => voi
           <span className="ms-2 text-xs text-muted-foreground">
             {t('patients.search.years', { count: item.ageYears })}
           </span>
+        )}
+        {/* Present (and worth a badge) only on a search result — every queue row is
+            'active' by definition, so this stays quiet on the queue itself. */}
+        {item.status && item.status !== 'active' && (
+          <Badge variant="muted" className="ms-2">
+            {t(`pharmacy.status.${item.status}`, { defaultValue: item.status })}
+          </Badge>
         )}
       </td>
       <td className="p-3 text-foreground">

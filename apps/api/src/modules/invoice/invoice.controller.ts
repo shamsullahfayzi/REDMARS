@@ -45,6 +45,10 @@ import { PaymentService } from './payment.service';
  * into the hospital's revenue, which is not the front desk's to see. Every other route here
  * names one invoice or one visit the caller already reached through their own work, and
  * stays on the wider `invoice.read` (admin, receptionist, pharmacist, management).
+ *
+ * R12 narrows the pharmacist's grip on both further: a lab order's own bill is excluded
+ * from whatever `invoice.read`/`invoice.list` would otherwise show them — see
+ * InvoiceService.detail/list/byVisit for where that is actually enforced.
  */
 @Controller('invoices')
 export class InvoiceController {
@@ -64,7 +68,8 @@ export class InvoiceController {
         errors: parsed.error.flatten().fieldErrors,
       });
     }
-    return this.invoices.list(this.auth(req).facilityId, parsed.data);
+    const auth = this.auth(req);
+    return this.invoices.list(auth.facilityId, parsed.data, auth.permissions);
   }
 
   /**
@@ -80,14 +85,16 @@ export class InvoiceController {
     @Req() req: Request,
     @Param('visitId', ParseUUIDPipe) visitId: string,
   ): Promise<VisitBillsResponse> {
-    return this.invoices.byVisit(this.auth(req).facilityId, visitId);
+    const auth = this.auth(req);
+    return this.invoices.byVisit(auth.facilityId, visitId, auth.permissions);
   }
 
   @Get(':id')
   @RequirePermission('invoice.read')
   @AuditRead('Invoice')
   detail(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string): Promise<InvoiceDetail> {
-    return this.invoices.detail(this.auth(req).facilityId, id);
+    const auth = this.auth(req);
+    return this.invoices.detail(auth.facilityId, id, auth.permissions);
   }
 
   /**

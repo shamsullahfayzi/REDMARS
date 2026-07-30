@@ -19,9 +19,11 @@ import { LabBillingService } from './lab-billing.service';
 /**
  * Reception's lab settlement — read a patient's lab charges, take payment per test.
  *
- * The desk's rights, not the bench's: reading is `invoice.read`, collecting is
- * `payment.receive` — the same permissions the reception check-in uses. Module-gated on the
- * lab, so a facility without it never reaches here.
+ * Its own permissions (`lab_charge.read` / `lab_charge.collect`), not `invoice.read` /
+ * `payment.receive`: those two are the reception desk's general till and a pharmacist holds
+ * both unconditionally, but a lab bill is not a pharmacist's to see at all (R12) — a
+ * permission they hold generally cannot be the gate on a door they must not walk through.
+ * Module-gated on the lab, so a facility without it never reaches here.
  */
 @RequiresModule('lab')
 @Controller('lab-charges')
@@ -29,7 +31,7 @@ export class LabBillingController {
   constructor(private readonly billing: LabBillingService) {}
 
   @Get()
-  @RequirePermission('invoice.read')
+  @RequirePermission('lab_charge.read')
   charges(@Req() req: Request, @Query() rawQuery: unknown): Promise<LabChargesResponse> {
     const parsed = labChargesQuerySchema.safeParse(rawQuery);
     if (!parsed.success) {
@@ -42,7 +44,7 @@ export class LabBillingController {
   }
 
   @Post('pay')
-  @RequirePermission('payment.receive')
+  @RequirePermission('lab_charge.collect')
   pay(@Req() req: Request, @Body() body: unknown): Promise<PayLabChargesResponse> {
     const parsed = payLabChargesRequestSchema.safeParse(body);
     if (!parsed.success) {

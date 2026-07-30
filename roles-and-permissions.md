@@ -126,8 +126,8 @@
 | Action | Admin | Recep | Nurse | Doctor | Lab | Pharm | Mgmt |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | `invoice.create` | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| `invoice.read` | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| `invoice.list` (facility register, browsable by day) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | *(task 6b.9 — split off invoice.read; reception would back into revenue by browsing it)* |
+| `invoice.read` | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ R12 | ✅ |
+| `invoice.list` (facility register, browsable by day) | ✅ | ❌ | ❌ | ❌ | ❌ | ⚠️ R12 | ✅ | *(task 6b.9 — split off invoice.read; reception would back into revenue by browsing it)* |
 | `invoice.print` | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | `payment.receive` | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | `payment.refund` | ✅ | ⚠️ R5 | ❌ | ❌ | ❌ | ⚠️ R5 | ❌ |
@@ -135,6 +135,8 @@
 | **`discount.apply`** | ✅ | ⚠️ R10 | ❌ | ❌ | ❌ | ⚠️ R10 | ❌ |
 | `discount.approve_over_threshold` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | `invoice.void` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `lab_charge.read` (a lab order's own bill) | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | *(a pharmacist's own invoice grants above are R12-excluded from lab origin; this is the lab till's own door, and it has none)* |
+| `lab_charge.collect` | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ## 10. Reports, audit & data
 
@@ -182,6 +184,9 @@ Receptionist and pharmacist may discount up to **10%** (configurable). Anything 
 
 **R11 — Bulk export requires a reason and is heavily audited.**
 Admin only. This is the real defence against someone walking off with the patient list — not blocking doctors from their own patients' histories.
+
+**R12 — A pharmacist's `invoice.read`/`invoice.list` excludes lab-origin bills.**
+The pharmacist grant on both is otherwise unconditional (their own till's bills, in full) — this rule subtracts one origin from it rather than adding a condition to check. A lab order's own bill is `lab_charge.read`/`lab_charge.collect`, and the pharmacist holds neither. The reasoning is the same as R6: a pharmacist has no operational reason to see what the lab is owed, and giving them a second, unrelated till's money to browse is exposure with no job behind it.
 
 ---
 

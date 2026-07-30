@@ -7,14 +7,19 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { returnMedicineRequestSchema } from '@redmars/shared';
+import {
+  pharmacyPrescriptionSearchQuerySchema,
+  returnMedicineRequestSchema,
+} from '@redmars/shared';
 import type {
   DispenseResponse,
   PharmacyPrescription,
+  PharmacyPrescriptionSearchResponse,
   PharmacyQueueResponse,
   ReturnMedicineResponse,
 } from '@redmars/shared';
@@ -44,6 +49,31 @@ export class PharmacyController {
   @AuditRead('Prescription')
   queue(@Req() req: Request): Promise<PharmacyQueueResponse> {
     return this.pharmacy.queue(this.auth(req).facilityId);
+  }
+
+  /**
+   * The pharmacist's own patient finder — not `patient.search`, which 6b.9 took away.
+   * Declared before `prescriptions/:id` (a literal segment must not be swallowed by a
+   * param one; same reasoning as PatientController's `duplicates`). Same
+   * `pharmacy.read_queue` gate and same audit as the queue: a search result is a named
+   * patient's drugs, exactly what opening a queue row already reveals — this only changes
+   * how the pharmacist got there.
+   */
+  @Get('prescriptions')
+  @RequirePermission('pharmacy.read_queue')
+  @AuditRead('Prescription')
+  search(
+    @Req() req: Request,
+    @Query() rawQuery: unknown,
+  ): Promise<PharmacyPrescriptionSearchResponse> {
+    const parsed = pharmacyPrescriptionSearchQuerySchema.safeParse(rawQuery);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid search',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    return this.pharmacy.search(this.auth(req).facilityId, parsed.data.q);
   }
 
   /**

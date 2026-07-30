@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Layers, Printer } from 'lucide-react'
 import {
   DISCOUNT_MAX_PERCENT_DEFAULT,
+  PAYMENT_METHODS,
+  type InvoiceDetailLine,
   type InvoicePayment,
+  type PaymentMethod,
   type RefundPaymentResponse,
   type VisitBill,
 } from '@redmars/shared'
@@ -14,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { ApiError, serverMessage } from '@/lib/api'
 import { useDiscountCeiling } from '@/hooks/useDiscountCeiling'
 import {
@@ -22,6 +26,7 @@ import {
   useRefundPayment,
   useVisitBills,
 } from '@/hooks/useInvoices'
+import { usePayLabCharges } from '@/hooks/useLabBilling'
 
 /**
  * Task 6.1 (and 6b.7's Collections worklist, which opens the very same view) — one bill in
@@ -135,21 +140,42 @@ export function InvoiceDetailView({
               uncapped={discountUncapped}
             />
           )}
-          {canReceive && outstanding && detail.invoice.status !== 'cancelled' && (
-            <PaymentForm
-              invoiceId={invoiceId}
-              outstanding={outstanding}
-              currency={detail.invoice.currency}
-              onPaid={(r) =>
-                setLastReceipt({
-                  receiptNo: r.payment.receiptNo,
-                  amount: r.payment.amount,
-                  currency: r.currency,
-                  settled: r.status === 'paid',
-                })
-              }
-            />
-          )}
+          {canReceive &&
+            outstanding &&
+            detail.invoice.status !== 'cancelled' &&
+            (detail.invoice.origin === 'lab' ? (
+              <LabLinePaymentForm
+                invoiceId={invoiceId}
+                patientId={detail.patient.id}
+                items={detail.invoice.items}
+                onPaid={(amount) =>
+                  setLastReceipt({
+                    // The per-line lab endpoint settles the cash but does not issue a
+                    // receipt number the way the general till does, and — because only the
+                    // ticked lines were paid — this view has no cheap way to know whether
+                    // that closed the whole bill until the invoice refetches.
+                    receiptNo: null,
+                    amount,
+                    currency: detail.invoice.currency,
+                    settled: false,
+                  })
+                }
+              />
+            ) : (
+              <PaymentForm
+                invoiceId={invoiceId}
+                outstanding={outstanding}
+                currency={detail.invoice.currency}
+                onPaid={(r) =>
+                  setLastReceipt({
+                    receiptNo: r.payment.receiptNo,
+                    amount: r.payment.amount,
+                    currency: r.currency,
+                    settled: r.status === 'paid',
+                  })
+                }
+              />
+            ))}
           {detail.payments.length > 0 && (
             <PaymentsPanel
               invoiceId={invoiceId}
@@ -293,6 +319,118 @@ function VisitBillRow({
         </Badge>
       </button>
     </li>
+  )
+}
+
+/**
+ * A lab order's bill, settled one test at a time — the same pick-which-lines payment
+ * LabChargesCard already gives the patient's own page, now reachable from wherever this
+ * shared view opens a lab invoice (Collections, the register). Replaces the flat
+ * PaymentForm for exactly this origin: paying the whole outstanding balance in one lump
+ * would take the money without ever flipping the per-line `isPaid` the lab bench and the
+ * doctor's own order tab both read — that mismatch was the "still shows unsettled" bug.
+ */
+function LabLinePaymentForm({
+  invoiceId,
+  patientId,
+  items,
+  onPaid,
+}: {
+  invoiceId: string
+  patientId: string
+  items: InvoiceDetailLine[]
+  onPaid: (amount: string) => void
+}) {
+  const { t } = useTranslation()
+  const pay = usePayLabCharges(patientId, invoiceId)
+  const unpaid = useMemo(() => items.filter((item) => !item.isPaid), [items])
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(unpaid.map((i) => i.id)))
+  const [method, setMethod] = useState<PaymentMethod>('cash')
+
+  const toggle = (itemId: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(itemId)) next.delete(itemId)
+      else next.add(itemId)
+      return next
+    })
+
+  const chosen = unpaid.filter((item) => selected.has(item.id))
+  const totalDue = chosen.reduce((sum, item) => sum + Number(item.total), 0)
+
+  if (unpaid.length === 0) return null
+
+  return (
+    <Card className="max-w-2xl space-y-3 p-4 print:hidden">
+      <p className="text-sm font-medium text-foreground">{t('labCharges.title')}</p>
+      <ul className="space-y-1.5">
+        {items.map((item) => (
+          <li key={item.id} className="flex items-center gap-2 text-sm">
+            {item.isPaid ? (
+              <span className="flex-1 text-muted-foreground line-through">
+                {item.description}
+              </span>
+            ) : (
+              <label className="flex flex-1 items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-primary"
+                  checked={selected.has(item.id)}
+                  disabled={pay.isPending}
+                  onChange={() => toggle(item.id)}
+                />
+                <span className="text-foreground">{item.description}</span>
+              </label>
+            )}
+            <span dir="ltr" className="tabular-nums text-muted-foreground">
+              {item.total}
+            </span>
+            {item.isPaid && (
+              <span className="rounded bg-success/15 px-1.5 py-0.5 text-xs text-success">
+                {t('labCharges.paid')}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          aria-label={t('labCharges.method')}
+          value={method}
+          onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+          className="h-9 w-36"
+        >
+          {PAYMENT_METHODS.map((m) => (
+            <option key={m} value={m}>
+              {t(`labCharges.methods.${m}`)}
+            </option>
+          ))}
+        </Select>
+        <Button
+          type="button"
+          size="sm"
+          disabled={chosen.length === 0 || pay.isPending}
+          onClick={() =>
+            pay.mutate(
+              { itemIds: chosen.map((i) => i.id), method },
+              { onSuccess: (r) => onPaid(r.amount) },
+            )
+          }
+        >
+          {pay.isPending
+            ? t('labCharges.collecting')
+            : t('labCharges.collect', { amount: totalDue.toFixed(2) })}
+        </Button>
+        {pay.isError && (
+          <span className="text-xs text-destructive">
+            {pay.error instanceof ApiError && typeof pay.error.body === 'object'
+              ? ((pay.error.body as { message?: string }).message ?? t('labCharges.failed'))
+              : t('labCharges.failed')}
+          </span>
+        )}
+      </div>
+    </Card>
   )
 }
 

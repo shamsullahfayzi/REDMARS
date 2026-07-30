@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   dispenseResponseSchema,
   pharmacyPrescriptionSchema,
+  pharmacyPrescriptionSearchResponseSchema,
   pharmacyQueueResponseSchema,
   type ReturnMedicineRequest,
   returnMedicineResponseSchema,
@@ -33,6 +34,25 @@ export function usePharmacyPrescription(prescriptionId: string | null) {
     queryFn: () => apiGet(`/pharmacy/prescriptions/${prescriptionId}`, pharmacyPrescriptionSchema),
     enabled: !!prescriptionId,
     staleTime: 30_000,
+  })
+}
+
+/**
+ * The pharmacist's own patient finder — a prescription by MRN, name or phone, not the
+ * whole patient register (`patient.search` is not theirs since 6b.9). Every status is
+ * searchable, so a dispensed sheet a patient is returning for is still findable.
+ */
+export function usePharmacySearch(q: string) {
+  const term = q.trim()
+  return useQuery({
+    queryKey: ['pharmacy', 'search', term],
+    queryFn: () =>
+      apiGet(
+        `/pharmacy/prescriptions?q=${encodeURIComponent(term)}`,
+        pharmacyPrescriptionSearchResponseSchema,
+      ),
+    enabled: term.length >= 2,
+    staleTime: 0,
   })
 }
 

@@ -19,8 +19,11 @@ export function LabChargesCard({ patientId }: { patientId: string }) {
   const { t } = useTranslation()
   const { roles, enabledModules } = useAuth()
 
-  const mayBill = roles.includes('admin') || roles.includes('receptionist') || roles.includes('pharmacist') || roles.includes('management')
-  const mayPay = roles.includes('receptionist') || roles.includes('pharmacist')
+  // Not pharmacist: a lab bill is not theirs to see at all (R12) — the same exclusion the
+  // API enforces on invoice.read/invoice.list and the lab-charges endpoints this card calls
+  // (lab_charge.read / lab_charge.collect, neither of which the pharmacist role holds).
+  const mayBill = roles.includes('admin') || roles.includes('receptionist') || roles.includes('management')
+  const mayPay = roles.includes('receptionist')
   const enabled = enabledModules.includes('lab') && mayBill
 
   const chargesQuery = useLabCharges(patientId, enabled)

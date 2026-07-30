@@ -28,6 +28,12 @@ export const pharmacyQueueItemSchema = z.object({
   itemCount: z.number().int(),
   /** The drugs at a glance — the first few names, so the shelf can be walked before opening. */
   summary: z.string(),
+  /**
+   * Absent from the queue itself (every queue row is `active` by definition) but present
+   * on a search result, which spans every status — so a search finding an already-
+   * dispensed sheet reads as that, not as a second thing waiting to be filled.
+   */
+  status: z.string().optional(),
 })
 export type PharmacyQueueItem = z.infer<typeof pharmacyQueueItemSchema>
 
@@ -36,6 +42,27 @@ export const pharmacyQueueResponseSchema = z.object({
   total: z.number().int(),
 })
 export type PharmacyQueueResponse = z.infer<typeof pharmacyQueueResponseSchema>
+
+/**
+ * Task: the pharmacist's own patient finder. Not `patient.search` (task 6b.9 took that
+ * away — a pharmacist works their own queue, not the whole register) — this is scoped to
+ * PRESCRIPTIONS: it finds the drug order, not the patient's chart, and opening a result
+ * reveals only what `pharmacy.read_queue` already allows (drugs + allergies, R6), same as
+ * opening any queue row. A prescription that already left the active queue (dispensed,
+ * cancelled) is still findable here — the desk may need to reprint or process a return for
+ * one that is no longer "waiting".
+ */
+export const pharmacyPrescriptionSearchQuerySchema = z.object({
+  q: z.string().trim().min(2).max(60),
+})
+export type PharmacyPrescriptionSearchQuery = z.infer<typeof pharmacyPrescriptionSearchQuerySchema>
+
+export const pharmacyPrescriptionSearchResponseSchema = z.object({
+  items: z.array(pharmacyQueueItemSchema),
+})
+export type PharmacyPrescriptionSearchResponse = z.infer<
+  typeof pharmacyPrescriptionSearchResponseSchema
+>
 
 // ---------------------------------------------------------------------------------
 // The prescription, as the pharmacy is allowed to see it — task 6.9 (Rule R6)

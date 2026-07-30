@@ -21,7 +21,10 @@ import { fullName, money, originOf } from '../invoice/invoice.service';
 export class CollectionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(facilityId: string): Promise<CollectionsListResponse> {
+  async list(
+    facilityId: string,
+    permissions: ReadonlyMap<string, string | null>,
+  ): Promise<CollectionsListResponse> {
     const rows = await this.prisma.db.invoice.findMany({
       where: {
         facilityId,
@@ -45,6 +48,10 @@ export class CollectionsService {
       },
     });
 
+    // R12 — a pharmacist's worklist excludes lab bills; the lab till is not theirs to see,
+    // here any more than in the register or one invoice opened by id.
+    const excludeLab = permissions.get('invoice.read') === 'R12';
+
     const bills: VisitBill[] = rows
       .map((row) => ({
         id: row.id,
@@ -66,7 +73,8 @@ export class CollectionsService {
       // A mixed bill's origin can still resolve to 'reception' or 'other' (originOf's
       // pharmacy-then-lab priority) even though the `some` filter above matched it on a lab
       // or pharmacy line — keep the list honestly scoped to what it claims to be.
-      .filter((bill) => bill.origin === 'lab' || bill.origin === 'pharmacy');
+      .filter((bill) => bill.origin === 'lab' || bill.origin === 'pharmacy')
+      .filter((bill) => !excludeLab || bill.origin !== 'lab');
 
     return { bills };
   }

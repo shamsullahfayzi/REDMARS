@@ -115,6 +115,7 @@ describe('Collections worklist (e2e)', () => {
 
     await seedActor('recep', 'receptionist');
     await seedActor('doctor', 'doctor');
+    await seedActor('pharmacist', 'pharmacist');
 
     const patient = await prisma.patient.create({
       data: {
@@ -172,4 +173,10 @@ describe('Collections worklist (e2e)', () => {
   });
 
   it('denies a doctor — invoice.read is not theirs', () => list('doctor').expect(403));
+
+  it('R12: a pharmacist sees the pharmacy bill but not the lab one', async () => {
+    const body = (await list('pharmacist').expect(200)).body as CollectionsListResponse;
+    expect(body.bills.some((b) => b.origin === 'pharmacy')).toBe(true);
+    expect(body.bills.some((b) => b.origin === 'lab')).toBe(false);
+  });
 });

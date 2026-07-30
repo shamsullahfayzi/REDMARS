@@ -551,4 +551,32 @@ describe('Pharmacy queue (e2e)', () => {
     await dispense('doctor', detailPrescriptionId).expect(403);
     await returnRx('doctor', returnPrescriptionId, { reason: 'nope' }).expect(403);
   });
+
+  const search = (q: string, as = 'pharm') =>
+    request(server)
+      .get(`/pharmacy/prescriptions?q=${encodeURIComponent(q)}`)
+      .set('Authorization', `Bearer ${tokens[as]}`);
+
+  it('the pharmacist finds a prescription by MRN or by name — not the whole patient register', async () => {
+    const byMrn = (await search(`${PREFIX}MRN1`).expect(200)).body as {
+      items: { patientMrn: string }[];
+    };
+    expect(byMrn.items.length).toBeGreaterThan(0);
+    expect(byMrn.items.every((i) => i.patientMrn === `${PREFIX}MRN1`)).toBe(true);
+
+    const byName = (await search('Bilal').expect(200)).body as { items: { patientMrn: string }[] };
+    expect(byName.items.some((i) => i.patientMrn === `${PREFIX}MRN1`)).toBe(true);
+  });
+
+  it('finds a prescription no longer on the active queue — a search is not the queue', async () => {
+    const body = (await search(`${PREFIX}MRN1`).expect(200)).body as {
+      items: { visitNo: string; status?: string }[];
+    };
+    const dispensed = body.items.find((i) => i.visitNo === `${PREFIX}V2`);
+    expect(dispensed).toBeDefined();
+    expect(dispensed!.status).toBe('completed');
+  });
+
+  it('denies a doctor — pharmacy.read_queue gates the search too', () =>
+    search(`${PREFIX}MRN1`, 'doctor').expect(403));
 });

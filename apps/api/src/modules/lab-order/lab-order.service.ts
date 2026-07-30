@@ -142,12 +142,31 @@ export class LabOrderService {
         order.items.filter((item) => item.status !== 'cancelled').map((item) => item.testId),
       );
 
-      // Remove: only tests still merely `ordered`. Nothing further along is a doctor's to
-      // undo with an edit.
-      for (const item of order.items) {
-        if (item.status === 'ordered' && !requested.has(item.testId)) {
-          await tx.labOrderItem.delete({ where: { id: item.id } });
-        }
+      // Remove: only tests still merely `ordered` AND not yet paid for. A doctor's edit can
+      // undo a test nobody has settled; one reception has already taken money for is no
+      // longer the doctor's to erase — that is what the trash icon disappearing (LabsTab)
+      // signals, and this is the write-side half of the same rule (a hidden button is a
+      // courtesy, not a control).
+      const candidates = order.items.filter(
+        (item) => item.status === 'ordered' && !requested.has(item.testId),
+      );
+      const paidCandidates = candidates.length
+        ? new Set(
+            (
+              await tx.invoiceItem.findMany({
+                where: {
+                  refType: LAB_REF_TYPE,
+                  refId: { in: candidates.map((c) => c.id) },
+                  isPaid: true,
+                },
+                select: { refId: true },
+              })
+            ).map((line) => line.refId),
+          )
+        : new Set<string | null>();
+      for (const item of candidates) {
+        if (paidCandidates.has(item.id)) continue;
+        await tx.labOrderItem.delete({ where: { id: item.id } });
       }
 
       // Add: requested tests not already on the order. testNameAtTime is snapshotted so a
@@ -339,10 +358,13 @@ export class LabOrderService {
     const lines = itemIds.length
       ? await this.prisma.db.invoiceItem.findMany({
           where: { refType: LAB_REF_TYPE, refId: { in: itemIds } },
-          select: { refId: true, unitPrice: true, invoiceId: true },
+          select: { refId: true, unitPrice: true, invoiceId: true, isPaid: true },
         })
       : [];
     const priceByItem = new Map(lines.map((line) => [line.refId, line.unitPrice]));
+    // A free line (no invoice line at all — priceByItem has nothing for it) owes nothing,
+    // so it counts as paid; the trash icon cares about what is still owed, not the ledger.
+    const paidByItem = new Map(lines.map((line) => [line.refId, line.isPaid]));
 
     const invoiceId = lines[0]?.invoiceId ?? null;
     let invoice: LabOrder['invoice'] = null;
@@ -388,6 +410,7 @@ export class LabOrderService {
         name: item.testNameAtTime,
         status: item.status,
         price: priceByItem.get(item.id)?.toFixed(2) ?? null,
+        isPaid: paidByItem.get(item.id) ?? true,
       })),
       invoice,
     };

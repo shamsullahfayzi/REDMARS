@@ -893,7 +893,20 @@
     "returning": "در حال بازگرداندن…",
     "confirmReturn": "تأیید بازگشت",
     "returnError": "بازگرداندن دوا انجام نشد.",
-    "returned": "بازگردانده شد · {{amount}} {{currency}} مسترد شد · {{receiptNo}}"
+    "returned": "بازگردانده شد · {{amount}} {{currency}} مسترد شد · {{receiptNo}}",
+    "search": {
+      "placeholder": "یافتن نسخه — شماره فایل، نام یا شماره تلفون",
+      "error": "جستجوی نسخه‌ها ناکام شد.",
+      "empty": "هیچ نسخه‌ای مطابقت ندارد."
+    },
+    "status": {
+      "draft": "پیش‌نویس",
+      "active": "فعال",
+      "on_hold": "متوقف شده",
+      "completed": "توزیع شده",
+      "cancelled": "لغو شده",
+      "entered_in_error": "باطل شده"
+    }
   },
   "till": {
     "subtitle": "تسویه پول نقد روز هنگام بستن.",

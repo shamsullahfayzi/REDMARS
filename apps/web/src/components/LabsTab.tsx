@@ -51,6 +51,9 @@ interface Row {
   /** Snapshot price as a decimal string, or null for a test that bills nothing on its own. */
   price: string | null
   status: LabOrderItemStatus
+  /** Whether reception has taken money for this line. False for a test just added and not
+   *  yet saved — there is nothing to have paid yet. */
+  isPaid: boolean
 }
 
 /** Sum of the selected lines, to two places. A null price counts as nothing. */
@@ -85,6 +88,7 @@ export function LabsTab({ visit }: { visit: VisitSummary }) {
         name: item.name,
         price: item.price,
         status: item.status,
+        isPaid: item.isPaid,
       })),
     )
     setNote(stored?.clinicalNote ?? '')
@@ -127,6 +131,7 @@ export function LabsTab({ visit }: { visit: VisitSummary }) {
         name: item.name,
         price: item.price,
         status: item.status,
+        isPaid: item.isPaid,
       })),
     )
     setNote(result.order?.clinicalNote ?? '')
@@ -143,6 +148,7 @@ export function LabsTab({ visit }: { visit: VisitSummary }) {
         name: test.name,
         price: test.price,
         status: 'ordered',
+        isPaid: false,
       },
     ])
   }
@@ -164,9 +170,11 @@ export function LabsTab({ visit }: { visit: VisitSummary }) {
       ) : (
         <ul className="space-y-2">
           {rows.map((row, index) => {
-            // Only a test still merely ordered may be pulled off here — once its sample is
-            // taken the lab has moved on and the doctor's edit no longer reaches it.
-            const removable = open && row.status === 'ordered'
+            // Only a test still merely ordered, and not yet paid for, may be pulled off
+            // here — once its sample is taken the lab has moved on, and once reception has
+            // taken money for it the doctor's edit no longer reaches it either (the
+            // backend enforces the same rule on save; this is the button matching it).
+            const removable = open && row.status === 'ordered' && !row.isPaid
             return (
               <li key={row.id ?? `new-${index}`}>
                 <Card className="flex items-center gap-3 p-3">

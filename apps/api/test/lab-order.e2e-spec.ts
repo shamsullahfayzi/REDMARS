@@ -337,4 +337,33 @@ describe('Lab order (e2e)', () => {
     const visitId = await stageVisit();
     await put(visitId, { testIds: [tests.cbc] }, 'receptionist').expect(403);
   });
+
+  it('carries isPaid per item, false until reception collects it', async () => {
+    const visitId = await stageVisit();
+    const res = (await put(visitId, { testIds: [tests.cbc] }).expect(200)).body as LabOrderResponse;
+    expect(res.order!.items[0].isPaid).toBe(false);
+  });
+
+  it('a paid test survives a re-save that asks to drop it — the doctor cannot undo money already taken', async () => {
+    const visitId = await stageVisit();
+    const ordered = (await put(visitId, { testIds: [tests.cbc, tests.alt] }).expect(200))
+      .body as LabOrderResponse;
+    const cbcItem = ordered.order!.items.find((i) => i.name === 'Complete Blood Count')!;
+
+    await request(server)
+      .post('/lab-charges/pay')
+      .set('Authorization', `Bearer ${tokens.receptionist}`)
+      .send({ itemIds: [cbcItem.id], method: 'cash' })
+      .expect(201);
+
+    // The doctor re-saves with NEITHER test — as if both trash icons had been clicked.
+    const after = (await put(visitId, { testIds: [] }).expect(200)).body as LabOrderResponse;
+
+    // ALT (unpaid) is gone; CBC (paid) is still there, untouched, and now reads isPaid.
+    expect(after.order).not.toBeNull();
+    expect(after.order!.items).toHaveLength(1);
+    expect(after.order!.items[0].name).toBe('Complete Blood Count');
+    expect(after.order!.items[0].status).toBe('ordered');
+    expect(after.order!.items[0].isPaid).toBe(true);
+  });
 });

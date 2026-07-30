@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type {
   InvoiceDetail,
@@ -51,8 +51,18 @@ export function originOf(refTypes: string[]): InvoiceOrigin {
 export class InvoiceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(facilityId: string, query: InvoiceListQuery): Promise<InvoiceListResponse> {
+  async list(
+    facilityId: string,
+    query: InvoiceListQuery,
+    permissions: ReadonlyMap<string, string | null>,
+  ): Promise<InvoiceListResponse> {
     const where: Prisma.InvoiceWhereInput = { facilityId };
+
+    // R12 — a pharmacist's register excludes lab bills. Filtered in the WHERE, not after the
+    // page comes back, so `total` and the page size stay honest for the rows they can see.
+    if (permissions.get('invoice.list') === 'R12') {
+      where.items = { none: { refType: 'lab_order_item' } };
+    }
 
     if (query.patientId) where.patientId = query.patientId;
     if (query.status) where.status = query.status;
@@ -113,7 +123,16 @@ export class InvoiceService {
     return { invoices, total, page: query.page, limit: query.limit };
   }
 
-  async detail(facilityId: string, invoiceId: string): Promise<InvoiceDetail> {
+  /**
+   * `permissions` is only ever consulted for R12: everyone else who reaches this method
+   * already cleared the guard on an unconditional grant. See DiscountService.assertWithin
+   * Ceiling for the same "read the qualifier off the caller's own permission map" shape.
+   */
+  async detail(
+    facilityId: string,
+    invoiceId: string,
+    permissions: ReadonlyMap<string, string | null>,
+  ): Promise<InvoiceDetail> {
     const invoice = await this.prisma.db.invoice.findFirst({
       where: { id: invoiceId, facilityId },
       select: {
@@ -167,7 +186,16 @@ export class InvoiceService {
           },
         },
         items: {
-          select: { id: true, description: true, quantity: true, unitPrice: true, total: true },
+          select: {
+            id: true,
+            description: true,
+            quantity: true,
+            unitPrice: true,
+            total: true,
+            refType: true,
+            refId: true,
+            isPaid: true,
+          },
         },
         payments: {
           orderBy: { receivedAt: 'asc' },
@@ -184,6 +212,12 @@ export class InvoiceService {
       },
     });
     if (!invoice) throw new NotFoundException('Invoice not found');
+
+    const origin = originOf(invoice.items.map((item) => item.refType));
+    // R12 — a pharmacist's invoice.read excludes a lab bill.
+    if (permissions.get('invoice.read') === 'R12' && origin === 'lab') {
+      throw new ForbiddenException("A lab order's own bill is not this permission's to read.");
+    }
 
     const creator = invoice.createdBy
       ? await this.prisma.db.appUser.findUnique({
@@ -250,12 +284,16 @@ export class InvoiceService {
         total: money(invoice.total),
         paidAmount: money(invoice.paidAmount),
         currency: invoice.currency,
+        origin,
         items: invoice.items.map((item) => ({
           id: item.id,
           description: item.description,
           quantity: item.quantity,
           unitPrice: money(item.unitPrice),
           total: money(item.total),
+          refType: item.refType,
+          refId: item.refId,
+          isPaid: item.isPaid,
         })),
         paymentMethod: lastPayment?.method ?? null,
         paidAt: lastPayment?.receivedAt.toISOString() ?? null,
@@ -284,7 +322,11 @@ export class InvoiceService {
    * desk all of them at once with a running total: charged, paid and still open. Same
    * `invoice.read` gate as the register; the pharmacist holds it and reads their own line.
    */
-  async byVisit(facilityId: string, visitId: string): Promise<VisitBillsResponse> {
+  async byVisit(
+    facilityId: string,
+    visitId: string,
+    permissions: ReadonlyMap<string, string | null>,
+  ): Promise<VisitBillsResponse> {
     const visit = await this.prisma.db.visit.findFirst({
       where: { id: visitId, facilityId },
       select: {
@@ -295,8 +337,15 @@ export class InvoiceService {
     });
     if (!visit) throw new NotFoundException('Visit not found');
 
+    // R12 — same exclusion as the register: a pharmacist's view of a visit's bills omits
+    // its lab one, so the running total below is theirs to see, not the whole visit's.
+    const where: Prisma.InvoiceWhereInput = { facilityId, visitId };
+    if (permissions.get('invoice.read') === 'R12') {
+      where.items = { none: { refType: 'lab_order_item' } };
+    }
+
     const rows = await this.prisma.db.invoice.findMany({
-      where: { facilityId, visitId },
+      where,
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,

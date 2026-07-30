@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  invoiceLineSchema,
   invoiceStatusSchema,
   invoiceSummarySchema,
   moneySchema,
@@ -93,28 +94,6 @@ export const invoicePaymentSchema = z.object({
 export type InvoicePayment = z.infer<typeof invoicePaymentSchema>
 
 /**
- * Everything the reprinted bill needs, rebuilt from the stored invoice. The same three
- * blocks the check-in receipt carries — facility, patient, visit — so the printed page is
- * identical to the one handed over at the window. `createdAt` is the receipt date for a
- * reprint (the visit's start time is when they arrived, not when this bill was raised),
- * and `visit` is nullable because the invoice model does not require one.
- */
-export const invoiceDetailSchema = z.object({
-  facility: receiptFacilitySchema,
-  patient: receiptPatientSchema,
-  visit: receiptVisitSchema.nullable(),
-  invoice: invoiceSummarySchema,
-  createdAt: z.string(),
-  createdByName: z.string().nullable(),
-  payments: z.array(invoicePaymentSchema),
-})
-export type InvoiceDetail = z.infer<typeof invoiceDetailSchema>
-
-// ---------------------------------------------------------------------------------
-// One visit, all its tills — task 6.2
-// ---------------------------------------------------------------------------------
-
-/**
  * Which till raised a bill, read off its lines. One visit can gather three separate
  * invoices — the consult and card at reception, the tests at the lab, the medicines at
  * the pharmacy — each settled at its own window. The origin is not stored on the invoice;
@@ -127,6 +106,47 @@ export type InvoiceDetail = z.infer<typeof invoiceDetailSchema>
 export const INVOICE_ORIGINS = ['reception', 'lab', 'pharmacy', 'other'] as const
 export const invoiceOriginSchema = z.enum(INVOICE_ORIGINS)
 export type InvoiceOrigin = z.infer<typeof invoiceOriginSchema>
+
+/**
+ * One line on the full detail, carrying what a register row does not need: which write it
+ * came from (`refType`/`refId`, so the screen can tell a lab or pharmacy line apart from a
+ * reception one) and whether THIS line is settled. Per-line settlement is real for a lab
+ * order (5.6) — a patient told to run three tests may pay for one — so the detail view
+ * needs it to offer the same pick-which-lines payment a lab invoice gets everywhere else
+ * (LabChargesCard, the collections worklist), rather than the flat pay-the-balance form
+ * that is right for a reception or pharmacy bill's single settlement.
+ */
+export const invoiceDetailLineSchema = invoiceLineSchema.extend({
+  refType: z.string(),
+  refId: z.uuid().nullable(),
+  isPaid: z.boolean(),
+})
+export type InvoiceDetailLine = z.infer<typeof invoiceDetailLineSchema>
+
+/**
+ * Everything the reprinted bill needs, rebuilt from the stored invoice. The same three
+ * blocks the check-in receipt carries — facility, patient, visit — so the printed page is
+ * identical to the one handed over at the window. `createdAt` is the receipt date for a
+ * reprint (the visit's start time is when they arrived, not when this bill was raised),
+ * and `visit` is nullable because the invoice model does not require one.
+ */
+export const invoiceDetailSchema = z.object({
+  facility: receiptFacilitySchema,
+  patient: receiptPatientSchema,
+  visit: receiptVisitSchema.nullable(),
+  invoice: invoiceSummarySchema.extend({
+    origin: invoiceOriginSchema,
+    items: z.array(invoiceDetailLineSchema),
+  }),
+  createdAt: z.string(),
+  createdByName: z.string().nullable(),
+  payments: z.array(invoicePaymentSchema),
+})
+export type InvoiceDetail = z.infer<typeof invoiceDetailSchema>
+
+// ---------------------------------------------------------------------------------
+// One visit, all its tills — task 6.2
+// ---------------------------------------------------------------------------------
 
 /** A register row, plus which till it belongs to and what is still owed on it. */
 export const visitBillSchema = invoiceListItemSchema.extend({

@@ -893,7 +893,20 @@
     "returning": "بیرته‌ورکړه کیږي…",
     "confirmReturn": "بیرته‌ورکړه تایید",
     "returnError": "درمل بیرته ونه ورکړل شول.",
-    "returned": "بیرته‌ورکړل‌شو · {{amount}} {{currency}} بیرته شو · {{receiptNo}}"
+    "returned": "بیرته‌ورکړل‌شو · {{amount}} {{currency}} بیرته شو · {{receiptNo}}",
+    "search": {
+      "placeholder": "نسخه ومومئ — د فایل شمېره، نوم یا تلیفون",
+      "error": "د نسخو لټون ناکام شو.",
+      "empty": "هیڅ نسخه سمون نه خوري."
+    },
+    "status": {
+      "draft": "مسوده",
+      "active": "فعال",
+      "on_hold": "ودرول شوی",
+      "completed": "ویشل شوی",
+      "cancelled": "لغوه شوی",
+      "entered_in_error": "باطل شوی"
+    }
   },
   "till": {
     "subtitle": "د ورځې د نغدو پیسو تصفیه د بندولو په وخت.",

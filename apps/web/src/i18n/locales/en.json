@@ -893,7 +893,20 @@
     "returning": "Returning…",
     "confirmReturn": "Confirm return",
     "returnError": "Could not return the medicine.",
-    "returned": "Returned · {{amount}} {{currency}} refunded · {{receiptNo}}"
+    "returned": "Returned · {{amount}} {{currency}} refunded · {{receiptNo}}",
+    "search": {
+      "placeholder": "Find a prescription — MRN, name or phone",
+      "error": "Could not search prescriptions.",
+      "empty": "No prescriptions match."
+    },
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "on_hold": "On hold",
+      "completed": "Dispensed",
+      "cancelled": "Cancelled",
+      "entered_in_error": "Voided"
+    }
   },
   "till": {
     "subtitle": "Reconcile the day's cash at closing.",

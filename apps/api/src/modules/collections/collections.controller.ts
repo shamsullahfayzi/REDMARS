@@ -19,7 +19,8 @@ export class CollectionsController {
   @Get()
   @RequirePermission('invoice.read')
   list(@Req() req: Request): Promise<CollectionsListResponse> {
-    return this.collections.list(this.auth(req).facilityId);
+    const auth = this.auth(req);
+    return this.collections.list(auth.facilityId, auth.permissions);
   }
 
   private auth(req: Request): AuthContext {
