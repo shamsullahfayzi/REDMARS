@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { CalendarClock, CheckCircle2, Phone, RefreshCw, Stethoscope } from 'lucide-react'
 import { FOLLOW_UP_DEFAULT_DAYS, type FollowUp } from '@redmars/shared'
 import { PageHeader } from '@/components/PageHeader'
@@ -156,11 +156,26 @@ export function FollowUpsPage() {
 
 function FollowUpRow({ followUp }: { followUp: FollowUp }) {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
+
+  function openConsult() {
+    navigate(`/consult/${followUp.visitId}`)
+  }
 
   return (
     <Card
+      role="button"
+      tabIndex={0}
+      onClick={openConsult}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          openConsult()
+        }
+      }}
       className={cn(
         'flex flex-wrap items-center gap-4 p-4',
+        'cursor-pointer transition-colors hover:border-ring hover:bg-muted/40',
         // Not seen is the loud state. The whole list exists for these rows.
         !followUp.attended && 'border-warning/40',
       )}
@@ -174,6 +189,7 @@ function FollowUpRow({ followUp }: { followUp: FollowUp }) {
       <div className="min-w-48 flex-1">
         <Link
           to={`/patients/${followUp.patientId}`}
+          onClick={(event) => event.stopPropagation()}
           className="font-semibold text-foreground hover:underline"
         >
           {followUp.patientName}
@@ -191,6 +207,7 @@ function FollowUpRow({ followUp }: { followUp: FollowUp }) {
       {followUp.patientPhone ? (
         <a
           href={`tel:${followUp.patientPhone}`}
+          onClick={(event) => event.stopPropagation()}
           className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
           dir="ltr"
         >
@@ -210,10 +227,12 @@ function FollowUpRow({ followUp }: { followUp: FollowUp }) {
         <Badge variant="warning">{t('followUps.notSeen')}</Badge>
       )}
 
-      {/* Back to the consultation the plan was made in — which is where the reasoning is,
-          and which audits its own read. */}
+      {/* Back to the consultation the plan was made in — the same destination the row
+          click now opens, kept as its own link so the row's affordance is not the only
+          way in (a screen reader landmark, a middle-click to open in a new tab). */}
       <Link
         to={`/consult/${followUp.visitId}`}
+        onClick={(event) => event.stopPropagation()}
         className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
       >
         <Stethoscope className="size-4" aria-hidden />
