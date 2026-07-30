@@ -343,19 +343,23 @@ function LabLinePaymentForm({
 }) {
   const { t } = useTranslation()
   const pay = usePayLabCharges(patientId, invoiceId)
-  const unpaid = useMemo(() => items.filter((item) => !item.isPaid), [items])
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(unpaid.map((i) => i.id)))
+  const unpaid = useMemo(() => items.filter((item) => !item.isPaid && item.refId), [items])
+  // Keyed by refId — the LAB ORDER ITEM id, which is what /lab-charges/pay matches against
+  // (it looks a line up by `InvoiceItem.refId`, not the invoice line's own id).
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(unpaid.map((i) => i.refId!)),
+  )
   const [method, setMethod] = useState<PaymentMethod>('cash')
 
-  const toggle = (itemId: string) =>
+  const toggle = (refId: string) =>
     setSelected((prev) => {
       const next = new Set(prev)
-      if (next.has(itemId)) next.delete(itemId)
-      else next.add(itemId)
+      if (next.has(refId)) next.delete(refId)
+      else next.add(refId)
       return next
     })
 
-  const chosen = unpaid.filter((item) => selected.has(item.id))
+  const chosen = unpaid.filter((item) => selected.has(item.refId!))
   const totalDue = chosen.reduce((sum, item) => sum + Number(item.total), 0)
 
   if (unpaid.length === 0) return null
@@ -366,7 +370,7 @@ function LabLinePaymentForm({
       <ul className="space-y-1.5">
         {items.map((item) => (
           <li key={item.id} className="flex items-center gap-2 text-sm">
-            {item.isPaid ? (
+            {item.isPaid || !item.refId ? (
               <span className="flex-1 text-muted-foreground line-through">
                 {item.description}
               </span>
@@ -375,9 +379,9 @@ function LabLinePaymentForm({
                 <input
                   type="checkbox"
                   className="size-4 accent-primary"
-                  checked={selected.has(item.id)}
+                  checked={selected.has(item.refId)}
                   disabled={pay.isPending}
-                  onChange={() => toggle(item.id)}
+                  onChange={() => toggle(item.refId!)}
                 />
                 <span className="text-foreground">{item.description}</span>
               </label>
@@ -413,7 +417,7 @@ function LabLinePaymentForm({
           disabled={chosen.length === 0 || pay.isPending}
           onClick={() =>
             pay.mutate(
-              { itemIds: chosen.map((i) => i.id), method },
+              { itemIds: chosen.map((i) => i.refId!), method },
               { onSuccess: (r) => onPaid(r.amount) },
             )
           }
