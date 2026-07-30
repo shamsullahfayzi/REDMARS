@@ -159,3 +159,36 @@ export function navItemsForRoles(
       (item.module === undefined || on.has(item.module)),
   )
 }
+
+/**
+ * Task 6b.10 — where a role lands instead of the dashboard, keyed by the ONE nav item
+ * that role's actual work queue is. Only for someone holding exactly one of these roles:
+ * a receptionist who is also a nurse, or an admin, has no single queue to default to —
+ * picking one for them would be a guess, and the dashboard's full menu already serves
+ * that case. Admin and management are deliberately absent — neither has an operational
+ * queue, only configuration and oversight, which the dashboard already is.
+ */
+const ROLE_LANDING: Record<string, string> = {
+  receptionist: 'reception',
+  nurse: 'queue',
+  doctor: 'consultations',
+  lab_tech: 'lab',
+  pharmacist: 'pharmacy',
+}
+
+/**
+ * The route a single-role user should land on instead of the dashboard, or null when the
+ * dashboard is still the right landing — more than one role, no mapped role, or the
+ * mapped item's module is off for this facility (checked through navItemsForRoles so this
+ * can never send someone to a page their own sidebar would hide).
+ */
+export function landingPathForRoles(
+  userRoles: readonly string[],
+  enabledModules: readonly ModuleKey[],
+): string | null {
+  if (userRoles.length !== 1) return null
+  const key = ROLE_LANDING[userRoles[0]]
+  if (!key) return null
+  const item = navItemsForRoles(userRoles, enabledModules).find((i) => i.key === key)
+  return item?.to ?? null
+}

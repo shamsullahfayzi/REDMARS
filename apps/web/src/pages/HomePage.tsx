@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { Link, Navigate } from 'react-router'
 import { ChevronRight } from 'lucide-react'
 import { useAuth } from '@/auth/authContext'
-import { navItemsForRoles } from '@/auth/nav'
+import { landingPathForRoles, navItemsForRoles } from '@/auth/nav'
 import { ApiStatus } from '@/components/ApiStatus'
 import { NAV_ICONS } from '@/components/navIcons'
 import { PageHeader } from '@/components/PageHeader'
@@ -13,10 +13,20 @@ import { cn } from '@/lib/utils'
  * The signed-in landing. A greeting plus quick-access cards to exactly the sections
  * this user's roles allow — the same filtered set the sidebar shows, so the two
  * cannot disagree about what a role can reach.
+ *
+ * Task 6b.10 — for a single-role operational user this is not where they land at all.
+ * A receptionist, nurse, doctor, lab tech or pharmacist is sent straight to their actual
+ * queue instead; the menu-of-everything below is what a multi-role user or admin/
+ * management sees, since neither has one queue to default to. See landingPathForRoles.
  */
 export function HomePage() {
   const { t } = useTranslation()
   const { user, roles, enabledModules } = useAuth()
+
+  const landing = landingPathForRoles(roles, enabledModules)
+  if (landing) {
+    return <Navigate to={landing} replace />
+  }
 
   // The dashboard links everywhere except back to itself.
   const sections = navItemsForRoles(roles, enabledModules).filter((item) => item.key !== 'dashboard')
