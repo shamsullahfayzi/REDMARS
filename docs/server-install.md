@@ -2,12 +2,12 @@
 
 Task 7.13 landed: `apps/api` and `apps/web` build into real Docker images
 (`apps/api/Dockerfile`, `apps/web/Dockerfile`) — the whole stack, DB included,
-is one `docker compose` command. No Node/pnpm needs to be installed on the
-server itself; only Docker does the building.
+is one `docker compose` command.
 
-Everything below assumes a Linux server on the hospital's own LAN, no public
-internet exposure needed. `docs/server-hardening.md` and `docs/https-lan.md` cover
-the *why* behind several steps here; this is the *what, in order*.
+Everything from step 1 onward assumes a Linux shell on the hospital's own LAN,
+no public internet exposure needed. `docs/server-hardening.md` and
+`docs/https-lan.md` cover the *why* behind several steps here; this is the
+*what, in order*.
 
 **Status note (2026-08-07): fully verified end to end** — `pnpm deploy:up`
 brings up all 6 containers healthy, migrate+seed run correctly inside the
@@ -15,16 +15,59 @@ brings up all 6 containers healthy, migrate+seed run correctly inside the
 `phase-7-13-containerize.md` (project memory) if you hit something this doc
 doesn't cover.
 
+## 0. Farhat's server is Windows — get a real Linux shell first, via WSL2
+
+**Not Docker Desktop.** Docker Desktop *also* runs on WSL2 under the hood, but
+it adds a GUI, a tray icon, and (for larger orgs) a commercial license the
+hospital doesn't need. Installing Docker Engine directly inside a WSL2 Ubuntu
+distro skips all of that and gets you the real Linux box every step below
+already assumes — no separate "Windows instructions" branch to maintain.
+
+This is also the actual security win, not just a technical detail: the
+containers, the database, and the compiled app all live inside the WSL2 VM's
+own filesystem, not on the Windows side. Someone browsing `C:\` in Explorer or
+checking Task Manager on the hospital server sees a `wsl.exe`/`vmmem` process,
+not "here's a Postgres and a Node app, here's a folder of code." It does NOT
+stop someone with actual admin access to that Windows box — `wsl -l -v`, enter
+the distro, `docker ps`, and it's all visible again. That's expected: hiding a
+running service from a local admin is not a real security boundary, it's
+housekeeping. The actual protection against someone copying this install to
+run unlicensed elsewhere is task 7.14 (signed license token), not this.
+
+```powershell
+# Run as Administrator, in PowerShell, on the hospital server itself:
+wsl --install -d Ubuntu
+# Reboot if prompted. Then open the new "Ubuntu" app once to finish setup
+# (creates a Linux username/password — this is separate from Windows' own).
+```
+
+Inside that Ubuntu shell, install Docker Engine the normal Linux way (NOT
+Docker Desktop, and NOT the `docker.io` apt package, which is older):
+```sh
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+# log out of the Ubuntu shell and back in for the group change to apply
+docker compose version   # confirms the plugin is present
+```
+
+Keep the repo clone INSIDE the WSL2 filesystem (`/home/<user>/redmars` or
+`/opt/redmars`, not `/mnt/c/...`) — cloning onto the Windows-mounted drive
+works but is slower for Docker builds and puts the checkout somewhere Windows
+Explorer can browse to directly via `\\wsl$\`. Everything from here on runs
+inside this Ubuntu shell.
+
 ## 1. Prerequisites on the server
 
-- Docker + Docker Compose plugin (`docker compose version` works) — this is now
-  the ONLY thing that needs installing beyond the OS itself
-- `openssl` (already on virtually every distro — used by `gen-lan-cert.sh`)
+- Docker + Docker Compose plugin (`docker compose version` works) — the only
+  thing that needs installing beyond WSL2/Ubuntu itself (step 0)
+- `openssl` (already on Ubuntu by default — used by `gen-lan-cert.sh`)
 - `git`, or another way to get the repo onto the box (scp/rsync a tarball works too
   — nothing about this step requires GitHub reachability)
 - **Enough free disk.** The image builds pull ~1GB+ of layers each; confirm
   headroom before starting (`df -h`) — a build that dies mid-way from a full
-  disk can leave Docker itself in a bad state, not just a failed build.
+  disk can leave Docker itself in a bad state, not just a failed build. WSL2's
+  virtual disk grows dynamically but doesn't shrink back on its own — if this
+  server is disk-constrained, that's worth knowing going in.
 
 ## 2. Get the code onto the server
 
@@ -202,6 +245,11 @@ app underneath it — known, documented gap, not a broken install.
   were migrated instead (see `medipro-data-migration.md`).
 - **A host firewall** (`ufw`) — documented and ready to run in
   `docs/server-hardening.md`, not yet executed anywhere (needs the real box).
+  Runs inside the WSL2 Ubuntu shell same as everything else in that doc.
+- **7.14/7.15** (signed license token, optional hardware-fingerprint binding)
+  — not built. This is the real answer to "stop someone from copying this
+  install and running it unlicensed elsewhere," which step 0's WSL2 note
+  above deliberately does NOT claim to solve on its own.
 - **7.9/7.10/7.11** (staff training, parallel run, go-live) — blocked on this
   doc actually being run against the real server once, which hasn't happened
   yet.
