@@ -29,22 +29,64 @@ import { z } from 'zod'
 
 export const PRINT_SETTINGS_KEY = 'print.prescription'
 
+export const PAPER_SIZES = ['A4', 'A5', 'Letter'] as const
+export type PaperSize = (typeof PAPER_SIZES)[number]
+
+/**
+ * Blank top/bottom space for ONE paper size, in millimetres.
+ *
+ * Split out from a single flat pair because task "doctor picks the paper" means the same
+ * facility can have two different pieces of pre-printed stationery loaded — a full A4
+ * letterhead for a normal visit and a smaller A5 pad at triage or a satellite room — and
+ * each carries its own header/footer artwork at a different height. One blank-margin pair
+ * cannot be right for both.
+ */
+const paperMarginsSchema = (topDefault: number, bottomDefault: number) =>
+  z.object({
+    topMarginMm: z.number().min(0).max(120).default(topDefault),
+    bottomMarginMm: z.number().min(0).max(60).default(bottomDefault),
+  })
+
+const DEFAULT_MARGINS = {
+  A4: { topMarginMm: 55, bottomMarginMm: 14 },
+  A5: { topMarginMm: 25, bottomMarginMm: 10 },
+  Letter: { topMarginMm: 55, bottomMarginMm: 14 },
+}
+
 export const printSettingsSchema = z.object({
   /**
-   * Blank space at the top of EVERY page, in millimetres.
-   *
-   * Farhat prints onto pre-printed letterhead stationery — the top third of their sheet is
-   * empty because the paper already carries the hospital's name. This is applied as an
-   * `@page` margin rather than a spacer element on purpose: a spacer only pushes the first
-   * page down, and a prescription that runs to a second page would print its table over
-   * the letterhead.
-   *
-   * 55 is a starting point to be measured against a real sheet, not a fact.
+   * A4 everywhere it has been seen. A5 and Letter are here because a doctor can choose
+   * either at print time (below) — this is only the sheet's opening value, i.e. what the
+   * picker shows before anyone touches it.
    */
-  topMarginMm: z.number().min(0).max(120).default(55),
+  paperSize: z.enum(PAPER_SIZES).default('A4'),
 
-  /** A4 everywhere it has been seen. Letter is here because it costs one line. */
-  paperSize: z.enum(['A4', 'Letter']).default('A4'),
+  /**
+   * Blank space at the top and bottom of EVERY page, per paper size, in millimetres.
+   *
+   * Farhat prints onto pre-printed letterhead stationery — the top third of their A4 sheet
+   * is empty because the paper already carries the hospital's name, and the bottom strip is
+   * left clear the same way for a footer/stamp. Applied as `@page` margins rather than
+   * spacer elements on purpose: a spacer only pushes the first page's content, and a
+   * prescription that runs to a second page would print its table over the letterhead.
+   *
+   * 55/14 (A4) is a starting point measured against a real sheet, not a fact. 25/10 (A5) is
+   * a proportional guess until someone measures the actual A5 pad against it.
+   */
+  margins: z
+    .object({
+      A4: paperMarginsSchema(DEFAULT_MARGINS.A4.topMarginMm, DEFAULT_MARGINS.A4.bottomMarginMm).default(
+        DEFAULT_MARGINS.A4,
+      ),
+      A5: paperMarginsSchema(DEFAULT_MARGINS.A5.topMarginMm, DEFAULT_MARGINS.A5.bottomMarginMm).default(
+        DEFAULT_MARGINS.A5,
+      ),
+      Letter: paperMarginsSchema(
+        DEFAULT_MARGINS.Letter.topMarginMm,
+        DEFAULT_MARGINS.Letter.bottomMarginMm,
+      ).default(DEFAULT_MARGINS.Letter),
+    })
+    .default(DEFAULT_MARGINS),
 
   /**
    * WHICH SECTIONS PRINT.

@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type {
   PharmacyAllergy,
+  PharmacyBill,
   PharmacyPrescription,
   PharmacyPrescriptionSearchResponse,
   PharmacyQueueItem,
@@ -8,6 +10,7 @@ import type {
 } from '@redmars/shared';
 import { ALLERGY_SEVERITY_RANK, currentAgeYears } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { money } from '../invoice/invoice.service';
 
 /** A display name from its parts, skipping the blanks. */
 function fullName(parts: (string | null | undefined)[]): string {
@@ -216,6 +219,7 @@ export class PharmacyService {
             quantity: true,
             instructions: true,
             allergyOverrideReason: true,
+            drug: { select: { sellPrice: true } },
           },
         },
       },
@@ -223,6 +227,42 @@ export class PharmacyService {
     if (!row) throw new NotFoundException('Prescription not found');
 
     const patient = row.visit.patient;
+
+    // Has this been billed yet, and is that bill settled? The one lookup `confirmHandover`
+    // and `returnMedicine` both already use to find a sheet's own invoice.
+    const billedItem = await this.prisma.db.invoiceItem.findFirst({
+      where: {
+        refType: 'prescription_item',
+        refId: { in: row.items.map((item) => item.id) },
+      },
+      select: {
+        invoice: {
+          select: {
+            id: true,
+            invoiceNo: true,
+            total: true,
+            paidAmount: true,
+            currency: true,
+            status: true,
+          },
+        },
+      },
+    });
+    const bill: PharmacyBill | null = billedItem
+      ? {
+          invoiceId: billedItem.invoice.id,
+          invoiceNo: billedItem.invoice.invoiceNo,
+          total: money(billedItem.invoice.total),
+          paidAmount: money(billedItem.invoice.paidAmount),
+          outstanding: money(
+            Prisma.Decimal.max(0, billedItem.invoice.total.minus(billedItem.invoice.paidAmount)),
+          ),
+          currency: billedItem.invoice.currency,
+          isPaid:
+            billedItem.invoice.status === 'paid' ||
+            billedItem.invoice.paidAmount.greaterThanOrEqualTo(billedItem.invoice.total),
+        }
+      : null;
 
     // The patient's allergies — the other half of what R6 grants. Read separately, active
     // and worst first, retracted ones last but shown (a doctor removed them for a reason).
@@ -284,8 +324,10 @@ export class PharmacyService {
         quantity: item.quantity,
         instructions: item.instructions,
         allergyOverrideReason: item.allergyOverrideReason,
+        suggestedUnitPrice: item.drug.sellPrice != null ? money(item.drug.sellPrice) : null,
       })),
       allergies,
+      bill,
     };
   }
 }

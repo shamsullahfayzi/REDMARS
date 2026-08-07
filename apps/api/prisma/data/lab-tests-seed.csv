@@ -1,0 +1,285 @@
+code,name,specimen,unit,price,gender,minAge,maxAge,low,high,textValue
+HB,Hemoglobin,blood,g/dL,,male,,,13.5,17.5,
+HB,Hemoglobin,blood,g/dL,,female,,,12,15.5,
+HCT,Hematocrit (PCV),blood,%,,male,,,41,53,
+HCT,Hematocrit (PCV),blood,%,,female,,,36,46,
+RBC,RBC Count,blood,x10^6/uL,,male,,,4.7,6.1,
+RBC,RBC Count,blood,x10^6/uL,,female,,,4.2,5.4,
+WBC,WBC Count (TLC),blood,x10^3/uL,,,,,4.5,11,
+PLT,Platelet Count,blood,x10^3/uL,,,,,150,450,
+MCV,MCV,blood,fL,,,,,80,100,
+MCH,MCH,blood,pg,,,,,27,33,
+MCHC,MCHC,blood,g/dL,,,,,32,36,
+RDW,RDW,blood,%,,,,,11.5,14.5,
+CBC,Complete Blood Count (panel),blood,,,,,,,,"See individual components (Hb, HCT, RBC, WBC, Platelets, indices, DLC)"
+NEUT,Neutrophils,blood,%,,,,,40,70,
+LYMPH,Lymphocytes,blood,%,,,,,20,45,
+MONO,Monocytes,blood,%,,,,,2,10,
+EOSIN,Eosinophils,blood,%,,,,,1,6,
+BASO,Basophils,blood,%,,,,,0,2,
+DLC,Differential Leukocyte Count (panel),blood,,,,,,,,See Neutrophils/Lymphocytes/Monocytes/Eosinophils/Basophils
+ESR1,ESR (1 hour),blood,mm/hr,,male,,,0,15,
+ESR1,ESR (1 hour),blood,mm/hr,,female,,,0,20,
+RETIC,Reticulocyte Count,blood,%,,,,,0.5,2.5,
+BLDGRP,Blood Group & Rh,blood,,,,,,,,"A/B/AB/O, Rh positive or negative"
+PBF,Peripheral Blood Film,blood,,,,,,,,Normal — see report for abnormal findings
+SICKLE,Sickle Cell Test,blood,,,,,,,,Negative
+G6PD,G6PD (Quantitative),blood,U/g Hb,,,,,4.6,13.4,
+HBELECT,Hemoglobin Electrophoresis (panel),blood,,,,,,,,See HbA2 and HbF
+HBA2,HbA2 (thalassemia screen),blood,%,,,,,2,3.5,
+HBF,HbF (fetal hemoglobin),blood,%,,,,,0,2,
+XMATCH,Cross Match,blood,,,,,,,,Compatible / Incompatible — see report
+COOMBD,Coomb's Direct,blood,,,,,,,,Negative
+COOMBI,Coomb's Indirect,blood,,,,,,,,Negative
+PT,Prothrombin Time (PT),blood,sec,,,,,11,13.5,
+INR,INR,blood,,,,,,0.8,1.2,
+APTT,APTT,blood,sec,,,,,25,35,
+BT,Bleeding Time (BT),blood,min,,,,,2,7,
+CT,Clotting Time (CT),blood,min,,,,,5,15,
+FIBRIN,Fibrinogen,blood,mg/dL,,,,,200,400,
+DDIMER,D-Dimer,blood,mg/L FEU,,,,,0,0.5,
+COAGPRO,Coagulation Profile (panel),blood,,,,,,,,"See PT/INR, APTT, Fibrinogen"
+FACT8,Factor VIII,blood,%,,,,,50,150,
+FACT9,Factor IX,blood,%,,,,,50,150,
+PROTC,Protein C,blood,%,,,,,70,140,
+PROTS,Protein S,blood,%,,,,,60,130,
+AT3,Antithrombin III,blood,%,,,,,80,120,
+LUPUSAC,Lupus Anticoagulant,blood,,,,,,,,Negative
+IRON,Serum Iron,blood,ug/dL,,male,,,65,175,
+IRON,Serum Iron,blood,ug/dL,,female,,,50,170,
+TIBC,TIBC,blood,ug/dL,,,,,250,450,
+FERR,Ferritin,blood,ng/mL,,male,,,20,250,
+FERR,Ferritin,blood,ng/mL,,female,,,10,120,
+TSAT,Transferrin Saturation,blood,%,,,,,20,50,
+TRANSF,Transferrin,blood,mg/dL,,,,,200,360,
+B12,Vitamin B12,blood,pg/mL,,,,,200,900,
+FOLATE,Folate,blood,ng/mL,,,,,3,17,
+HAPTO,Haptoglobin,blood,mg/dL,,,,,30,200,
+NA,Sodium,blood,mmol/L,,,,,135,145,
+K,Potassium,blood,mmol/L,,,,,3.5,5.1,
+CL,Chloride,blood,mmol/L,,,,,98,107,
+HCO3,Bicarbonate,blood,mmol/L,,,,,22,29,
+ELECT,Electrolytes (panel),blood,,,,,,,,"See Sodium, Potassium, Chloride, Bicarbonate"
+ANIONGAP,Anion Gap,blood,mmol/L,,,,,8,16,
+CA,Calcium (Total),blood,mg/dL,,,,,8.5,10.5,
+ICA,Ionized Calcium,blood,mg/dL,,,,,4.6,5.3,
+PHOS,Phosphorus,blood,mg/dL,,,,,2.5,4.5,
+MG,Magnesium,blood,mg/dL,,,,,1.7,2.2,
+FBS,Fasting Blood Sugar (FBS),blood,mg/dL,,,,,70,100,
+RBS,Random Blood Sugar (RBS),blood,mg/dL,,,,,70,140,
+GTT,Glucose Tolerance Test (2hr),blood,mg/dL,,,,,70,140,
+HBA1C,HbA1c,blood,%,,,,,4,5.6,
+BUN,Urea (BUN),blood,mg/dL,,,,,7,20,
+CREAT,Creatinine,blood,mg/dL,,male,,,0.7,1.3,
+CREAT,Creatinine,blood,mg/dL,,female,,,0.6,1.1,
+RFT,Renal Function Test (panel),blood,,,,,,,,"See Urea, Creatinine, Uric Acid, Electrolytes"
+URICAC,Uric Acid,blood,mg/dL,,male,,,3.4,7,
+URICAC,Uric Acid,blood,mg/dL,,female,,,2.4,6,
+OSMSER,Osmolality (Serum),blood,mOsm/kg,,,,,275,295,
+AMMONIA,Ammonia,blood,umol/L,,,,,15,45,
+HOMOCYS,Homocysteine,blood,umol/L,,,,,5,15,
+LACTATE,Lactate,blood,mmol/L,,,,,0.5,2.2,
+TBILI,Total Bilirubin,blood,mg/dL,,,,,0.3,1.2,
+DBILI,Direct Bilirubin,blood,mg/dL,,,,,0,0.3,
+IBILI,Indirect Bilirubin,blood,mg/dL,,,,,0.2,0.9,
+AST,AST (SGOT),blood,U/L,,,,,5,40,
+ALT,ALT (SGPT),blood,U/L,,,,,7,56,
+ALP,Alkaline Phosphatase,blood,U/L,,,,,44,147,
+GGT,GGT (Gamma GT),blood,U/L,,male,,,8,61,
+GGT,GGT (Gamma GT),blood,U/L,,female,,,5,36,
+TPROT,Total Protein,blood,g/dL,,,,,6.4,8.3,
+ALB,Albumin,blood,g/dL,,,,,3.5,5,
+GLOB,Globulin,blood,g/dL,,,,,2,3.5,
+AGRATIO,A/G Ratio,blood,,,,,,1,2.5,
+LFT,Liver Function Test (panel),blood,,,,,,,,"See Bilirubin, AST, ALT, ALP, GGT, Protein, Albumin"
+LDH,LDH,blood,U/L,,,,,140,280,
+AMYL,Amylase,blood,U/L,,,,,30,110,
+LIPASE,Lipase,blood,U/L,,,,,10,140,
+PREALB,Pre-albumin,blood,mg/dL,,,,,15,36,
+CERULO,Ceruloplasmin,blood,mg/dL,,,,,20,60,
+CHOL,Total Cholesterol,blood,mg/dL,,,,,,200,Desirable <200
+TG,Triglycerides,blood,mg/dL,,,,,,150,Desirable <150
+HDL,HDL Cholesterol,blood,mg/dL,,male,,,40,,Desirable >40
+HDL,HDL Cholesterol,blood,mg/dL,,female,,,50,,Desirable >50
+LDL,LDL Cholesterol,blood,mg/dL,,,,,,100,Optimal <100
+VLDL,VLDL Cholesterol,blood,mg/dL,,,,,5,40,
+LIPPROF,Lipid Profile (panel),blood,,,,,,,,"See Total Cholesterol, Triglycerides, HDL, LDL, VLDL"
+TSH,TSH,blood,uIU/mL,,,,,0.4,4,
+FT4,Free T4,blood,ng/dL,,,,,0.8,1.8,
+FT3,Free T3,blood,pg/mL,,,,,2.3,4.2,
+TT4,Total T4,blood,ug/dL,,,,,5,12,
+TT3,Total T3,blood,ng/dL,,,,,80,200,
+ANTITPO,Anti-TPO,blood,IU/mL,,,,,,34,
+ANTITG,Anti-Thyroglobulin,blood,IU/mL,,,,,,115,
+CALCITON,Calcitonin,blood,pg/mL,,male,,,,8.4,
+CALCITON,Calcitonin,blood,pg/mL,,female,,,,5,
+TROPI,Troponin I,blood,ng/mL,,,,,,0.04,
+TROPT,Troponin T,blood,ng/mL,,,,,,0.01,
+CKMB,CK-MB,blood,U/L,,,,,0,25,
+CPK,CPK (Total),blood,U/L,,male,,,39,308,
+CPK,CPK (Total),blood,U/L,,female,,,26,192,
+BNP,BNP,blood,pg/mL,,,,,,100,
+NTPROBNP,NT-proBNP,blood,pg/mL,,,,,,125,
+MYOGLOB,Myoglobin,blood,ng/mL,,male,,,28,72,
+MYOGLOB,Myoglobin,blood,ng/mL,,female,,,25,58,
+CARDPROF,Cardiac Profile (panel),blood,,,,,,,,"See Troponin, CK-MB, Myoglobin"
+FSH,FSH,blood,mIU/mL,,male,,,1.5,12.4,
+FSH,FSH,blood,mIU/mL,,female,,,3.5,12.5,Follicular phase; varies with cycle
+LH,LH,blood,mIU/mL,,male,,,1.7,8.6,
+LH,LH,blood,mIU/mL,,female,,,2.4,12.6,Follicular phase; varies with cycle
+PROLAC,Prolactin,blood,ng/mL,,male,,,4,15.2,
+PROLAC,Prolactin,blood,ng/mL,,female,,,4.8,23.3,
+TESTO,Testosterone (Total),blood,ng/dL,,male,,,280,1100,
+TESTO,Testosterone (Total),blood,ng/dL,,female,,,15,70,
+FREETESTO,Free Testosterone,blood,pg/mL,,male,,,9,30,
+FREETESTO,Free Testosterone,blood,pg/mL,,female,,,0.3,1.9,
+ESTRAD,Estradiol,blood,pg/mL,,male,,,10,40,
+ESTRAD,Estradiol,blood,pg/mL,,female,,,15,350,Varies with cycle phase
+PROGEST,Progesterone,blood,ng/mL,,female,,,0.1,25,Varies with cycle/pregnancy
+BHCG,Beta-hCG (Quantitative),blood,mIU/mL,,,,,,5,Non-pregnant reference; pregnancy interpreted by gestational week
+UPREG,Urine Pregnancy Test,urine,,,,,,,,Negative
+CORTISOL,Cortisol (AM),blood,ug/dL,,,,,6.2,19.4,
+ACTH,ACTH,blood,pg/mL,,,,,7.2,63.3,
+GH,Growth Hormone (random),blood,ng/mL,,,,,,5,
+IGF1,IGF-1,blood,ng/mL,,,,,100,300,
+AMH,AMH,blood,ng/mL,,female,,,1,4,
+ALDOST,Aldosterone (upright),blood,ng/dL,,,,,4,31,
+RENIN,Renin (Plasma Renin Activity),blood,ng/mL/hr,,,,,0.5,4,
+PTH,Parathyroid Hormone (PTH),blood,pg/mL,,,,,15,65,
+INSULIN,Insulin (Fasting),blood,uIU/mL,,,,,2.6,24.9,
+CPEPTIDE,C-Peptide,blood,ng/mL,,,,,0.8,3.1,
+DHEAS,DHEA-S,blood,ug/dL,,male,,,80,560,
+DHEAS,DHEA-S,blood,ug/dL,,female,,,35,430,
+OHPROG,17-OH Progesterone,blood,ng/mL,,,,,0.2,1,
+VITD,Vitamin D (25-OH),blood,ng/mL,,,,,30,100,
+GASTRIN,Gastrin (Fasting),blood,pg/mL,,,,,0,100,
+EPO,Erythropoietin (EPO),blood,mIU/mL,,,,,4.3,29,
+CEA,CEA,blood,ng/mL,,,,,,5,Higher cutoff (<10) common in smokers
+AFP,AFP,blood,ng/mL,,,,,,10,
+CA125,CA 125,blood,U/mL,,,,,,35,
+CA199,CA 19-9,blood,U/mL,,,,,,37,
+CA153,CA 15-3,blood,U/mL,,,,,,30,
+CA2729,CA 27-29,blood,U/mL,,,,,,38,
+PSA,PSA (Total),blood,ng/mL,,male,,,,4,
+PSAFREE,PSA Free/Total Ratio,blood,%,,male,,,25,,>25% lower risk
+B2MICRO,Beta-2 Microglobulin,blood,mg/L,,,,,0.8,2.2,
+NSE,Neuron Specific Enolase (NSE),blood,ng/mL,,,,,,16.3,
+HE4,HE4,blood,pmol/L,,female,,,,140,
+HBSAG,HBsAg,blood,,,,,,,,Negative
+HBSAGELISA,HBsAg (ELISA),blood,,,,,,,,Negative
+HBEAG,HBeAg,blood,,,,,,,,Negative
+HBEAB,Anti-HBe,blood,,,,,,,,Negative
+HBCOREIGM,Anti-HBc IgM,blood,,,,,,,,Negative
+HBCOREIGG,Anti-HBc IgG (Total),blood,,,,,,,,Negative
+HBVQUANT,Hepatitis B Viral Load (Quantitative),blood,IU/mL,,,,,,,Not detected / below quantification limit
+HBVPROF,HBV Profile (panel),blood,,,,,,,,"See HBsAg, HBeAg, Anti-HBc, Anti-HBs"
+HBSAB,Anti-HBs (Immunity),blood,mIU/mL,,,,,10,,>10 mIU/mL indicates immunity
+HAVIGM,Hepatitis A IgM,blood,,,,,,,,Negative
+ANTIHCV,Anti-HCV,blood,,,,,,,,Negative
+HCVQUANT,Hepatitis C Viral Load (Quantitative),blood,IU/mL,,,,,,,Not detected / below quantification limit
+HDVAB,Hepatitis D Antibody,blood,,,,,,,,Negative
+HIV,HIV Ag/Ab (Combo),blood,,,,,,,,Negative
+VDRL,VDRL/RPR (Syphilis),blood,,,,,,,,Non-Reactive
+TPHA,TPHA,blood,,,,,,,,Non-Reactive
+WIDAL,Widal Test,blood,,,,,,,80,Titer <1:80 considered non-significant
+BRUCRB,Brucella Agglutination (Rose Bengal),blood,,,,,,,,Negative
+BRUCIGGM,Brucella IgG/IgM,blood,,,,,,,,Negative
+MALICT,Malaria Antigen (ICT),blood,,,,,,,,Negative
+MALMP,Malaria Parasite (MP smear),blood,,,,,,,,Negative
+LEISHRK39,Leishmania rK39 (Kala-azar),blood,,,,,,,,Negative
+DENGUENS1,Dengue NS1 Antigen,blood,,,,,,,,Negative
+DENGUEIGGM,Dengue IgG/IgM,blood,,,,,,,,Negative
+HPYLBLOOD,H. Pylori Antibody (Blood),blood,,,,,,,,Negative
+HPYLSTOOL,H. Pylori Antigen (Stool),stool,,,,,,,,Negative
+ASO,ASO Titer,blood,IU/mL,,,,,,200,
+CRP,CRP,blood,mg/L,,,,,,6,
+RF,RA Factor (RF),blood,IU/mL,,,,,,14,
+ANA,ANA,blood,,,,,,,,Negative
+DSDNA,Anti-dsDNA,blood,IU/mL,,,,,,30,
+ANTICCP,Anti-CCP,blood,U/mL,,,,,,20,
+C3,Complement C3,blood,mg/dL,,,,,90,180,
+C4,Complement C4,blood,mg/dL,,,,,10,40,
+ANCA,ANCA (p-ANCA/c-ANCA),blood,,,,,,,,Negative
+ASMA,Anti-Smooth Muscle Antibody,blood,,,,,,,,Negative
+AMA,Anti-Mitochondrial Antibody,blood,,,,,,,,Negative
+CMVIGGM,CMV IgG/IgM,blood,,,,,,,,IgM Negative; IgG positive indicates past exposure
+TOXOIGGM,Toxoplasma IgG/IgM,blood,,,,,,,,IgM Negative; IgG positive indicates past exposure
+RUBELLAIGGM,Rubella IgG/IgM,blood,,,,,,,,IgM Negative; IgG positive indicates immunity
+HSV1IGG,HSV-1 IgG,blood,,,,,,,,Negative
+HSV1IGM,HSV-1 IgM,blood,,,,,,,,Negative
+HSV2IGG,HSV-2 IgG,blood,,,,,,,,Negative
+HSV2IGM,HSV-2 IgM,blood,,,,,,,,Negative
+EBVIGGM,EBV VCA IgG/IgM,blood,,,,,,,,IgM Negative; IgG positive indicates past exposure
+MEASLESIGG,Measles IgG,blood,,,,,,,,Positive indicates immunity
+MUMPSIGG,Mumps IgG,blood,,,,,,,,Positive indicates immunity
+VARICELLAIGG,Varicella IgG,blood,,,,,,,,Positive indicates immunity
+TORCHQUAL,TORCH Profile (Qualitative),blood,,,,,,,,"See Toxoplasma, Rubella, CMV, HSV IgG/IgM"
+TORCHQUANT,TORCH Profile (Quantitative),blood,,,,,,,,"See Toxoplasma, Rubella, CMV, HSV IgG/IgM titers"
+COVIDAG,COVID-19 Antigen,swab,,,,,,,,Negative
+COVIDPCR,COVID-19 PCR,swab,,,,,,,,Not detected
+TYPHIDOT,Typhidot IgG/IgM,blood,,,,,,,,Negative
+MANTOUX,Mantoux Test (PPD),skin,mm induration,,,,,,10,≥10mm considered positive (≥5mm if immunocompromised)
+IGRA,TB Interferon-Gamma Release Assay (IGRA),blood,,,,,,,,Negative
+TBIGGM,TB IgG/IgM,blood,,,,,,,,Negative
+URINEEXAM,Urine Routine Examination,urine,,,,,,,,"See report — physical, chemical and microscopic findings"
+URINEPH,Urine pH,urine,,,,,,4.5,8,
+URINESG,Urine Specific Gravity,urine,,,,,,1.005,1.03,
+URINEKETONE,Urine Ketone,urine,,,,,,,,Negative
+URINEPROT24,Urine Protein (24hr),urine,mg/24hr,,,,,,150,
+MICROALB,Microalbumin (Urine),urine,mg/g creatinine,,,,,,30,
+URINECRCL,Creatinine Clearance,urine,mL/min,,,,,90,120,
+URINENA24,24hr Urine Sodium,urine,mmol/24hr,,,,,40,220,
+URINEK24,24hr Urine Potassium,urine,mmol/24hr,,,,,25,125,
+URINECA24,24hr Urine Calcium,urine,mg/24hr,,,,,100,300,
+URINEDRUG,Urine Drug Screen,urine,,,,,,,,Negative
+OSMURINE,Osmolality (Urine),urine,mOsm/kg,,,,,300,900,
+STOOLEXAM,Stool Routine Examination,stool,,,,,,,,See report
+FOB,Fecal Occult Blood (FOB),stool,,,,,,,,Negative
+STOOLOVA,Stool for Ova & Parasite,stool,,,,,,,,Negative
+STOOLREDSUB,Stool Reducing Substance,stool,,,,,,,,Negative
+BLOODCULT,Blood Culture,blood,,,,,,,,No growth after 5 days
+URINECULT,Urine Culture,urine,,,,,,,,"No growth / <10,000 CFU/mL"
+WOUNDCULT,Wound/Pus Culture,swab,,,,,,,,No growth
+SPUTUMAFB,Sputum AFB / Culture,sputum,,,,,,,,Negative for AFB
+THROATCULT,Throat Swab Culture,swab,,,,,,,,Normal flora / No growth
+VAGINALCULT,Vaginal Swab Culture,swab,,,,,,,,Normal flora / No growth
+STOOLCULT,Stool Culture,stool,,,,,,,,No enteric pathogens isolated
+SEMENCULT,Semen Culture,semen,,,,,,,,No growth
+GRAMSTAIN,Gram Stain,swab,,,,,,,,See report
+CSFWBC,CSF WBC Count,csf,cells/uL,,,,,0,5,
+CSFPROT,CSF Protein,csf,mg/dL,,,,,15,45,
+CSFGLUC,CSF Glucose,csf,mg/dL,,,,,40,70,
+PLEURALFL,Pleural Fluid Analysis,pleural fluid,,,,,,,,See report
+PERITONFL,Peritoneal Fluid Analysis,peritoneal fluid,,,,,,,,See report
+FLUIDANAL,Fluid Analysis (general),fluid,,,,,,,,See report
+SEMENVOL,Semen Volume,semen,mL,,,,,1.5,5,
+SEMENCOUNT,Sperm Count,semen,million/mL,,,,,15,,
+SEMENMOTIL,Sperm Motility,semen,%,,,,,40,,
+SEMENMORPH,Sperm Morphology (normal forms),semen,%,,,,,4,,
+SEMENANAL,Semen Analysis (panel),semen,,,,,,,,"See Volume, Count, Motility, Morphology"
+ABGPH,Blood Gas pH,arterial blood,,,,,,7.35,7.45,
+ABGPCO2,pCO2,arterial blood,mmHg,,,,,35,45,
+ABGPO2,pO2,arterial blood,mmHg,,,,,80,100,
+ABGHCO3,HCO3 (ABG),arterial blood,mmol/L,,,,,22,26,
+ABGO2SAT,O2 Saturation,arterial blood,%,,,,,95,100,
+ABGBE,Base Excess,arterial blood,mmol/L,,,,,-2,2,
+LITHIUMLVL,Lithium Level,blood,mmol/L,,,,,0.6,1.2,"Trough, 12hr post-dose"
+VALPROATELVL,Valproic Acid Level,blood,ug/mL,,,,,50,100,
+CARBAMAZLVL,Carbamazepine Level,blood,ug/mL,,,,,4,12,
+PHENYTOINLVL,Phenytoin Level,blood,ug/mL,,,,,10,20,
+DIGOXINLVL,Digoxin Level,blood,ng/mL,,,,,0.8,2,
+ETHANOL,Ethanol (Blood Alcohol),blood,mg/dL,,,,,,0,
+COHB,Carboxyhemoglobin,blood,%,,,,,,3,Non-smoker
+LEAD,Lead (Blood),blood,ug/dL,,,,,,10,
+ZINC,Zinc,blood,ug/dL,,,,,70,120,
+COPPER,Copper,blood,ug/dL,,,,,70,140,
+PROCALC,Procalcitonin,blood,ng/mL,,,,,,0.05,
+VITB1,Vitamin B1 (Thiamine),blood,nmol/L,,,,,70,180,
+VITB6,Vitamin B6,blood,ug/L,,,,,5,50,
+VITA,Vitamin A,blood,ug/dL,,,,,30,65,
+VITE,Vitamin E,blood,mg/L,,,,,5.5,17,
+VITC,Vitamin C,blood,mg/dL,,,,,0.4,2,
+TOTALIGE,Total IgE,blood,IU/mL,,,,,,100,
+BIOPSYSM,Biopsy (Small),tissue,,,,,,,,See histopathology report
+BIOPSYLG,Biopsy (Large),tissue,,,,,,,,See histopathology report
+STONEANAL,Stone Analysis,stone,,,,,,,,See composition report

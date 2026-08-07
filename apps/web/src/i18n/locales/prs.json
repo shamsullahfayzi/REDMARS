@@ -89,7 +89,8 @@
     "doctor": "داکتر",
     "lab_tech": "تخنیکر لابراتوار",
     "pharmacist": "دواساز",
-    "management": "مدیریت"
+    "management": "مدیریت",
+    "call_center": "مرکز تماس"
   },
   "users": {
     "create": {
@@ -273,7 +274,7 @@
     "subtitle": "فهرست ادویهٔ این شفاخانه.",
     "import": {
       "title": "وارد کردن از CSV",
-      "hint": "سطرها را با یک سطر عنوان جای‌گذاری کنید. ستون‌های code و genericName الزامی‌اند؛ brandName، atcCode، strength، form، isControlled اختیاری. وارد کردن دوبارهٔ همان کود آن را به‌روز می‌کند.",
+      "hint": "سطرها را با یک سطر عنوان جای‌گذاری کنید. ستون‌های code و genericName الزامی‌اند؛ brandName، atcCode، strength، form، isControlled، sellPrice اختیاری. وارد کردن دوبارهٔ همان کود آن را به‌روز می‌کند.",
       "submit": "وارد کردن",
       "importing": "در حال وارد کردن…",
       "failed": "وارد کردن ناکام شد. لطفاً دوباره تلاش کنید.",
@@ -293,6 +294,9 @@
       "defaultFreq": "تکرار پیش‌فرض",
       "defaultDuration": "مدت پیش‌فرض",
       "isControlled": "مادهٔ کنترل‌شده",
+      "sellPrice": "قیمت فروش",
+      "sellPricePlaceholder": "رایگان (خالی بگذارید)",
+      "sellPriceHint": "آنچه دواخانه هنگام تحویل به ازای هر واحد می‌گیرد. خالی یعنی رایگان — اشتباه نیست، ولی مطمئن شوید همین منظور شماست.",
       "submit": "افزودن دوا",
       "submitting": "در حال ذخیره…",
       "invalid": "لطفاً فورم را بررسی کنید.",
@@ -311,6 +315,9 @@
       "genericName": "نام جنریک",
       "strength": "قوت",
       "form": "شکل",
+      "sellPrice": "قیمت",
+      "noPrice": "بدون قیمت",
+      "noPriceHint": "این دوا قیمت ندارد — تحویل آن با مبلغ ۰.۰۰ محاسبه می‌شود.",
       "controlled": "کنترل‌شده",
       "status": "وضعیت",
       "actions": "اقدامات",
@@ -778,10 +785,14 @@
   "collections": {
     "subtitle": "همه صورت‌حساب‌های پرداخت‌ناشده لابراتوار یا فارمسی، در یک لست.",
     "searchPlaceholder": "شماره صورت‌حساب، نام مریض یا شماره فایل",
+    "allDates": "همه تاریخ‌ها",
     "error": "بارگیری مطالبات ناکام شد.",
     "empty": "در حال حاضر چیزی باقی نمانده.",
     "noMatch": "هیچ صورت‌حسابی مطابقت ندارد.",
-    "count": "{{count}} باقی‌مانده",
+    "count": "{{shown}} از {{total}} باقی‌مانده نشان داده می‌شود",
+    "page": "صفحه {{page}} از {{pageCount}}",
+    "previous": "قبلی",
+    "next": "بعدی",
     "new": "جدید",
     "col": {
       "origin": "کانتر",
@@ -869,7 +880,10 @@
       "ordered": "زمان",
       "patient": "مریض",
       "drugs": "دواها",
-      "prescriber": "تجویزکننده"
+      "prescriber": "تجویزکننده",
+      "qty": "تعداد",
+      "unitPrice": "نرخ واحد",
+      "lineTotal": "مجموع قلم"
     },
     "back": "بازگشت به صف",
     "loading": "در حال بارگیری…",
@@ -881,12 +895,22 @@
     "qty": "تعداد {{count}}",
     "allergyOverride": "با وجود حساسیت تجویز شد: {{reason}}",
     "advice": "توصیه",
-    "dispense": "توزیع و صورت‌حساب",
-    "dispensing": "در حال توزیع…",
-    "dispenseError": "توزیع انجام نشد.",
+    "priceTitle": "قیمت‌گذاری این نسخه",
+    "unitPriceFor": "نرخ واحد برای {{drug}}",
+    "billTotal": "مجموع صورت‌حساب",
+    "priceHint": "پیش از صورت‌حساب، برای هر دوا نرخ وارد کنید.",
+    "billIt": "صورت‌حساب این نسخه",
+    "billing": "در حال صورت‌حساب…",
+    "billError": "صورت‌حساب این نسخه ناکام شد.",
     "alreadyDispensed": "قبلاً توزیع شده",
     "printBill": "چاپ صورت‌حساب",
-    "dispensed": "توزیع شد · {{invoiceNo}} · {{total}} {{currency}}",
+    "dispensed": "تحویل داده شد · {{invoiceNo}} · {{total}} {{currency}}",
+    "billPaid": "صورت‌حساب {{invoiceNo}} تادیه شد — آماده تحویل",
+    "awaitingPayment": "صورت‌حساب {{invoiceNo}} — {{outstanding}} {{currency}} باقی‌مانده",
+    "waitingForReception": "این را چاپ کنید و مریض را به پذیرش بفرستید تا تادیه کند. پس از تسویه دوباره به این‌جا بیایید تا دوا تحویل داده شود.",
+    "confirmHandover": "تأیید تحویل",
+    "handingOver": "در حال تحویل…",
+    "handoverError": "تأیید تحویل ناکام شد.",
     "return": "بازگرداندن دوا",
     "returnReason": "دلیل",
     "returnReasonPlaceholder": "دلیل بازگرداندن دوا (الزامی)",
@@ -919,6 +943,117 @@
     "total": "مجموع",
     "grandCash": "همه صندوق‌ها — نقد",
     "grandTotal": "همه صندوق‌ها — مجموع"
+  },
+  "reports": {
+    "subtitle": "سرشماری، زمان انتظار، عواید، شمار تشخیص‌ها و سوابق حسابرسی.",
+    "noAccess": "هیچ گزارشی برای نقش شما باز نیست.",
+    "from": "از",
+    "to": "تا",
+    "presets": {
+      "today": "امروز",
+      "yesterday": "دیروز",
+      "thisMonth": "این ماه",
+      "lastMonth": "ماه گذشته"
+    },
+    "filterDepartment": "بخش",
+    "allDepartments": "همه بخش‌ها",
+    "filterDoctor": "داکتر",
+    "allDoctors": "همه داکتران",
+    "print": "چاپ",
+    "downloadCsv": "دانلود CSV",
+    "loading": "در حال بارگیری…",
+    "error": "این گزارش بارگیری نشد.",
+    "empty": "در این بازه چیزی نیست.",
+    "ownScopeNotice": "فقط ثبت‌های خود شما نشان داده می‌شود.",
+    "open": "باز (در جریان)",
+    "tabs": {
+      "census": "سرشماری",
+      "waitTimes": "زمان انتظار",
+      "revenue": "عواید",
+      "diagnoses": "تشخیص‌ها",
+      "audit": "سوابق حسابرسی",
+      "errors": "خطاها",
+      "export": "استخراج فهرست بیماران"
+    },
+    "census": {
+      "chartTitle": "ویزیت‌ها به تفکیک روز",
+      "totals": "{{visits}} ویزیت · {{completed}} تکمیل شده · {{cancelled}} لغو شده · {{noShow}} عدم حضور",
+      "open": "باز",
+      "col": {
+        "date": "تاریخ",
+        "department": "بخش",
+        "visits": "ویزیت‌ها",
+        "completed": "تکمیل شده",
+        "cancelled": "لغو شده",
+        "noShow": "عدم حضور"
+      }
+    },
+    "waitTimes": {
+      "chartTitle": "میانگین انتظار به تفکیک بخش",
+      "minutes": "{{minutes}} دقیقه",
+      "col": {
+        "department": "بخش",
+        "doctor": "داکتر",
+        "visits": "ویزیت‌ها",
+        "avg": "میانگین انتظار (دقیقه)",
+        "median": "میانه انتظار (دقیقه)"
+      }
+    },
+    "revenue": {
+      "grandTotal": "مجموع دریافتی",
+      "total": "مجموع",
+      "trendTitle": "دریافتی روزانه",
+      "byDepartment": "به تفکیک بخش",
+      "otherDepartment": "سایر",
+      "byMethod": "به تفکیک روش",
+      "col": {
+        "date": "تاریخ",
+        "total": "مجموع"
+      }
+    },
+    "diagnoses": {
+      "chartTitle": "شایع‌ترین تشخیص‌ها",
+      "ownScopeNotice": "فقط بیماران خود شما نشان داده می‌شود.",
+      "col": {
+        "code": "کد ICD",
+        "label": "تشخیص",
+        "count": "شمار"
+      }
+    },
+    "audit": {
+      "action": "عملیه",
+      "anyAction": "هر عملیه",
+      "entity": "موجودیت",
+      "entityPlaceholder": "بیمار، فکتور…",
+      "col": {
+        "when": "زمان",
+        "who": "کی",
+        "action": "عملیه",
+        "entity": "موجودیت"
+      },
+      "pageOf": "صفحه {{page}} از {{total}}",
+      "prev": "قبلی",
+      "next": "بعدی"
+    },
+    "errors": {
+      "status": "حالت",
+      "anyStatus": "هر حالت",
+      "col": {
+        "when": "زمان",
+        "status": "حالت",
+        "request": "درخواست",
+        "message": "پیام",
+        "who": "کی"
+      },
+      "from": "از"
+    },
+    "export": {
+      "explain": "فهرست کامل بیماران را به شکل CSV می‌کشد. فقط ادمین، و هر بار دلیل و زمان آن ثبت می‌شود.",
+      "reason": "دلیل این استخراج",
+      "action": "استخراج فهرست بیماران",
+      "error": "فهرست بیماران استخراج نشد.",
+      "done": "{{count}} بیمار استخراج شد."
+    }
   },
   "queue": {
     "mine": "بیماران شما که امروز منتظر اند، طولانی‌ترین انتظار اول.",
@@ -958,6 +1093,17 @@
       "keep": "مراجعه بماند",
       "saving": "در حال لغو…",
       "failed": "لغو این مراجعه ناکام شد."
+    },
+    "reassign": {
+      "start": "تبدیل داکتر",
+      "practitioner": "داکتر جدید",
+      "choose": "یک داکتر انتخاب کنید",
+      "reason": "چرا این مراجعه تبدیل می‌شود؟",
+      "reasonPlaceholder": "داکتر شیرزی مریض شد",
+      "confirm": "تبدیل کردن",
+      "keep": "مراجعه بماند",
+      "saving": "در حال تبدیل…",
+      "failed": "تبدیل این مراجعه ناکام شد."
     }
   },
   "consultations": {
@@ -1026,7 +1172,15 @@
     "seen": "دیده شده",
     "notSeen": "دیده نشده",
     "noPhone": "شمارهٔ تیلفون ندارد",
-    "openVisit": "باز کردن ملاقات"
+    "openVisit": "باز کردن ملاقات",
+    "response": {
+      "coming": "می‌آید",
+      "not_coming": "نمی‌آید",
+      "custom": "یادداشت",
+      "notePlaceholder": "چه گفت؟",
+      "save": "ذخیره",
+      "cancel": "لغو"
+    }
   },
   "consult": {
     "loading": "در حال باز کردن سابقه…",
@@ -1044,7 +1198,8 @@
       "prescription": "نسخه",
       "labs": "لابراتوار",
       "notes": "یادداشت‌ها",
-      "history": "سابقه"
+      "history": "سابقه",
+      "trends": "روند"
     },
     "separator": "، ",
     "hint": {
@@ -1060,7 +1215,8 @@
       "saveFailed": "{{sections}} ذخیره نشد. چیزی چاپ نشد و مراجعه ختم نشد.",
       "startFirst": "پیش از ختم، معاینه را شروع کنید.",
       "finishFailed": "ختم این مراجعه ناکام شد. چیزی تغییر نکرد.",
-      "saved": "{{sections}} ذخیره شد."
+      "saved": "{{sections}} ذخیره شد.",
+      "paperSize": "کاغذ"
     },
     "unsaved": {
       "title": "کار ذخیره‌ناشده در {{sections}}.",
@@ -1367,6 +1523,22 @@
     "dose": "مقدار",
     "frequency": "تکرار",
     "duration": "مدت"
+  },
+  "trends": {
+    "complaint": {
+      "title": "شکایات در گذر زمان",
+      "empty": "در این مدت شکایتی ثبت نشده است.",
+      "count": "{{count}} شکایت"
+    },
+    "diagnosis": {
+      "title": "تشخیص‌ها در گذر زمان",
+      "empty": "در این مدت تشخیصی ثبت نشده است.",
+      "count": "{{count}} تشخیص"
+    },
+    "lab": {
+      "title": "نتایج لابراتوار در گذر زمان",
+      "empty": "در این مدت نتیجهٔ عددی و تأیید شده‌ای نیست."
+    }
   },
   "codes": {
     "placeholder": "تایپ یا انتخاب کنید…",

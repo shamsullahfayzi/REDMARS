@@ -18,12 +18,14 @@ import {
   changeVisitStatusRequestSchema,
   createVisitRequestSchema,
   queueQuerySchema,
+  reassignPractitionerRequestSchema,
   updateComplaintRequestSchema,
 } from '@redmars/shared';
 import type {
   CancelVisitResponse,
   ConsultContext,
   QueueResponse,
+  ReassignPractitionerResponse,
   VisitHistoryResponse,
   VisitOptionsResponse,
   VisitSummary,
@@ -187,6 +189,40 @@ export class VisitController {
 
     const auth = this.auth(req);
     return this.visits.cancel(auth.facilityId, auth.userId, auth.permissions, id, parsed.data);
+  }
+
+  /**
+   * Fixing who a visit is booked under.
+   *
+   * Gated on `visit.reassign_practitioner`, the same R5 shape as cancel — admin
+   * outright, receptionist same-day and only before the doctor has started. The guard
+   * cannot see the visit to check that, so the condition travels on request.auth.permissions
+   * and the service applies it, mirroring `cancel` exactly.
+   */
+  @Post(':id/reassign-practitioner')
+  @RequirePermission('visit.reassign_practitioner')
+  @HttpCode(200)
+  reassignPractitioner(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ): Promise<ReassignPractitionerResponse> {
+    const parsed = reassignPractitionerRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid reassignment',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+
+    const auth = this.auth(req);
+    return this.visits.reassignPractitioner(
+      auth.facilityId,
+      auth.userId,
+      auth.permissions,
+      id,
+      parsed.data,
+    );
   }
 
   /**

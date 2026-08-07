@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type {
+  BillPrescriptionRequest,
+  ConfirmHandoverResponse,
   DispenseResponse,
   ReturnMedicineRequest,
   ReturnMedicineResponse,
@@ -18,14 +20,22 @@ import { NumberSequenceService } from '../../services/number-sequence.service';
 const ZERO = new Prisma.Decimal(0);
 
 /**
- * Task 6.10 — dispensing, and the pharmacy bill.
+ * Task 6.10 — dispensing, and the pharmacy bill. Two steps, not one.
  *
- * Dispensing a prescription does two things at once: it marks the sheet dispensed (which
- * takes it off the queue), and it raises a pharmacy-origin invoice for the drugs — the line
- * items are `prescription_item`, so the invoice reads as a pharmacy bill everywhere the
- * origin is shown (6.2). The prices are the formulary's, read here at the till; the browser
- * sends nothing but the instruction to dispense (guardrail 7). The patient then pays that
- * bill with the ordinary payment machinery (6.3), at the pharmacy till.
+ * BILLING (`bill`) and the actual HANDOVER (`confirmHandover`) used to be a single action —
+ * click once, the sheet is marked dispensed AND the invoice raised, before a single afghani
+ * had moved. That let medicine leave the building on the strength of a click, with the bill
+ * settled (or not) as an afterthought. Now: `bill` takes the price the pharmacist typed for
+ * every line — the formulary's `Drug.sellPrice` is only ever a suggested starting figure the
+ * prescription screen pre-fills (many drugs have none at all, which used to mean a silent
+ * 0.00 bill with no way to fix it) — and raises a pharmacy-origin invoice from those typed
+ * prices. The line items are `prescription_item`, so it reads as a pharmacy bill everywhere
+ * the origin is shown (6.2) and lands in Collections (6b.7) like any other unpaid till, for
+ * RECEPTION to collect — the pharmacy counter has no payment form of its own. Only once that
+ * invoice is fully paid does `confirmHandover` become reachable, and only then does the
+ * prescription leave the queue. What the server never trusts is which prescription is being
+ * billed, whether it was billed already, or whether the priced set of items matches the sheet
+ * — that much stays guardrail 7; the actual afghani figures are the pharmacist's to type.
  */
 @Injectable()
 export class DispenseService {
@@ -34,10 +44,13 @@ export class DispenseService {
     private readonly sequence: NumberSequenceService,
   ) {}
 
-  async dispense(
+  /** Step one — price the sheet at what the pharmacist typed and raise its bill. Does not
+   *  touch the prescription's status. */
+  async bill(
     facilityId: string,
     userId: string,
     prescriptionId: string,
+    input: BillPrescriptionRequest,
   ): Promise<DispenseResponse> {
     const result = await this.prisma.db.$transaction(async (tx) => {
       const prescription = await tx.prescription.findFirst({
@@ -49,12 +62,7 @@ export class DispenseService {
           visit: { select: { id: true, patientId: true } },
           items: {
             orderBy: { sequence: 'asc' },
-            select: {
-              id: true,
-              drugNameAtTime: true,
-              quantity: true,
-              drug: { select: { sellPrice: true } },
-            },
+            select: { id: true, drugNameAtTime: true, quantity: true },
           },
         },
       });
@@ -72,12 +80,41 @@ export class DispenseService {
         });
       }
 
-      // Price every line from the formulary. A drug with no price is a zero line — a
-      // free-issue item, not a blocked one — and the quantity falls back to one when the
-      // prescriber left it blank.
+      // Already billed? Same lookup `returnMedicine` uses to find a sheet's own invoice —
+      // one bill per prescription, checked before raising a second.
+      const alreadyBilled = await tx.invoiceItem.findFirst({
+        where: {
+          refType: 'prescription_item',
+          refId: { in: prescription.items.map((item) => item.id) },
+        },
+        select: { id: true },
+      });
+      if (alreadyBilled) {
+        throw new ConflictException({
+          message: 'This prescription was just billed at another bench. Reload.',
+          code: 'already_billed',
+        });
+      }
+
+      // The priced set the pharmacist sent must be exactly the sheet's own items — not a
+      // subset, not an extra line smuggled in from somewhere else.
+      const priceByItemId = new Map(input.items.map((line) => [line.itemId, line.unitPrice]));
+      const sheetItemIds = new Set(prescription.items.map((item) => item.id));
+      const pricedMatchesSheet =
+        priceByItemId.size === sheetItemIds.size &&
+        [...sheetItemIds].every((id) => priceByItemId.has(id));
+      if (!pricedMatchesSheet) {
+        throw new BadRequestException({
+          message: 'Every drug on this sheet needs a price, and only those drugs.',
+          code: 'price_mismatch',
+        });
+      }
+
+      // Priced at what the pharmacist typed, not the formulary — quantity falls back to one
+      // when the prescriber left it blank.
       const lines = prescription.items.map((item) => {
         const quantity = item.quantity ?? 1;
-        const unitPrice = item.drug.sellPrice ?? ZERO;
+        const unitPrice = new Prisma.Decimal(priceByItemId.get(item.id)!);
         return {
           refType: 'prescription_item',
           refId: item.id,
@@ -89,20 +126,6 @@ export class DispenseService {
       });
       const subtotal = lines.reduce((sum, line) => sum.add(line.total), ZERO);
 
-      // Guarded mark-dispensed: only if it is still active and un-dispensed, so two benches
-      // cannot both dispense (and double-bill) the same sheet. A lost race rolls the whole
-      // transaction back — invoice number and all.
-      const marked = await tx.prescription.updateMany({
-        where: { id: prescriptionId, status: 'active', dispensedAt: null },
-        data: { status: 'completed', dispensedAt: new Date(), dispensedBy: userId },
-      });
-      if (marked.count === 0) {
-        throw new ConflictException({
-          message: 'This prescription was just dispensed at another bench. Reload.',
-          code: 'already_dispensed',
-        });
-      }
-
       const invoiceNo = await this.sequence.next(facilityId, 'invoice_no', undefined, tx);
       const invoice = await tx.invoice.create({
         data: {
@@ -113,8 +136,9 @@ export class DispenseService {
           invoiceNo: invoiceNo.formatted,
           subtotal,
           total: subtotal,
-          // A priced bill is issued and settled at the till; a wholly free-issue sheet has
-          // nothing to pay, so it is born paid.
+          // A wholly free-issue sheet has nothing to pay, so it is born paid — the handover
+          // gate below reads exactly this field, so a free sheet is never stuck behind a
+          // payment that was never owed.
           paidAmount: ZERO,
           status: subtotal.greaterThan(ZERO) ? 'issued' : 'paid',
           items: { create: lines },
@@ -155,6 +179,72 @@ export class DispenseService {
         total: item.total.toFixed(2),
       })),
     };
+  }
+
+  /**
+   * Step two — the actual handover, reachable only once `bill`'s invoice is fully paid. This
+   * is the check that used to not exist: medicine left the building the moment `dispense`
+   * was clicked, paid or not. Re-checked here against the invoice itself, never trusting
+   * whatever the screen that offered the button believed.
+   */
+  async confirmHandover(
+    facilityId: string,
+    userId: string,
+    prescriptionId: string,
+  ): Promise<ConfirmHandoverResponse> {
+    const prescription = await this.prisma.db.prescription.findFirst({
+      where: { id: prescriptionId, visit: { facilityId } },
+      select: {
+        id: true,
+        status: true,
+        dispensedAt: true,
+        items: { select: { id: true } },
+      },
+    });
+    if (!prescription) throw new NotFoundException('Prescription not found');
+    if (prescription.status !== 'active' || prescription.dispensedAt !== null) {
+      throw new BadRequestException({
+        message: 'This prescription has already been handed over.',
+        code: 'already_dispensed',
+      });
+    }
+
+    const itemIds = prescription.items.map((item) => item.id);
+    const billedItem = await this.prisma.db.invoiceItem.findFirst({
+      where: { refType: 'prescription_item', refId: { in: itemIds } },
+      select: { invoice: { select: { total: true, paidAmount: true, status: true } } },
+    });
+    if (!billedItem) {
+      throw new BadRequestException({
+        message: 'This prescription has not been billed yet.',
+        code: 'not_billed',
+      });
+    }
+    const fullyPaid =
+      billedItem.invoice.status === 'paid' ||
+      billedItem.invoice.paidAmount.greaterThanOrEqualTo(billedItem.invoice.total);
+    if (!fullyPaid) {
+      throw new ForbiddenException({
+        message: 'The bill for this prescription is not fully paid yet.',
+        code: 'not_paid',
+      });
+    }
+
+    // Guarded mark-dispensed: only if it is still active and un-dispensed, so two benches
+    // cannot both complete the same handover.
+    const now = new Date();
+    const marked = await this.prisma.db.prescription.updateMany({
+      where: { id: prescriptionId, status: 'active', dispensedAt: null },
+      data: { status: 'completed', dispensedAt: now, dispensedBy: userId },
+    });
+    if (marked.count === 0) {
+      throw new ConflictException({
+        message: 'This prescription was just handed over at another bench. Reload.',
+        code: 'already_dispensed',
+      });
+    }
+
+    return { prescriptionId, status: 'completed', dispensedAt: now.toISOString() };
   }
 
   /**

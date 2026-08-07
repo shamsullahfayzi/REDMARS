@@ -84,6 +84,116 @@ const DEPARTMENTS: Array<{
     nameLocalPs: 'اداره',
     type: DepartmentType.administration,
   },
+  // The rest of these (task: Medi-Pro migration) come from the grp codes actually
+  // used on the old system's service list — a real multi-specialty OPD roster, not
+  // just Farhat's psych focus. DepartmentType only has 7 buckets, so most specialty
+  // clinics land under `opd` (they ARE outpatient clinics); imaging modalities
+  // (ultrasound, doppler) fold into RAD rather than getting their own type.
+  {
+    code: 'IPD',
+    name: 'Inpatient Department',
+    nameLocalPrs: 'بخش بستری',
+    nameLocalPs: 'د بستري کیدو څانګه',
+    type: DepartmentType.ipd,
+  },
+  {
+    code: 'EME',
+    name: 'Emergency',
+    nameLocalPrs: 'عاجل',
+    nameLocalPs: 'عاجل',
+    type: DepartmentType.emergency,
+  },
+  {
+    code: 'RAD',
+    name: 'Radiology',
+    nameLocalPrs: 'رادیولوژی',
+    nameLocalPs: 'رادیولوژي',
+    type: DepartmentType.radiology,
+  },
+  {
+    code: 'CAR',
+    name: 'Cardiology',
+    nameLocalPrs: 'قلب',
+    nameLocalPs: 'زړه',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'NEURO',
+    name: 'Neurosurgery',
+    nameLocalPrs: 'نیوروسرجری',
+    nameLocalPs: 'نیوروسرجري',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'OPEN',
+    name: 'General & Open Surgery',
+    nameLocalPrs: 'جراحی عمومی',
+    nameLocalPs: 'عمومي جراحي',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'DENTA',
+    name: 'Dental',
+    nameLocalPrs: 'دندان',
+    nameLocalPs: 'غاښونه',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'URO',
+    name: 'Urology',
+    nameLocalPrs: 'یورولوژی',
+    nameLocalPs: 'یورولوژي',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'GYN',
+    name: 'Gynecology & Obstetrics',
+    nameLocalPrs: 'نسائی و ولادی',
+    nameLocalPs: 'ښځینه او زیږون',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'PED',
+    name: 'Pediatrics',
+    nameLocalPrs: 'اطفال',
+    nameLocalPs: 'ماشومان',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'INTER',
+    name: 'Internal Medicine',
+    nameLocalPrs: 'داخله',
+    nameLocalPs: 'داخله',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'PHYS',
+    name: 'Physiotherapy',
+    nameLocalPrs: 'فزیوتراپی',
+    nameLocalPs: 'فزیوتراپي',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'DIALY',
+    name: 'Dialysis',
+    nameLocalPrs: 'دیالیز',
+    nameLocalPs: 'ډیالیز',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'ENDO',
+    name: 'Endoscopy',
+    nameLocalPrs: 'اندوسکوپی',
+    nameLocalPs: 'اندوسکوپي',
+    type: DepartmentType.opd,
+  },
+  {
+    code: 'ANE',
+    name: 'Anesthesia',
+    nameLocalPrs: 'بیهوشی',
+    nameLocalPs: 'بیهوښي',
+    type: DepartmentType.opd,
+  },
 ];
 
 async function seedFacility() {

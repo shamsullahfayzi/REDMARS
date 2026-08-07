@@ -22,6 +22,26 @@ export const DEPARTMENT_TYPES = [
 ] as const
 export type DepartmentType = (typeof DEPARTMENT_TYPES)[number]
 
+/**
+ * The five department types a PATIENT is ever checked into or billed against — the fixed
+ * taxonomy Reports' revenue breakdown and the reception check-in picker both use.
+ *
+ * Deliberately narrower than `DEPARTMENT_TYPES`: `administration` never sees a patient, and
+ * `radiology` is a real clinical type this facility doesn't run yet — both would otherwise
+ * be a receptionist's 5th/6th/7th option on a screen where every extra choice costs a
+ * patient standing at the desk time. Revenue that lands outside this set (an invoice with
+ * no visit, or a department type added here later) still counts — see reports.ts's `other`
+ * bucket — it just isn't one of the five named categories.
+ */
+export const CLINICAL_DEPARTMENT_TYPES = [
+  'opd',
+  'ipd',
+  'emergency',
+  'laboratory',
+  'pharmacy',
+] as const
+export type ClinicalDepartmentType = (typeof CLINICAL_DEPARTMENT_TYPES)[number]
+
 // The shape sent to the browser. No facilityId: one tenant per database, and the
 // client never needs it — same discipline as userSummarySchema omitting the hash.
 export const departmentSummarySchema = z.object({

@@ -42,6 +42,7 @@ describe('Visit create (e2e)', () => {
   let opdId: string;
   let labId: string;
   let closedDeptId: string;
+  let adminDeptId: string;
   let drOpdId: string;
   let drLabOnlyId: string;
   let drRetiredId: string;
@@ -154,9 +155,18 @@ describe('Visit create (e2e)', () => {
         isActive: false,
       },
     });
+    const admin = await prisma.department.create({
+      data: {
+        facilityId,
+        code: `${PREFIX}ADMIN`,
+        name: 'E2E Administration',
+        type: 'administration',
+      },
+    });
     opdId = opd.id;
     labId = lab.id;
     closedDeptId = closed.id;
+    adminDeptId = admin.id;
 
     // Works OPD only. Booking him into the laboratory must fail.
     const drOpd = await prisma.practitioner.create({
@@ -432,6 +442,28 @@ describe('Visit create (e2e)', () => {
     const labDoctor = options.practitioners.find((p) => p.id === drLabOnlyId);
     expect(labDoctor?.departmentIds).toEqual([labId]);
     expect(labDoctor?.name).toBe('Wazhma Karimi');
+  });
+
+  it('the department picker excludes non-clinical types — administration is not a place a patient checks into', async () => {
+    const res = await request(server)
+      .get('/visits/options')
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .expect(200);
+
+    const options = res.body as VisitOptionsResponse;
+    expect(options.departments.map((d) => d.id)).not.toContain(adminDeptId);
+    expect(options.departments.map((d) => d.id)).toContain(opdId);
+  });
+
+  it('each doctor carries a code — the fast-typed check-in field needs it', async () => {
+    const res = await request(server)
+      .get('/visits/options')
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .expect(200);
+
+    const options = res.body as VisitOptionsResponse;
+    const drOpd = options.practitioners.find((p) => p.name === 'Hafizullah Sherzai');
+    expect(drOpd?.code).toBe(`${PREFIX}DR1`);
   });
 
   it("another facility's visit is a 404 on read", async () => {

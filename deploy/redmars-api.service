@@ -1,0 +1,35 @@
+# REDMARS API — systemd unit (see docs/server-install.md step 8).
+#
+# Runs the BUILT app (`pnpm build` first, from the repo root) rather than
+# ts-node/watch — lower memory, no recompile-on-change surprise on a server
+# nobody is actively editing code on.
+#
+# Placeholders to fix before `systemctl enable` on the real box:
+#   - ExecStart's node path: `which node`
+#   - WorkingDirectory: wherever you actually cloned the repo
+
+[Unit]
+Description=REDMARS API
+After=network.target docker.service
+Requires=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=redmars
+Group=redmars
+WorkingDirectory=/opt/redmars/apps/api
+EnvironmentFile=/opt/redmars/apps/api/.env
+ExecStart=/usr/bin/node dist/main.js
+Restart=on-failure
+RestartSec=5
+
+# Same non-root reasoning as the Docker services in docker-compose.yml (task 7.3) —
+# a dedicated system account, no login shell, no privilege this process doesn't need.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/redmars/apps/api
+
+[Install]
+WantedBy=multi-user.target

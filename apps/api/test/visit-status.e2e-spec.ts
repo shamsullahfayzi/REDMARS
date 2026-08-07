@@ -317,8 +317,8 @@ describe('Visit status transitions (e2e)', () => {
   });
 
   it('refuses `cancelled` here: ending a visit early is a different authority', () =>
-    // visit.cancel (admin, or receptionist within R5) — not visit.change_status, which
-    // every clinical role holds. The contract refuses it so this cannot be a back door.
+    // visit.cancel (admin, or receptionist within R5) — not visit.change_status, which the
+    // clinical roles hold. The contract refuses it so this cannot be a back door.
     seedVisit('arrived').then((id) => move(id, { status: 'cancelled' }).expect(400)));
 
   it('refuses `entered_in_error` here: voiding is admin-only', () =>
@@ -361,9 +361,9 @@ describe('Visit status transitions (e2e)', () => {
   it('a nurse may move a visit: she is the one who calls patients through', () =>
     seedVisit('arrived').then((id) => move(id, { status: 'in_progress' }, nurseToken).expect(200)));
 
-  it('a receptionist may move a visit', () =>
+  it('a receptionist may not: checking a patient in is not moving them through care', () =>
     seedVisit('arrived').then((id) =>
-      move(id, { status: 'in_progress' }, receptionistToken).expect(200),
+      move(id, { status: 'in_progress' }, receptionistToken).expect(403),
     ));
 
   it('a pharmacist may not: they hold no visit.change_status', () =>

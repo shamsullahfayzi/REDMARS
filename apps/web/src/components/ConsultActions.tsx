@@ -2,8 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { CheckCircle2, LogOut, Printer, Save, TriangleAlert } from 'lucide-react'
-import { VISIT_STATUS_TRANSITIONS, isVisitOpen, type VisitSummary } from '@redmars/shared'
+import {
+  PAPER_SIZES,
+  VISIT_STATUS_TRANSITIONS,
+  isVisitOpen,
+  type PaperSize,
+  type VisitSummary,
+} from '@redmars/shared'
 import { Button } from '@/components/ui/button'
+import { Select } from '@/components/ui/select'
 import { useConsultSave } from '@/hooks/useConsultSave'
 import { useChangeVisitStatus } from '@/hooks/useVisitStatus'
 import { cn } from '@/lib/utils'
@@ -37,7 +44,15 @@ import { cn } from '@/lib/utils'
 
 type Tone = 'ok' | 'warn'
 
-export function ConsultActions({ visit }: { visit: VisitSummary }) {
+export function ConsultActions({
+  visit,
+  paperSize,
+  onPaperSizeChange,
+}: {
+  visit: VisitSummary
+  paperSize: PaperSize
+  onPaperSizeChange: (size: PaperSize) => void
+}) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { dirtyKeys, saving, saveAll } = useConsultSave()
@@ -226,6 +241,29 @@ export function ConsultActions({ visit }: { visit: VisitSummary }) {
           mouse and there should not be two code paths to keep in step. */}
       <div className="sticky bottom-0 flex flex-wrap items-center gap-2 border-t border-border bg-background/95 py-2 backdrop-blur">
         <KeyAction hint="F2" label={t('consult.hotkeys.saveContinue')} icon={Save} onRun={save} disabled={busy} />
+        {/*
+          Task: the doctor's own choice of OUTPUT PAPER, made right where they print — not a
+          facility setting they'd have to leave this screen to change. Farhat stocks
+          pre-printed A4 letterhead for the normal case and a smaller A5 pad elsewhere; each
+          has its own header/footer artwork already on it, so PrescriptionSheet blanks a
+          different top/bottom margin per size (packages/shared/printSettings.ts) rather than
+          drawing anything over it.
+        */}
+        <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          {t('consult.hotkeys.paperSize')}
+          <Select
+            className="w-auto py-1"
+            aria-label={t('consult.hotkeys.paperSize')}
+            value={paperSize}
+            onChange={(event) => onPaperSizeChange(event.target.value as PaperSize)}
+          >
+            {PAPER_SIZES.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </Select>
+        </label>
         <KeyAction
           hint="F4"
           label={t('consult.hotkeys.savePrint')}

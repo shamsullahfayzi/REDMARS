@@ -67,6 +67,7 @@ describe('Collections worklist (e2e)', () => {
     refType: 'service' | 'lab_order_item' | 'prescription_item';
     total: string;
     paidAmount: string;
+    createdAt?: Date;
   }): Promise<string> {
     counter += 1;
     const invoice = await prisma.invoice.create({
@@ -79,6 +80,7 @@ describe('Collections worklist (e2e)', () => {
         total: overrides.total,
         paidAmount: overrides.paidAmount,
         status: overrides.status,
+        ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
         items: {
           create: [
             {
@@ -96,8 +98,8 @@ describe('Collections worklist (e2e)', () => {
     return invoice.id;
   }
 
-  const list = (as = 'recep') =>
-    request(server).get('/collections').set('Authorization', `Bearer ${tokens[as]}`);
+  const list = (as = 'recep', query = '') =>
+    request(server).get(`/collections${query}`).set('Authorization', `Bearer ${tokens[as]}`);
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -178,5 +180,61 @@ describe('Collections worklist (e2e)', () => {
     const body = (await list('pharmacist').expect(200)).body as CollectionsListResponse;
     expect(body.bills.some((b) => b.origin === 'pharmacy')).toBe(true);
     expect(body.bills.some((b) => b.origin === 'lab')).toBe(false);
+  });
+
+  /**
+   * A bill that has been sitting unpaid for a while is a MORE urgent reason to be on this
+   * worklist, not a reason to be hidden — so unlike Reports and Invoices, this list gets no
+   * default date window. `from`/`to`, when given, only narrow it.
+   */
+  it('shows an old unpaid bill with no date filter, and total/page/limit are always present', async () => {
+    const body = (await list().expect(200)).body as CollectionsListResponse;
+    expect(body.bills).toHaveLength(2);
+    expect(body.total).toBe(2);
+    expect(body.page).toBe(1);
+    expect(body.limit).toBe(50);
+  });
+
+  it('narrows by from/to without hiding anything when the range is not given', async () => {
+    const farPast = new Date('2020-01-01T00:00:00Z');
+    const staleId = await stageInvoice({
+      status: 'issued',
+      refType: 'lab_order_item',
+      total: '999',
+      paidAmount: '0',
+      createdAt: farPast,
+    });
+
+    const unfiltered = (await list().expect(200)).body as CollectionsListResponse;
+    expect(unfiltered.bills.some((b) => b.id === staleId)).toBe(true);
+
+    const narrowed = (await list('recep', '?from=2026-01-01').expect(200))
+      .body as CollectionsListResponse;
+    expect(narrowed.bills.some((b) => b.id === staleId)).toBe(false);
+
+    await prisma.invoice.delete({ where: { id: staleId } });
+  });
+
+  it('searches by patient name, MRN or invoice number, same as the register', async () => {
+    const byName = (await list('recep', '?q=Zarghona').expect(200)).body as CollectionsListResponse;
+    expect(byName.bills.length).toBeGreaterThan(0);
+
+    const byNothing = (await list('recep', '?q=no-such-patient-xyz').expect(200))
+      .body as CollectionsListResponse;
+    expect(byNothing.bills).toHaveLength(0);
+    expect(byNothing.total).toBe(0);
+  });
+
+  it('paginates the result, newest first', async () => {
+    const page1 = (await list('recep', '?limit=1&page=1').expect(200))
+      .body as CollectionsListResponse;
+    expect(page1.bills).toHaveLength(1);
+    expect(page1.total).toBe(2);
+    expect(page1.limit).toBe(1);
+
+    const page2 = (await list('recep', '?limit=1&page=2').expect(200))
+      .body as CollectionsListResponse;
+    expect(page2.bills).toHaveLength(1);
+    expect(page2.bills[0].id).not.toBe(page1.bills[0].id);
   });
 });

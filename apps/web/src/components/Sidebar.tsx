@@ -105,7 +105,9 @@ export function Sidebar({ roles, enabledModules, open, onClose }: SidebarProps) 
  * fires the request.
  */
 function CollectionsNavBadge() {
-  const query = useCollectionsList()
+  // Sorted newest-first server-side, so page 1 already holds every bill that could be
+  // "new since last seen" — no need to page through the whole worklist for a badge count.
+  const query = useCollectionsList({ page: 1 })
   const bills = query.data?.bills ?? []
   const lastSeen = getCollectionsLastSeen()
   const newCount = bills.filter((bill) => bill.createdAt > lastSeen).length

@@ -11,10 +11,22 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { QUEUE_POLL_MS, useQueue, waitTone } from '@/hooks/useQueue'
-import { useCancelVisit, useChangeVisitStatus } from '@/hooks/useVisitStatus'
+import { useCancelVisit, useChangeVisitStatus, useReassignPractitioner } from '@/hooks/useVisitStatus'
 import { useVisitOptions } from '@/hooks/useVisits'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
+
+/**
+ * One day before a YYYY-MM-DD, in the same string shape. Takes the SERVER'S `today` (task
+ * 3.7's own facility-zone day), never a local `new Date()` — this screen already documents
+ * why the day boundary has to come from the server, and re-deriving "yesterday" from the
+ * browser's clock would reopen exactly that bug for a doctor near a UTC offset boundary.
+ */
+function dayBefore(dateStr: string): string {
+  const d = new Date(`${dateStr}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
 
 /**
  * Task 3.7 — the queue.
@@ -137,13 +149,32 @@ export function QueuePage() {
 
         <div className="space-y-1.5">
           <Label htmlFor="queueDate">{t('queue.date')}</Label>
-          <Input
-            id="queueDate"
-            type="date"
-            dir="ltr"
-            value={date || (data?.date ?? '')}
-            onChange={(e) => setDate(e.target.value)}
-          />
+          <div className="flex items-center gap-1.5">
+            <Input
+              id="queueDate"
+              type="date"
+              dir="ltr"
+              value={date || (data?.date ?? '')}
+              onChange={(e) => setDate(e.target.value)}
+            />
+            {/* Quick jump, not a default: the queue itself already opens to today with no
+                filter (task 3.7's own day boundary). "Yesterday" is here because a doctor
+                asking to look back one day shouldn't have to know the date. */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!today}
+              onClick={() => today && setDate(dayBefore(today))}
+            >
+              {t('reports.presets.yesterday')}
+            </Button>
+            {date !== '' && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => setDate('')}>
+                {t('reports.presets.today')}
+              </Button>
+            )}
+          </div>
         </div>
 
         <label className="flex h-10 items-center gap-2 text-sm text-foreground">
@@ -392,6 +423,8 @@ function QueueRow({
 
         <StatusActions entry={entry} />
 
+        <ReassignPractitionerAction entry={entry} />
+
         <CancelVisitAction entry={entry} />
 
         {/* The done-when of task 4.1: this is how a doctor opens a patient. It points at
@@ -477,18 +510,111 @@ function CancelVisitAction({ entry }: { entry: QueueEntry }) {
 }
 
 /**
+ * Fixing who a visit is booked under.
+ *
+ * Same two-step shape as cancel, and for the same reason: a reason is mandatory, so
+ * there is no one-click reassign. Offered only to the desk and to administrators,
+ * matching `visit.reassign_practitioner` — the server applies R5's same-day and
+ * "before the next step" clauses on top of that.
+ */
+function ReassignPractitionerAction({ entry }: { entry: QueueEntry }) {
+  const { t } = useTranslation()
+  const { roles } = useAuth()
+  const optionsQuery = useVisitOptions()
+  const reassign = useReassignPractitioner(entry.id)
+  const [open, setOpen] = useState(false)
+  const [practitionerId, setPractitionerId] = useState('')
+  const [reason, setReason] = useState('')
+
+  const mayReassign = roles.includes('admin') || roles.includes('receptionist')
+  const reassignable = entry.status !== 'completed' && entry.status !== 'cancelled'
+  if (!mayReassign || !reassignable) return null
+
+  const choices = (optionsQuery.data?.practitioners ?? []).filter(
+    (p) => p.departmentIds.includes(entry.departmentId) && p.id !== entry.practitionerId,
+  )
+  if (choices.length === 0 && !open) return null
+
+  if (!open) {
+    return (
+      <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(true)}>
+        <Stethoscope className="size-4" aria-hidden />
+        {t('queue.reassign.start')}
+      </Button>
+    )
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-2 rounded-lg border border-input bg-muted/30 p-3">
+      <Label htmlFor={`reassign-doc-${entry.id}`}>{t('queue.reassign.practitioner')}</Label>
+      <Select
+        id={`reassign-doc-${entry.id}`}
+        value={practitionerId}
+        autoFocus
+        onChange={(e) => setPractitionerId(e.target.value)}
+      >
+        <option value="">{t('queue.reassign.choose')}</option>
+        {choices.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </Select>
+      <Label htmlFor={`reassign-reason-${entry.id}`}>{t('queue.reassign.reason')}</Label>
+      <Input
+        id={`reassign-reason-${entry.id}`}
+        value={reason}
+        placeholder={t('queue.reassign.reasonPlaceholder')}
+        onChange={(e) => setReason(e.target.value)}
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          disabled={reassign.isPending || !practitionerId || reason.trim().length < 3}
+          onClick={() =>
+            reassign.mutate(
+              { practitionerId, reason: reason.trim() },
+              { onSuccess: () => setOpen(false) },
+            )
+          }
+        >
+          {reassign.isPending ? t('queue.reassign.saving') : t('queue.reassign.confirm')}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
+          {t('queue.reassign.keep')}
+        </Button>
+      </div>
+      {reassign.isError && (
+        <p className="text-xs text-destructive">
+          {reassign.error instanceof ApiError && typeof reassign.error.body === 'object'
+            ? ((reassign.error.body as { message?: string }).message ?? t('queue.reassign.failed'))
+            : t('queue.reassign.failed')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
  * The moves this visit can actually make, as buttons (task 3.9).
  *
  * Driven by the shared transition map rather than a list written out here, so the screen
  * cannot offer a button the server will refuse — and cannot quietly stop offering one
  * when the rules change on the server side only.
+ *
+ * Nurse/doctor only, matching `visit.change_status`. Moving a patient through hold /
+ * in-progress / complete is a clinical call, not desk work — the receptionist checks
+ * people in (`visit.create`) but does not hold this.
  */
 function StatusActions({ entry }: { entry: QueueEntry }) {
   const { t } = useTranslation()
+  const { roles } = useAuth()
   const change = useChangeVisitStatus(entry.id)
   const moves = allowedStatusChanges(entry.status)
 
-  if (moves.length === 0) return null
+  const mayChangeStatus = roles.includes('nurse') || roles.includes('doctor')
+  if (!mayChangeStatus || moves.length === 0) return null
 
   return (
     <div className="flex flex-col items-end gap-1">

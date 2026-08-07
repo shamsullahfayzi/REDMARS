@@ -13,8 +13,9 @@ import {
   Pill,
   Play,
   TestTube,
+  TrendingUp,
 } from 'lucide-react'
-import { defaultPrintSettings, isVisitOpen, type ConsultContext } from '@redmars/shared'
+import { defaultPrintSettings, isVisitOpen, type ConsultContext, type PaperSize } from '@redmars/shared'
 import { AllergyBanner } from '@/components/AllergyBanner'
 import { AllergyEditor } from '@/components/AllergyEditor'
 import { ConsultActions } from '@/components/ConsultActions'
@@ -26,6 +27,7 @@ import { NotesTab } from '@/components/NotesTab'
 import { PrescriptionSheet } from '@/components/PrescriptionSheet'
 import { LabResultSheet } from '@/components/LabResultSheet'
 import { PrescriptionTab } from '@/components/PrescriptionTab'
+import { TrendsTab } from '@/components/TrendsTab'
 import { VitalsTab } from '@/components/VitalsTab'
 import { useAuth } from '@/auth/authContext'
 import { Badge } from '@/components/ui/badge'
@@ -70,6 +72,7 @@ const TABS = [
   { key: 'vitals', icon: Activity },
   { key: 'complaint', icon: MessageSquare },
   { key: 'history', icon: History },
+  { key: 'trends', icon: TrendingUp },
   // Module-gated: the laboratory is optional (task 2.13), so this tab is present only when
   // the facility has it on. The server re-checks the module on every lab route regardless.
   { key: 'labs', icon: TestTube, module: 'lab' },
@@ -87,6 +90,11 @@ export function ConsultPage() {
   const { enabledModules } = useAuth()
   const contextQuery = useConsultContext(visitId)
   const [tab, setTab] = useState<TabKey>('vitals')
+  // Task: doctor picks the OUTPUT PAPER at print time, not a facility setting buried in an
+  // admin screen. The facility default (Farhat: A4) is only the picker's opening value —
+  // this is a per-print, unsaved choice, because the same visit's follow-up copy might go
+  // on a different pad than the original.
+  const [paperSize, setPaperSize] = useState<PaperSize>(() => defaultPrintSettings().paperSize)
 
   // A module-tagged tab (labs) shows only where its module is on. Hiding is courtesy — every
   // lab route is module-guarded on the server too.
@@ -147,9 +155,10 @@ export function ConsultPage() {
                   departmentId={context.visit.departmentId}
                 />
               ),
+              trends: <TrendsTab patient={context.patient} />,
             }}
           />
-          <ConsultActions visit={context.visit} />
+          <ConsultActions visit={context.visit} paperSize={paperSize} onPaperSizeChange={setPaperSize} />
         </div>
 
         {/*
@@ -161,7 +170,7 @@ export function ConsultPage() {
           page. Settings come from the shared defaults — Farhat's sheet — until the admin
           screen that writes them per facility exists.
         */}
-        <PrescriptionSheet context={context} settings={defaultPrintSettings()} />
+        <PrescriptionSheet context={context} settings={{ ...defaultPrintSettings(), paperSize }} />
         {/* The lab result report — a second hidden sheet. Which one prints is chosen by the
             data-print-target stamp (lib/print.ts); F4 prints the prescription, the Labs tab's
             Print prints this. Mounted only where the lab is on. */}

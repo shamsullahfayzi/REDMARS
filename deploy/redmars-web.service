@@ -1,0 +1,31 @@
+# REDMARS Web — systemd unit (see docs/server-install.md step 8).
+#
+# Runs Vite's OWN dev server with --host, exactly what Caddyfile already expects
+# (`reverse_proxy host.docker.internal:5173`) — no Caddyfile change needed. This is
+# the "test it" path, not the eventual production one: a real static build served
+# by Caddy directly is simpler and faster, and is worth doing once this is past a
+# pilot (task 7.13 territory — the container work will likely change this file
+# entirely, so it isn't worth building the static-serve path early).
+#
+# Placeholders to fix before `systemctl enable` on the real box:
+#   - ExecStart's pnpm path: `which pnpm`
+#   - WorkingDirectory: wherever you actually cloned the repo (repo ROOT, not
+#     apps/web — pnpm --filter needs the workspace root)
+
+[Unit]
+Description=REDMARS Web
+After=network.target
+
+[Service]
+Type=simple
+User=redmars
+Group=redmars
+WorkingDirectory=/opt/redmars
+ExecStart=/usr/bin/pnpm --filter web dev -- --host 0.0.0.0
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

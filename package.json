@@ -10,11 +10,17 @@
   "seed": "pnpm --filter api exec prisma db seed",
   "db:backup": "docker compose exec backup sh /usr/local/bin/backup.sh",
   "db:backups": "docker compose exec backup ls -lh /backups",
+  "db:restore": "docker compose exec backup sh /usr/local/bin/restore.sh",
+  "certs:gen": "sh scripts/gen-lan-cert.sh",
   "db:reset": "docker compose down -v",
   "dev:api": "pnpm --filter api start:dev",
   "dev:web": "pnpm --filter web dev",
   "dev": "pnpm --filter @redmars/shared build && pnpm --parallel -r dev",
-  "build": "pnpm --filter @redmars/shared build && pnpm -r build"
+  "build": "pnpm --filter @redmars/shared build && pnpm -r build",
+  "deploy:up": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --wait",
+  "deploy:down": "docker compose -f docker-compose.yml -f docker-compose.prod.yml down",
+  "deploy:logs": "docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f api web caddy",
+  "deploy:config": "docker compose -f docker-compose.yml -f docker-compose.prod.yml config"
 },
   "keywords": [],
   "author": "",
@@ -22,7 +28,7 @@
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "^11.13.0",
+      "version": "11.13.0",
       "onFail": "download"
     }
   },

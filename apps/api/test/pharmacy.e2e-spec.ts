@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import type {
+  ConfirmHandoverResponse,
   DispenseResponse,
   LoginResponse,
   PharmacyPrescription,
@@ -36,7 +37,9 @@ describe('Pharmacy queue (e2e)', () => {
   let detailPrescriptionId: string;
   let otherPrescriptionId: string;
   let dispensePrescriptionId: string;
+  let dispenseItemIds: string[];
   let returnPrescriptionId: string;
+  let returnItemIds: string[];
   let oldDispensedId: string;
   let pharmId: string;
   const tokens: Record<string, string> = {};
@@ -150,6 +153,7 @@ describe('Pharmacy queue (e2e)', () => {
 
     pharmId = await seedActor('pharm', 'pharmacist');
     await seedActor('doctor', 'doctor');
+    await seedActor('recep', 'receptionist');
 
     const dept = await prisma.department.create({
       data: { facilityId, code: `${PREFIX}OPD`, name: 'E2E OPD', type: 'opd' },
@@ -207,14 +211,21 @@ describe('Pharmacy queue (e2e)', () => {
 
     // The one that should show: an active prescription on a live visit, two drugs, with a
     // per-line allergy override and a per-sheet interaction acknowledgement.
-    detailPrescriptionId = await seedPrescription(facilityId, patientId, dept.id, practitionerId, drugId, {
-      visitNo: `${PREFIX}V1`,
-      visitStatus: 'arrived',
-      status: 'active',
-      drugs: ['Amoxicillin 500mg', 'Paracetamol 500mg'],
-      interactionAckReason: 'Monitored',
-      overrideReason: 'Benefit outweighs risk',
-    });
+    detailPrescriptionId = await seedPrescription(
+      facilityId,
+      patientId,
+      dept.id,
+      practitionerId,
+      drugId,
+      {
+        visitNo: `${PREFIX}V1`,
+        visitStatus: 'arrived',
+        status: 'active',
+        drugs: ['Amoxicillin 500mg', 'Paracetamol 500mg'],
+        interactionAckReason: 'Monitored',
+        overrideReason: 'Benefit outweighs risk',
+      },
+    );
 
     // Already dispensed — completed — so it is off the queue.
     await seedPrescription(facilityId, patientId, dept.id, practitionerId, drugId, {
@@ -246,6 +257,12 @@ describe('Pharmacy queue (e2e)', () => {
         drugs: ['Amoxicillin 500mg', 'Vitamin C'],
       },
     );
+    dispenseItemIds = (
+      await prisma.prescriptionItem.findMany({
+        where: { prescriptionId: dispensePrescriptionId },
+        select: { id: true },
+      })
+    ).map((item) => item.id);
 
     // Another active prescription, for the medicine return (task 6.11): one 50 line.
     returnPrescriptionId = await seedPrescription(
@@ -261,6 +278,12 @@ describe('Pharmacy queue (e2e)', () => {
         drugs: ['Amoxicillin 500mg'],
       },
     );
+    returnItemIds = (
+      await prisma.prescriptionItem.findMany({
+        where: { prescriptionId: returnPrescriptionId },
+        select: { id: true },
+      })
+    ).map((item) => item.id);
 
     // A prescription dispensed TWO DAYS AGO with its (unpaid) pharmacy bill — outside the R5
     // return window, so even the pharmacist cannot return it.
@@ -327,7 +350,12 @@ describe('Pharmacy queue (e2e)', () => {
       data: { facilityId: otherFacilityId, code: `${PREFIX}OPD2`, name: 'E2E OPD2', type: 'opd' },
     });
     const otherPract = await prisma.practitioner.create({
-      data: { facilityId: otherFacilityId, code: `${PREFIX}DR2`, firstName: 'Omar', lastName: 'Zia' },
+      data: {
+        facilityId: otherFacilityId,
+        code: `${PREFIX}DR2`,
+        firstName: 'Omar',
+        lastName: 'Zia',
+      },
     });
     const otherPatient = await prisma.patient.create({
       data: {
@@ -408,10 +436,17 @@ describe('Pharmacy queue (e2e)', () => {
   });
 
   const detail = (as: string, id: string) =>
-    request(server).get(`/pharmacy/prescriptions/${id}`).set('Authorization', `Bearer ${tokens[as]}`);
-  const dispense = (as: string, id: string) =>
     request(server)
-      .post(`/pharmacy/prescriptions/${id}/dispense`)
+      .get(`/pharmacy/prescriptions/${id}`)
+      .set('Authorization', `Bearer ${tokens[as]}`);
+  const billRx = (as: string, id: string, itemIds: string[], unitPrice = '50') =>
+    request(server)
+      .post(`/pharmacy/prescriptions/${id}/bill`)
+      .set('Authorization', `Bearer ${tokens[as]}`)
+      .send({ items: itemIds.map((itemId) => ({ itemId, unitPrice })) });
+  const handover = (as: string, id: string) =>
+    request(server)
+      .post(`/pharmacy/prescriptions/${id}/handover`)
       .set('Authorization', `Bearer ${tokens[as]}`);
   const pay = (as: string, invoiceId: string, body: unknown) =>
     request(server)
@@ -446,6 +481,7 @@ describe('Pharmacy queue (e2e)', () => {
       [
         'advice',
         'allergies',
+        'bill',
         'interactionAckReason',
         'items',
         'orderedAt',
@@ -456,21 +492,24 @@ describe('Pharmacy queue (e2e)', () => {
         'visitNo',
       ].sort(),
     );
+    // Not yet billed — the whole point of the field being nullable.
+    expect(body.bill).toBeNull();
   });
 
   it('404s a prescription in another facility', async () => {
     await detail('pharm', otherPrescriptionId).expect(404);
   });
 
-  it('the done-when (6.10): dispensing raises a priced pharmacy bill, paid at the till', async () => {
-    // Two lines at 50 each — priced from the formulary, not sent by the caller.
-    const bill = (await dispense('pharm', dispensePrescriptionId).expect(200))
+  it('the done-when (6.10): billing raises a priced pharmacy bill — priced at what the pharmacist typed, and stays on the queue until paid and handed over', async () => {
+    // Two lines at 75 each — TYPED by the pharmacist, not the formulary's 50. Proves the
+    // bill is priced from the request body, not silently re-derived from Drug.sellPrice.
+    const bill = (await billRx('pharm', dispensePrescriptionId, dispenseItemIds, '75').expect(200))
       .body as DispenseResponse;
     expect(bill.items).toHaveLength(2);
-    expect(bill.items[0].unitPrice).toBe('50.00');
-    expect(bill.total).toBe('100.00');
+    expect(bill.items[0].unitPrice).toBe('75.00');
+    expect(bill.total).toBe('150.00');
     expect(bill.status).toBe('issued');
-    expect(bill.outstanding).toBe('100.00');
+    expect(bill.outstanding).toBe('150.00');
 
     // The bill is a pharmacy-origin invoice: its lines are prescription_item.
     const invoiceItems = await prisma.invoiceItem.findMany({
@@ -479,35 +518,97 @@ describe('Pharmacy queue (e2e)', () => {
     });
     expect(invoiceItems.every((i) => i.refType === 'prescription_item')).toBe(true);
 
-    // The prescription is dispensed and off the queue.
-    const rx = await prisma.prescription.findUniqueOrThrow({
+    // Billing alone does NOT dispense — the real bug this task fixed. The sheet is still
+    // active, still un-dispensed, and STILL on the queue: nobody has paid yet.
+    const afterBill = await prisma.prescription.findUniqueOrThrow({
       where: { id: dispensePrescriptionId },
-      select: { status: true, dispensedAt: true, dispensedBy: true },
+      select: { status: true, dispensedAt: true },
     });
-    expect(rx.status).toBe('completed');
-    expect(rx.dispensedAt).not.toBeNull();
-    expect(rx.dispensedBy).not.toBeNull();
+    expect(afterBill.status).toBe('active');
+    expect(afterBill.dispensedAt).toBeNull();
     const stillQueued = (await queue('pharm').expect(200)).body as PharmacyQueueResponse;
-    expect(stillQueued.items.map((i) => i.visitNo)).not.toContain(`${PREFIX}V4`);
+    expect(stillQueued.items.map((i) => i.visitNo)).toContain(`${PREFIX}V4`);
 
-    // The patient pays for the medicine at the pharmacy till.
-    const paid = (await pay('pharm', bill.invoiceId, { amount: '100', method: 'cash' }).expect(200))
+    // The prescription view now shows the bill, unpaid.
+    const view = (await detail('pharm', dispensePrescriptionId).expect(200))
+      .body as PharmacyPrescription;
+    expect(view.bill?.invoiceId).toBe(bill.invoiceId);
+    expect(view.bill?.isPaid).toBe(false);
+
+    // Handover is refused before the bill is paid — the actual gate this task added.
+    const tooSoon = (await handover('pharm', dispensePrescriptionId).expect(403)).body as {
+      code?: string;
+    };
+    expect(tooSoon.code).toBe('not_paid');
+
+    // Billing the same sheet twice is refused too.
+    const rebilled = (
+      await billRx('pharm', dispensePrescriptionId, dispenseItemIds, '75').expect(409)
+    ).body as { code?: string };
+    expect(rebilled.code).toBe('already_billed');
+
+    // RECEPTION collects the money — not the pharmacy counter (payment.receive is not
+    // wired into PharmacyPage.tsx any more; the endpoint itself is origin-agnostic, so this
+    // asserts the intended actor, not a new server-side restriction).
+    const paid = (await pay('recep', bill.invoiceId, { amount: '150', method: 'cash' }).expect(200))
       .body as RecordPaymentResponse;
     expect(paid.status).toBe('paid');
     expect(paid.payment.receiptNo).toMatch(/^RCP-/);
 
-    // Dispensing the same sheet again is refused.
-    const again = (await dispense('pharm', dispensePrescriptionId).expect(400)).body as {
+    // Now the prescription view shows it cleared —
+    const cleared = (await detail('pharm', dispensePrescriptionId).expect(200))
+      .body as PharmacyPrescription;
+    expect(cleared.bill?.isPaid).toBe(true);
+
+    // — and the handover the pharmacist was waiting to make is now allowed.
+    const handed = (await handover('pharm', dispensePrescriptionId).expect(200))
+      .body as ConfirmHandoverResponse;
+    expect(handed.status).toBe('completed');
+
+    const afterHandover = await prisma.prescription.findUniqueOrThrow({
+      where: { id: dispensePrescriptionId },
+      select: { status: true, dispensedAt: true, dispensedBy: true },
+    });
+    expect(afterHandover.status).toBe('completed');
+    expect(afterHandover.dispensedAt).not.toBeNull();
+    expect(afterHandover.dispensedBy).not.toBeNull();
+    const nowGone = (await queue('pharm').expect(200)).body as PharmacyQueueResponse;
+    expect(nowGone.items.map((i) => i.visitNo)).not.toContain(`${PREFIX}V4`);
+
+    // A second handover is refused.
+    const again = (await handover('pharm', dispensePrescriptionId).expect(400)).body as {
       code?: string;
     };
     expect(again.code).toBe('already_dispensed');
   });
 
+  it('handover on a sheet that was never billed is refused', async () => {
+    const never = (await handover('pharm', returnPrescriptionId).expect(400)).body as {
+      code?: string;
+    };
+    expect(never.code).toBe('not_billed');
+  });
+
+  it("billing rejects a price list that does not match the sheet's own items", async () => {
+    // A well-formed price for an item this sheet does not carry — not the empty-body case
+    // (`.min(1)` already refuses that at the contract), the actual mismatch check.
+    const wrong = (
+      await billRx(
+        'pharm',
+        returnPrescriptionId,
+        ['00000000-0000-0000-0000-000000000000'],
+        '50',
+      ).expect(400)
+    ).body as { code?: string };
+    expect(wrong.code).toBe('price_mismatch');
+  });
+
   it('the done-when (6.11): an unopened box comes back same-day, the money goes back', async () => {
-    // Dispense and pay for the medicine today.
-    const bill = (await dispense('pharm', returnPrescriptionId).expect(200))
+    // Bill, pay, and hand over the medicine today — priced at what the pharmacist typed.
+    const bill = (await billRx('pharm', returnPrescriptionId, returnItemIds, '50').expect(200))
       .body as DispenseResponse;
-    await pay('pharm', bill.invoiceId, { amount: '50', method: 'cash' }).expect(200);
+    await pay('recep', bill.invoiceId, { amount: '50', method: 'cash' }).expect(200);
+    await handover('pharm', returnPrescriptionId).expect(200);
 
     // Return it: the bill is cancelled and the money reversed.
     const ret = (
@@ -529,26 +630,25 @@ describe('Pharmacy queue (e2e)', () => {
     expect(invoice.payments.some((p) => p.amount.toFixed(2) === '-50.00')).toBe(true);
 
     // A second return is refused.
-    const again = (
-      await returnRx('pharm', returnPrescriptionId, { reason: 'again' }).expect(400)
-    ).body as { code?: string };
+    const again = (await returnRx('pharm', returnPrescriptionId, { reason: 'again' }).expect(400))
+      .body as { code?: string };
     expect(again.code).toBe('already_returned');
   });
 
   it('holds the R5 window and requires a reason', async () => {
     // Dispensed two days ago — outside the same-day window even for the pharmacist.
-    const closed = (
-      await returnRx('pharm', oldDispensedId, { reason: 'Too late' }).expect(403)
-    ).body as { code?: string };
+    const closed = (await returnRx('pharm', oldDispensedId, { reason: 'Too late' }).expect(403))
+      .body as { code?: string };
     expect(closed.code).toBe('outside_r5_window');
     // No reason — refused at the contract.
     await returnRx('pharm', dispensePrescriptionId, { reason: ' ' }).expect(400);
   });
 
-  it('denies a doctor — pharmacy queue, dispense and return are not theirs', async () => {
+  it('denies a doctor — pharmacy queue, billing, handover and return are not theirs', async () => {
     await queue('doctor').expect(403);
     await detail('doctor', detailPrescriptionId).expect(403);
-    await dispense('doctor', detailPrescriptionId).expect(403);
+    await billRx('doctor', detailPrescriptionId, []).expect(403);
+    await handover('doctor', detailPrescriptionId).expect(403);
     await returnRx('doctor', returnPrescriptionId, { reason: 'nope' }).expect(403);
   });
 

@@ -1,6 +1,13 @@
-import { Controller, Get, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Query,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { Request } from 'express';
-import type { CollectionsListResponse } from '@redmars/shared';
+import { collectionsListQuerySchema, type CollectionsListResponse } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuthContext } from '../../auth/auth-context';
 import { CollectionsService } from './collections.service';
@@ -18,9 +25,16 @@ export class CollectionsController {
 
   @Get()
   @RequirePermission('invoice.read')
-  list(@Req() req: Request): Promise<CollectionsListResponse> {
+  list(@Req() req: Request, @Query() rawQuery: unknown): Promise<CollectionsListResponse> {
+    const parsed = collectionsListQuerySchema.safeParse(rawQuery);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid collections filter',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
     const auth = this.auth(req);
-    return this.collections.list(auth.facilityId, auth.permissions);
+    return this.collections.list(auth.facilityId, auth.permissions, parsed.data);
   }
 
   private auth(req: Request): AuthContext {

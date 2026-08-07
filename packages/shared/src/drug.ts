@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { moneySchema } from './reception.js'
 
 /**
  * Drug formulary contract (task 2.4). A per-facility catalogue of medicines, keyed
@@ -30,6 +31,13 @@ export const drugSummarySchema = z.object({
   defaultDuration: z.string().nullable(),
   isControlled: z.boolean(),
   isActive: z.boolean(),
+  /**
+   * What the pharmacy charges for one unit — null means dispensed free (a sample, a
+   * free-issue item), never a blocked dispense. This is what `dispense.service.ts` prices
+   * a prescription's items from; a drug with no price here is the reason a bill can print
+   * as 0.00 even though real medicine went out the door.
+   */
+  sellPrice: z.string().nullable(),
 })
 export type DrugSummary = z.infer<typeof drugSummarySchema>
 
@@ -52,6 +60,11 @@ export const drugFieldsSchema = z.object({
   defaultFreq: optionalText(40),
   defaultDuration: optionalText(40),
   isControlled: z.boolean().default(false),
+  /** Blank means free-issue (no charge at dispense) — not a required field. */
+  sellPrice: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    moneySchema.optional(),
+  ),
 })
 export type DrugFields = z.infer<typeof drugFieldsSchema>
 

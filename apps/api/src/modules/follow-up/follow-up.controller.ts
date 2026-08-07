@@ -1,14 +1,19 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Post,
   Query,
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { followUpQuerySchema } from '@redmars/shared';
-import type { FollowUpListResponse } from '@redmars/shared';
+import { followUpQuerySchema, recordFollowUpResponseRequestSchema } from '@redmars/shared';
+import type { FollowUp, FollowUpListResponse } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { AuthContext } from '../../auth/auth-context';
 import { FollowUpService } from './follow-up.service';
@@ -41,6 +46,31 @@ export class FollowUpController {
     }
 
     return this.followUps.list(this.auth(req).facilityId, parsed.data);
+  }
+
+  /**
+   * The call center's (or admin's) answer for one follow-up — coming, not coming, or a
+   * note. `follow_up.respond` is a narrower grant than `follow_up.read`: a doctor and a
+   * receptionist can both see this list, but only the role built around ringing patients
+   * (plus admin, for a correction) can write to it.
+   */
+  @Post(':prescriptionId/respond')
+  @RequirePermission('follow_up.respond')
+  @HttpCode(200)
+  respond(
+    @Req() req: Request,
+    @Param('prescriptionId', ParseUUIDPipe) prescriptionId: string,
+    @Body() body: unknown,
+  ): Promise<FollowUp> {
+    const parsed = recordFollowUpResponseRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid follow-up response',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    const auth = this.auth(req);
+    return this.followUps.respond(auth.facilityId, auth.userId, prescriptionId, parsed.data);
   }
 
   private auth(req: Request): AuthContext {

@@ -13,10 +13,12 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import {
+  billPrescriptionRequestSchema,
   pharmacyPrescriptionSearchQuerySchema,
   returnMedicineRequestSchema,
 } from '@redmars/shared';
 import type {
+  ConfirmHandoverResponse,
   DispenseResponse,
   PharmacyPrescription,
   PharmacyPrescriptionSearchResponse,
@@ -93,17 +95,44 @@ export class PharmacyController {
   }
 
   /**
-   * Task 6.10 — dispense a prescription and raise the pharmacy bill. `pharmacy.dispense` is
-   * the pharmacist's alone. No body: the drugs and their prices are the server's, read from
-   * the prescription and the formulary. The bill it returns is then paid at the till with
-   * the ordinary payment endpoint (6.3).
+   * Task 6.10, step one — bill a prescription at whatever the pharmacist typed for each
+   * line. `pharmacy.dispense` is the pharmacist's alone. The bill this returns is paid at
+   * RECEPTION, not here — it lands in the Collections worklist the moment this returns, same
+   * as a lab bill.
    */
-  @Post('prescriptions/:id/dispense')
+  @Post('prescriptions/:id/bill')
   @RequirePermission('pharmacy.dispense')
   @HttpCode(200)
-  dispense(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string): Promise<DispenseResponse> {
+  bill(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ): Promise<DispenseResponse> {
+    const parsed = billPrescriptionRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid bill',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
     const auth = this.auth(req);
-    return this.dispensing.dispense(auth.facilityId, auth.userId, id);
+    return this.dispensing.bill(auth.facilityId, auth.userId, id, parsed.data);
+  }
+
+  /**
+   * Task 6.10, step two — the actual handover, once the bill above is fully paid. Same
+   * `pharmacy.dispense` grant as billing (one job, two steps) — the server re-checks the
+   * invoice itself rather than trusting that the screen only offered this button once paid.
+   */
+  @Post('prescriptions/:id/handover')
+  @RequirePermission('pharmacy.dispense')
+  @HttpCode(200)
+  confirmHandover(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ConfirmHandoverResponse> {
+    const auth = this.auth(req);
+    return this.dispensing.confirmHandover(auth.facilityId, auth.userId, id);
   }
 
   /**

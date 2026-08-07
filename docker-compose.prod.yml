@@ -1,0 +1,65 @@
+# REDMARS — containerized api+web overlay (task 7.13). Merges on top of the
+# base docker-compose.yml (postgres/adminer/backup/caddy) rather than
+# replacing it, so local Windows dev (host-run `pnpm dev:api`/`dev:web`,
+# proxied via the base Caddyfile's host.docker.internal targets) keeps
+# working completely unchanged. Use this file for a real server install:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# (`pnpm deploy:up` does exactly that.)
+#
+# What changes vs base: adds `api` and `web` as real containers, and swaps
+# the caddy service's config mount to Caddyfile.prod, which points at those
+# containers by service name instead of host.docker.internal.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: redmars-api
+    restart: unless-stopped
+    env_file:
+      - apps/api/.env
+    environment:
+      # Overrides apps/api/.env's own DATABASE_URL, which points at
+      # localhost:${POSTGRES_PORT} — correct for a host-run process, wrong
+      # inside this container (no port-mapping needed or wanted between
+      # containers on the same compose network; `postgres` is the service
+      # name, 5432 is its ALWAYS-internal port regardless of POSTGRES_PORT).
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public&connection_limit=20&pool_timeout=20
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Build-time only (Vite bakes this into the bundle) — must be the
+        # ORIGIN A BROWSER CAN REACH, i.e. the front door's :8443, never the
+        # internal `api:3000` service name.
+        VITE_API_URL: ${VITE_API_URL}
+    container_name: redmars-web
+    restart: unless-stopped
+
+  caddy:
+    # NOT a per-item overlay — compose REPLACES a service's whole `volumes:`
+    # list when an override file redefines it (verified via `docker compose
+    # config`: redefining just the Caddyfile line here silently dropped the
+    # base file's certs/data/config mounts entirely). So this repeats the
+    # base list in full, swapping only the Caddyfile source.
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started

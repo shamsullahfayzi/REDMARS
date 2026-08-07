@@ -602,7 +602,8 @@ describe('Prescription (e2e)', () => {
     const settings = defaultPrintSettings();
 
     // Farhat's sheet, as photographed: pre-printed letterhead and route spelled out.
-    expect(settings.topMarginMm).toBe(55);
+    expect(settings.margins.A4.topMarginMm).toBe(55);
+    expect(settings.margins.A4.bottomMarginMm).toBe(14);
     expect(settings.paperSize).toBe('A4');
     expect(settings.routeAsWord).toBe(true);
 
@@ -611,10 +612,15 @@ describe('Prescription (e2e)', () => {
     // prescription that leaves the building without it undoes both at the last step.
     expect(settings.showAllergies).toBe(true);
 
+    // A doctor can print the same prescription on A5 (e.g. a triage pad) and its blank
+    // letterhead space is a DIFFERENT pair of numbers, not a scaled copy of A4's.
+    expect(settings.margins.A5.topMarginMm).toBe(25);
+    expect(settings.margins.A5.bottomMarginMm).toBe(10);
+
     // A partial stored value fills its gaps rather than failing — which is what makes
     // adding a setting later a safe change for facilities that saved the old shape.
-    expect(printSettingsSchema.parse({ topMarginMm: 20 })).toMatchObject({
-      topMarginMm: 20,
+    expect(printSettingsSchema.parse({ margins: { A4: { topMarginMm: 20 } } })).toMatchObject({
+      margins: { A4: { topMarginMm: 20, bottomMarginMm: 14 } },
       showAllergies: true,
       paperSize: 'A4',
     });

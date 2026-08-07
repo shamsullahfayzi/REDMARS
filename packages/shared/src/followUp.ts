@@ -53,6 +53,30 @@ export const followUpQuerySchema = z.object({
 })
 export type FollowUpQuery = z.infer<typeof followUpQuerySchema>
 
+export const followUpResponseStatusSchema = z.enum(['coming', 'not_coming', 'custom'])
+export type FollowUpResponseStatus = z.infer<typeof followUpResponseStatusSchema>
+
+/**
+ * What a call found out, logged by the call center against ONE follow-up date. Append-only
+ * on the server (a correction is a new row, never an overwrite — R4); this is always the
+ * latest one for the date being shown. `note` is free text on every status, not only
+ * `custom` — "coming, but running late" is a real thing to write down against "coming."
+ */
+export const followUpResponseSchema = z.object({
+  status: followUpResponseStatusSchema,
+  note: z.string().nullable(),
+  recordedByName: z.string(),
+  recordedAt: z.string(),
+})
+export type FollowUpResponse = z.infer<typeof followUpResponseSchema>
+
+/** `follow_up.respond` — logging what a call found out. Note is optional on every status. */
+export const recordFollowUpResponseRequestSchema = z.object({
+  status: followUpResponseStatusSchema,
+  note: z.string().trim().max(300).optional(),
+})
+export type RecordFollowUpResponseRequest = z.infer<typeof recordFollowUpResponseRequestSchema>
+
 export const followUpSchema = z.object({
   /** The prescription the date was written on. */
   prescriptionId: z.uuid(),
@@ -87,6 +111,8 @@ export const followUpSchema = z.object({
   attended: z.boolean(),
   /** The most recent visit on or after the due date, when there is one. */
   attendedAt: z.string().nullable(),
+  /** The call center's latest answer for THIS `followUpDate`, or null — nobody's called yet. */
+  response: followUpResponseSchema.nullable(),
 })
 export type FollowUp = z.infer<typeof followUpSchema>
 

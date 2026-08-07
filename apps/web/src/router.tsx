@@ -4,7 +4,6 @@ import { RootLayout } from '@/layouts/RootLayout'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
-import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { AppointmentsPage } from '@/pages/AppointmentsPage'
 import { CollectionsPage } from '@/pages/CollectionsPage'
 import { ConsultPage } from '@/pages/ConsultPage'
@@ -26,6 +25,7 @@ import { PractitionersPage } from '@/pages/PractitionersPage'
 import { TillPage } from '@/pages/TillPage'
 import { QueuePage } from '@/pages/QueuePage'
 import { ReceptionPage } from '@/pages/ReceptionPage'
+import { ReportsPage } from '@/pages/ReportsPage'
 import { ServicesPage } from '@/pages/ServicesPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { StartVisitPage } from '@/pages/StartVisitPage'
@@ -86,7 +86,7 @@ export const router = createBrowserRouter([
           { path: 'lab-tests', element: <LabTestsPage /> },
           { path: 'lab-panels', element: <LabPanelsPage /> },
           { path: 'drugs', element: <DrugsPage /> },
-          { path: 'reports', element: <PlaceholderPage sectionKey="reports" /> },
+          { path: 'reports', element: <ReportsPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

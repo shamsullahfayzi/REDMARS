@@ -34,6 +34,7 @@ describe('Invoice register + reprint (e2e)', () => {
   let visitId: string;
   let invoiceId: string;
   let invoiceNo: string;
+  let pharmacyInvoiceId: string;
   let payInvoiceId: string;
   let overInvoiceId: string;
   let discountInvoiceId: string;
@@ -107,6 +108,7 @@ describe('Invoice register + reprint (e2e)', () => {
     receptionistId = await seedActor('recep', 'receptionist');
     await seedActor('doctor', 'doctor');
     adminId = await seedActor('admin', 'admin');
+    await seedActor('pharmacist', 'pharmacist');
 
     const dept = await prisma.department.create({
       data: { facilityId, code: `${PREFIX}OPD`, name: 'E2E OPD', type: 'opd' },
@@ -206,6 +208,33 @@ describe('Invoice register + reprint (e2e)', () => {
         },
       },
     });
+
+    // A THIRD bill on the SAME visit, raised at the pharmacy till — R12's positive case:
+    // the one bill on this three-till visit a pharmacist should actually be able to read.
+    pharmacyInvoiceId = (
+      await prisma.invoice.create({
+        data: {
+          facilityId,
+          patientId: patient.id,
+          visitId: visit.id,
+          createdBy: receptionistId,
+          invoiceNo: `${PREFIX}INV1P`,
+          subtotal: '80',
+          total: '80',
+          paidAmount: '0',
+          status: 'issued',
+          items: {
+            create: {
+              refType: 'prescription_item',
+              description: 'Amoxicillin 500mg',
+              quantity: 10,
+              unitPrice: '8',
+              total: '80',
+            },
+          },
+        },
+      })
+    ).id;
 
     // Two unpaid bills with NO visit, for the payment tests — kept off the visit so the
     // 6.2 rollup (which counts bills on the visit) is not disturbed by settling them.
@@ -506,21 +535,61 @@ describe('Invoice register + reprint (e2e)', () => {
     const body = (await byVisit('recep', visitId).expect(200)).body as VisitBillsResponse;
     expect(body.visit.visitNo).toBe(`${PREFIX}V1`);
     expect(body.visit.patientName).toBe('Mr. Karim Noori');
-    expect(body.bills).toHaveLength(2);
+    expect(body.bills).toHaveLength(3);
 
     const reception = body.bills.find((b) => b.invoiceNo === invoiceNo);
     const lab = body.bills.find((b) => b.invoiceNo === `${PREFIX}INV1L`);
+    const pharmacy = body.bills.find((b) => b.invoiceNo === `${PREFIX}INV1P`);
     // Each bill is tagged by the till that raised it, read off its lines.
     expect(reception!.origin).toBe('reception');
     expect(reception!.outstanding).toBe('0.00');
     expect(lab!.origin).toBe('lab');
     expect(lab!.outstanding).toBe('250.00');
+    expect(pharmacy!.origin).toBe('pharmacy');
+    expect(pharmacy!.outstanding).toBe('80.00');
 
-    // Three tills, one running total: 500 charged and paid, 250 charged and open.
-    expect(body.totals.billed).toBe('750.00');
+    // Three tills, one running total: 500 charged and paid, 330 charged and still open.
+    expect(body.totals.billed).toBe('830.00');
     expect(body.totals.paid).toBe('500.00');
-    expect(body.totals.outstanding).toBe('250.00');
+    expect(body.totals.outstanding).toBe('330.00');
     expect(body.totals.currency).toBe('AFN');
+  });
+
+  describe('R12 — a pharmacist reads only their own pharmacy-origin bills', () => {
+    it('reads the pharmacy bill on this visit, and no other', async () => {
+      const body = (await detail('pharmacist', pharmacyInvoiceId).expect(200))
+        .body as InvoiceDetail;
+      expect(body.invoice.invoiceNo).toBe(`${PREFIX}INV1P`);
+      expect(body.invoice.origin).toBe('pharmacy');
+    });
+
+    it('cannot read the OPD (reception) bill on the same visit', () =>
+      detail('pharmacist', invoiceId).expect(403));
+
+    it('cannot read the lab bill on the same visit', async () => {
+      const labInvoice = await prisma.invoice.findFirstOrThrow({
+        where: { invoiceNo: `${PREFIX}INV1L` },
+        select: { id: true },
+      });
+      await detail('pharmacist', labInvoice.id).expect(403);
+    });
+
+    it('the register lists the pharmacy bill, never the OPD or lab one', async () => {
+      const body = (await list('pharmacist').expect(200)).body as InvoiceListResponse;
+      const numbers = body.invoices.map((i) => i.invoiceNo);
+      expect(numbers).toContain(`${PREFIX}INV1P`);
+      expect(numbers).not.toContain(invoiceNo);
+      expect(numbers).not.toContain(`${PREFIX}INV1L`);
+    });
+
+    it("a visit's bills, from a pharmacist, is their one line — not the OPD or lab bill beside it", async () => {
+      const body = (await byVisit('pharmacist', visitId).expect(200)).body as VisitBillsResponse;
+      expect(body.bills).toHaveLength(1);
+      expect(body.bills[0].invoiceNo).toBe(`${PREFIX}INV1P`);
+      expect(body.bills[0].origin).toBe('pharmacy');
+      // Their own running total, not the whole visit's three-till total.
+      expect(body.totals.billed).toBe('80.00');
+    });
   });
 
   it('404s a visit belonging to another facility (or no visit at all)', async () => {

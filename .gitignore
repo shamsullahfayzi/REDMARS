@@ -19,6 +19,9 @@ apps/api/prisma/*.db
 # backups (0.9)
 backups/
 
+# LAN HTTPS cert + key (7.2) — install-specific, contains a private key
+certs/
+
 # logs / os / editor
 *.log
 .DS_Store

@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { AuditInterceptor } from './audit/audit.interceptor';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { AuthModule } from './auth/auth.module';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
@@ -39,6 +40,7 @@ import { HistoryModule } from './modules/history/history.module';
 import { FollowUpModule } from './modules/follow-up/follow-up.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { CollectionsModule } from './modules/collections/collections.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -84,12 +86,16 @@ import { CollectionsModule } from './modules/collections/collections.module';
     FollowUpModule,
     SettingsModule,
     CollectionsModule,
+    ReportsModule,
   ],
   providers: [
     // Global. Runs after the guards on every route, so request.auth is already
     // set — it opens the AsyncLocalStorage scope the Prisma audit middleware reads
     // to attribute each write to its actor. See audit.interceptor.ts.
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
+    // Global (task 7.8) — via DI rather than `app.useGlobalFilters(new ...)` in
+    // main.ts, so it can be handed a real PrismaService to write error_log rows.
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
 })
 export class AppModule {}

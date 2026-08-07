@@ -75,6 +75,12 @@ interface Row {
    * become a quantity of 3 if the doctor saves mid-keystroke.
    */
   quantity: string
+  /**
+   * True while `quantity` holds OUR number, not the prescriber's. Lets `suggestQuantity`
+   * keep recomputing as dose/frequency/duration change; flips to false the moment the
+   * prescriber types into the box directly, which is what actually stops the overwrite.
+   */
+  quantityIsSuggested: boolean
   instructions: string
   /** Already-recorded override, so re-saving does not re-prompt for the same one. */
   allergyOverrideReason: string | null
@@ -82,6 +88,76 @@ interface Row {
 
 function drugLabel(drug: DrugSummary): string {
   return [drug.brandName ?? drug.genericName, drug.strength].filter(Boolean).join(' ')
+}
+
+/**
+ * How many times a day each CLOSED frequency code means — the one part of "dose × frequency
+ * × duration" that IS a fact rather than a guess, because the codes are a closed set (see
+ * prescriptionCodes.ts). PRN ("as needed") and STAT (a single dose, handled separately below)
+ * are deliberately absent — a daily rate for either would be invented, not read off the code.
+ */
+const DOSES_PER_DAY: Partial<Record<string, number>> = {
+  OD: 1,
+  OM: 1,
+  ON: 1,
+  BID: 2,
+  TID: 3,
+  QID: 4,
+  Q4H: 6,
+  Q6H: 4,
+  Q8H: 3,
+  Q12H: 2,
+  ALT: 0.5,
+  WKLY: 1 / 7,
+  MTHLY: 1 / 30,
+}
+
+const DOSE_FRACTIONS: Record<string, number> = { '½': 0.5, '¼': 0.25, '¾': 0.75 }
+
+/** The leading count in a dose like "1 tab", "½ tab" or "10 ml" — null when it doesn't start with one. */
+function parseDoseCount(dose: string): number | null {
+  const trimmed = dose.trim()
+  const fraction = DOSE_FRACTIONS[trimmed[0] as string]
+  if (fraction) return fraction
+  const match = trimmed.match(/^(\d+(?:\.\d+)?)/)
+  return match ? Number(match[1]) : null
+}
+
+/**
+ * Duration as a day count — only for the plain "N day(s)/week(s)/month(s)" shape every
+ * DURATION_PRESET uses. "Until review" and "Ongoing" have no day count and correctly return
+ * null; a month is treated as 30 days, an approximation good enough for a SUGGESTED number
+ * the prescriber can always edit, same as every other autofilled field on this row.
+ */
+function parseDurationDays(duration: string): number | null {
+  const match = duration.trim().toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(day|days|week|weeks|month|months)$/)
+  if (!match) return null
+  const value = Number(match[1])
+  const unit = match[2].startsWith('week') ? 7 : match[2].startsWith('month') ? 30 : 1
+  return value * unit
+}
+
+/**
+ * "1 tablet, TID, for 7 days" → 21 — the quantity the pharmacy would dispense, offered as a
+ * STARTER the same way route/frequency/duration already autofill from the formulary (never
+ * written over a number the prescriber already typed — see the one call site below). Returns
+ * null whenever any piece is missing, free-text-only ("until review"), or PRN — a "best
+ * guess" number silently sitting in a box the pharmacy dispenses against is worse than an
+ * empty one, which is exactly the concern the box's own comment already raised.
+ */
+function suggestQuantity(dose: string, frequency: string, duration: string): number | null {
+  const doseCount = parseDoseCount(dose)
+  if (doseCount == null || doseCount <= 0) return null
+
+  if (frequency === 'STAT') return Math.ceil(doseCount)
+
+  const perDay = DOSES_PER_DAY[frequency]
+  if (perDay == null) return null
+
+  const days = parseDurationDays(duration)
+  if (days == null) return null
+
+  return Math.ceil(doseCount * perDay * days)
 }
 
 export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
@@ -128,6 +204,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         duration: item.duration,
         route: item.route,
         quantity: item.quantity === null ? '' : String(item.quantity),
+        quantityIsSuggested: false,
         instructions: item.instructions ?? '',
         allergyOverrideReason: item.allergyOverrideReason,
       })),
@@ -160,7 +237,10 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
   const currentSignature = useMemo(
     () =>
       JSON.stringify({
-        items: rows.map(({ drugLabel: _label, allergyOverrideReason: _reason, ...rest }) => rest),
+        items: rows.map(
+          ({ drugLabel: _label, allergyOverrideReason: _reason, quantityIsSuggested: _sugg, ...rest }) =>
+            rest,
+        ),
         advice,
         followUpDate,
       }),
@@ -225,6 +305,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         duration: item.duration,
         route: item.route,
         quantity: item.quantity === null ? '' : String(item.quantity),
+        quantityIsSuggested: false,
         instructions: item.instructions ?? '',
         allergyOverrideReason: item.allergyOverrideReason,
       })),
@@ -249,10 +330,13 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
         frequency: matchCode(drug.defaultFreq, FREQUENCY_CODES) ?? '',
         duration: drug.defaultDuration ?? '',
         route: matchCode(drug.defaultRoute, ROUTE_CODES) ?? '',
-        // Not derived from frequency × duration. "OD for 1 month" is 30 tablets only if the
-        // month has 30 days and the pack is tablets, and a quantity the pharmacy dispenses
-        // against is not a number to arrive at by arithmetic nobody checked.
+        // Left blank here specifically because dose isn't autofilled above — there is
+        // nothing yet to multiply. Once the prescriber types a dose, `suggestQuantity`
+        // (below `drugLabel`) offers a computed starter the moment frequency and duration
+        // are both filled in too, same "editable default" treatment as every other field
+        // on this row, and only into a box still empty — never over a typed number.
         quantity: '',
+        quantityIsSuggested: false,
         instructions: '',
         allergyOverrideReason: null,
       },
@@ -261,6 +345,25 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
 
   function setRow(index: number, patch: Partial<Row>) {
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)))
+  }
+
+  /**
+   * Same as `setRow`, plus a suggested quantity when dose/frequency/duration now say enough
+   * to compute one. Recomputes as long as the box still holds OUR number (`quantityIsSuggested`)
+   * — so re-picking dose/frequency/duration keeps the suggestion live — but never overwrites a
+   * number the prescriber typed directly, which is what clears that flag.
+   */
+  function setRowAndSuggestQuantity(index: number, patch: Partial<Row>) {
+    setRows((current) =>
+      current.map((row, i) => {
+        if (i !== index) return row
+        const merged = { ...row, ...patch }
+        if (merged.quantity !== '' && !merged.quantityIsSuggested) return merged
+        const suggested = suggestQuantity(merged.dose, merged.frequency, merged.duration)
+        if (suggested == null) return merged
+        return { ...merged, quantity: String(suggested), quantityIsSuggested: true }
+      }),
+    )
   }
 
   /**
@@ -290,6 +393,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
           duration: item.duration,
           route: matchCode(item.route, ROUTE_CODES) ?? '',
           quantity: item.quantity === null ? '' : String(item.quantity),
+          quantityIsSuggested: false,
           instructions: item.instructions ?? '',
           // Never carried. Task 4.8's block must fire again on a sheet nobody has read.
           allergyOverrideReason: null,
@@ -328,6 +432,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
             duration: item.duration,
             route: item.route,
             quantity: item.quantity === null ? '' : String(item.quantity),
+            quantityIsSuggested: false,
             instructions: item.instructions ?? '',
             allergyOverrideReason: null,
           }
@@ -435,7 +540,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
                     codes={DOSE_PRESETS}
                     allowFree
                     disabled={!open}
-                    onChange={(dose) => setRow(index, { dose })}
+                    onChange={(dose) => setRowAndSuggestQuantity(index, { dose })}
                   />
                   {/* Frequency and route are CLOSED — the contract refuses anything else. */}
                   <CodePicker
@@ -445,7 +550,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
                     codes={FREQUENCY_CODES}
                     disabled={!open}
                     invalid={open && !row.frequency}
-                    onChange={(frequency) => setRow(index, { frequency })}
+                    onChange={(frequency) => setRowAndSuggestQuantity(index, { frequency })}
                   />
                   <CodePicker
                     id={`rx-duration-${index}`}
@@ -455,7 +560,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
                     allowFree
                     disabled={!open}
                     invalid={open && !row.duration}
-                    onChange={(duration) => setRow(index, { duration })}
+                    onChange={(duration) => setRowAndSuggestQuantity(index, { duration })}
                   />
                   {/* Farhat fills this on every line and the pharmacy dispenses against it.
                       Optional here because the strength and duration often say it, and a
@@ -476,7 +581,10 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
                       value={row.quantity}
                       disabled={!open}
                       onChange={(e) =>
-                        setRow(index, { quantity: e.target.value.replace(/\D/g, '').slice(0, 4) })
+                        setRow(index, {
+                          quantity: e.target.value.replace(/\D/g, '').slice(0, 4),
+                          quantityIsSuggested: false,
+                        })
                       }
                     />
                   </div>

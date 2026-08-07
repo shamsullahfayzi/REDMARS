@@ -208,25 +208,57 @@ things built too rigid the first time, plus two visibility gaps management flagg
 
 ---
 
+## Phase 6c — Reports (~30 h)
+
+`report.operational` / `report.financial` / `report.clinical_aggregate` / `audit_log.read` /
+`data.export` already exist in `permissions.ts` and the matrix (§10) — seeded, gated, unused.
+`/reports` is a `PlaceholderPage`. This phase is the vertical slice that fills it in, and it
+replaces the one-line `7.4` from the original plan with the detail that line never had.
+
+| # | Task | Touches | Done when |
+|---|---|---|---|
+| 6c.1 | Reports shell: date-range picker, role-gated tab set, replaces `PlaceholderPage` | ReportsPage, router.tsx | Admin/management land on a real page; a doctor sees only the tab R rules give them |
+| 6c.2 | Daily census: visits by day / department / type / status, incl. no-shows | `report.service` (new), Visit | "Yesterday OPD: 42 visits, 3 no-shows" matches a hand count |
+| 6c.3 | Wait-time report: arrived → in_progress, median + average, by department and practitioner | VisitStatusHistory | Dr. H sees his queue's actual wait, not a guess |
+| 6c.4 | Revenue report: collected by day, payment method, origin (reception/lab/pharmacy) | Invoice, Payment | Numbers reconcile exactly against till closing (6.12) — one source of truth, not two |
+| 6c.5 | Diagnosis-count report — aggregate only, zero patient identifiers | Diagnosis, IcdCode | "F32.1 × 14 this month"; a doctor's own tab shows only his patients' counts (R3), management's shows the facility |
+| 6c.6 | `report.operational` R8 scope for reception: her own desk's day (queue count, wait, no-shows) — never revenue, never other departments | permissions.ts, `report.service` | Consistent with 6b.9 — a receptionist's tab can't back her into the facility's money |
+| 6c.7 | CSV export per report (aggregate numbers only — not `data.export`) | — | Management pastes today's census into Excel |
+| 6c.8 | Audit log viewer: filter by user / action / entity / date, read-only | AuditLog | Admin answers "who touched this, when" without a DB console |
+| 6c.9 | Report print layout: bilingual header, facility letterhead, date range stamped | print.ts | A report can be signed and filed on paper, same as every other document in this system |
+| 6c.10 | `data.export` (R11): raw patient-list export, mandatory reason, heavily audited | AuditLog | Admin can pull the list; every pull is logged with who/why and is easy to review later |
+
+> **6c.6 is the same fight as 6b.9, one level up.** `report.operational` reads task-scoped
+> (R8) for reception on purpose — she gets her own numbers, never the hospital's revenue.
+> Don't widen it "for convenience"; that's the exact leak 6b.9 closed on the invoice list.
+
+> **6c.10 is not 6c.7.** Aggregate report exports (counts, totals) carry no patient identity
+> and need no special gate beyond the report's own permission. `data.export` is the other
+> thing — a raw list of patients — and stays admin-only, reason-required, audited (R11),
+> per §10 of `roles-and-permissions.md`. Conflating the two is how a hospital's patient list
+> walks out the door inside what looked like a harmless CSV button.
+
+---
+
 ## Phase 7 — Hardening, deploy, pilot (~70 h)
 
 **Never cut this phase.** This is what separates software from a demo.
 
 | # | Task | Done when |
 |---|---|---|
-| 7.1 | **Backup + tested RESTORE.** Destroy the DB, restore from backup, verify | You have personally restored from a backup |
-| 7.2 | HTTPS on LAN via Caddy (self-signed), no more "Not secure" | Browser doesn't warn |
-| 7.3 | Server hardening: firewall, non-root, no default passwords | — |
-| 7.4 | Reports: daily census, revenue, wait times, diagnosis counts | Dr. H gets his numbers |
-| 7.5 | Printer setup + print layout QA on the *actual* hospital printer | Paper looks right on real hardware |
-| 7.6 | **Legacy data migration** from Medi-Pro → `PatientIdentifier` keeps old IDs | Existing patients findable by old number |
-| 7.7 | Load test: 40 concurrent patients, 6 users, Tuesday-morning conditions | Doesn't fall over |
-| 7.8 | Error tracking + a way to see logs without SSH | You can debug a 2 a.m. call |
-| 7.9 | **Staff training** — receptionist first, she's the bottleneck | She registers a patient unaided |
-| 7.10 | **Parallel run: 1 week on both systems.** Paper/Medi-Pro AND REDMARS | Nothing is lost when you switch |
-| 7.11 | Go-live + 2 weeks of daily on-site bugfixing | Real patients, real days |
+| 7.1 | ✅ **Backup + tested RESTORE.** Destroy the DB, restore from backup, verify | You have personally restored from a backup |
+| 7.2 | ✅ HTTPS on LAN via Caddy (self-signed), no more "Not secure" | Browser doesn't warn |
+| 7.3 | ✅ Server hardening: firewall, non-root, no default passwords | — |
+| 7.4 | ~~Reports~~ — moved to **Phase 6c**, built before hardening, not after | Dr. H gets his numbers |
+| 7.5 | 🚧 Printer setup + print layout QA on the *actual* hospital printer — deprioritized, simple fix once there's real hardware | Paper looks right on real hardware |
+| 7.6 | ~~Legacy data migration~~ — **skipped, confirmed**: Farhat does not want old patient IDs migrated | Existing patients findable by old number |
+| 7.7 | ✅ Load test: 40 concurrent patients, 6 users, Tuesday-morning conditions | Doesn't fall over |
+| 7.8 | ✅ Error tracking + a way to see logs without SSH | You can debug a 2 a.m. call |
+| 7.9 | **Staff training** — receptionist first, she's the bottleneck. Blocked on 7.13 | She registers a patient unaided |
+| 7.10 | **Parallel run: 1 week on both systems.** Blocked on 7.13 | Nothing is lost when you switch |
+| 7.11 | Go-live + 2 weeks of daily on-site bugfixing. Blocked on 7.13 | Real patients, real days |
 | 7.12 | UPS, power-loss test: pull the plug mid-transaction | No corruption |
-| 7.13 | Ship backend **compiled/bundled in a container**, not readable source | No clean `git clone` of your commented TS on the hospital PC |
+| 7.13 | ✅ Ship backend **compiled/bundled in a container**, not readable source — `pnpm deploy:up` builds+runs the whole stack (db/api/web/caddy), verified end to end (health, migrate, seed, real HTTP through Caddy) | No clean `git clone` of your commented TS on the hospital PC |
 | 7.14 | `License` mechanism: signed token (your private key), verified **locally/offline** | Server validates without internet |
 | 7.15 | Optional hardware fingerprint binding on the token | Folder copied to another PC won't start without a new token only you can sign |
 | 7.16 | License **banner/nag** on admin dashboard as `paidThroughDate` nears/passes | Admins get reminded; **no clinical action is ever blocked** |

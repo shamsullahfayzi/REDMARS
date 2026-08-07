@@ -89,7 +89,8 @@
     "doctor": "ډاکټر",
     "lab_tech": "د لابراتوار تخنیکر",
     "pharmacist": "درملګر",
-    "management": "مدیریت"
+    "management": "مدیریت",
+    "call_center": "د اړیکو مرکز"
   },
   "users": {
     "create": {
@@ -273,7 +274,7 @@
     "subtitle": "د دې روغتون د درملو فهرست.",
     "import": {
       "title": "له CSV څخه واردول",
-      "hint": "کرښې د سرلیک کرښې سره ننوباسئ. code او genericName اړین دي؛ brandName، atcCode، strength، form، isControlled اختیاري دي. د ورته کوډ بیا واردول یې تازه کوي.",
+      "hint": "کرښې د سرلیک کرښې سره ننوباسئ. code او genericName اړین دي؛ brandName، atcCode، strength، form، isControlled، sellPrice اختیاري دي. د ورته کوډ بیا واردول یې تازه کوي.",
       "submit": "واردول",
       "importing": "په واردولو کې…",
       "failed": "واردول ناکام شو. مهرباني وکړئ بیا هڅه وکړئ.",
@@ -293,6 +294,9 @@
       "defaultFreq": "اصلي تکرار",
       "defaultDuration": "اصلي موده",
       "isControlled": "کنټرول شوی ماده",
+      "sellPrice": "د پلور بیه",
+      "sellPricePlaceholder": "وړیا (خالي پرېږدئ)",
+      "sellPriceHint": "هغه څه چې درملتون د تحویلولو پر مهال د هرې واحدې لپاره اخلي. خالي یعنې وړیا — دا تېروتنه نه ده، خو ډاډ ترلاسه کړئ چې ستاسو مطلب همدا دی.",
       "submit": "درمل زیاتول",
       "submitting": "په خوندي کولو کې…",
       "invalid": "مهرباني وکړئ فورمه وګورئ.",
@@ -311,6 +315,9 @@
       "genericName": "جنریک نوم",
       "strength": "قوت",
       "form": "شکل",
+      "sellPrice": "بیه",
+      "noPrice": "بیه نشته",
+      "noPriceHint": "دې درمل بیه نلري — تحویلول یې د ۰.۰۰ سره محاسبه کیږي.",
       "controlled": "کنټرول شوی",
       "status": "حالت",
       "actions": "کړنې",
@@ -778,10 +785,14 @@
   "collections": {
     "subtitle": "د لابراتوار یا فارمسۍ ټول ناتادیه بیلونه، په یوه لیست کې.",
     "searchPlaceholder": "د بیل شمېره، د ناروغ نوم یا فایل شمېره",
+    "allDates": "ټولې نېټې",
     "error": "د غوښتنو بارول ناکام شو.",
     "empty": "اوس مهال هیڅ پاتې نه دی.",
     "noMatch": "هیڅ بیل سمون نه خوري.",
-    "count": "{{count}} پاتې",
+    "count": "ښودل {{shown}} له {{total}} پاتې",
+    "page": "مخ {{page}} له {{pageCount}}",
+    "previous": "مخکینی",
+    "next": "راتلونکی",
     "new": "نوی",
     "col": {
       "origin": "کاونټر",
@@ -869,7 +880,10 @@
       "ordered": "وخت",
       "patient": "ناروغ",
       "drugs": "درمل",
-      "prescriber": "نسخه‌کوونکی"
+      "prescriber": "نسخه‌کوونکی",
+      "qty": "مقدار",
+      "unitPrice": "د واحد نرخ",
+      "lineTotal": "د قلم مجموعه"
     },
     "back": "قطار ته بیرته",
     "loading": "بارېږي…",
@@ -881,12 +895,22 @@
     "qty": "مقدار {{count}}",
     "allergyOverride": "د حساسیت سره سره وړاندیز شو: {{reason}}",
     "advice": "مشوره",
-    "dispense": "ویش او بیل",
-    "dispensing": "ویشل کیږي…",
-    "dispenseError": "ویش ونه شو.",
+    "priceTitle": "د دې نسخې نرخ ټاکل",
+    "unitPriceFor": "د {{drug}} د واحد نرخ",
+    "billTotal": "د بیل مجموعه",
+    "priceHint": "د بیل جوړولو دمخه د هر درمل لپاره نرخ ولیکئ.",
+    "billIt": "د دې نسخې بیل جوړول",
+    "billing": "بیل جوړیږي…",
+    "billError": "د دې نسخې بیل جوړ نشو.",
     "alreadyDispensed": "مخکې ویشل شوی",
     "printBill": "د بیل چاپ",
-    "dispensed": "وویشل شو · {{invoiceNo}} · {{total}} {{currency}}",
+    "dispensed": "وسپارل شو · {{invoiceNo}} · {{total}} {{currency}}",
+    "billPaid": "بیل {{invoiceNo}} تادیه شوی — د سپارلو لپاره چمتو",
+    "awaitingPayment": "بیل {{invoiceNo}} — {{outstanding}} {{currency}} پاتې دي",
+    "waitingForReception": "دا چاپ کړئ او ناروغ استقبال ته ولېږئ چې تادیه یې وکړي. وروسته له تصفیې بیا دلته راشئ چې درمل وسپارل شي.",
+    "confirmHandover": "د سپارلو تایید",
+    "handingOver": "سپارل کیږي…",
+    "handoverError": "د سپارلو تایید ونشو.",
     "return": "د درملو بیرته‌ورکړه",
     "returnReason": "دلیل",
     "returnReasonPlaceholder": "د درملو د بیرته‌ورکړې دلیل (اړین)",
@@ -919,6 +943,117 @@
     "total": "ټول",
     "grandCash": "ټول صندوقونه — نغدي",
     "grandTotal": "ټول صندوقونه — ټول"
+  },
+  "reports": {
+    "subtitle": "سرشمېرنه، د انتظار وخت، عاید، د تشخیصونو شمېر، او د پلټنې لړلیک.",
+    "noAccess": "ستاسو رول ته هیڅ راپور نه دی پرانستل شوی.",
+    "from": "له",
+    "to": "تر",
+    "presets": {
+      "today": "نن",
+      "yesterday": "پرون",
+      "thisMonth": "دا میاشت",
+      "lastMonth": "تېره میاشت"
+    },
+    "filterDepartment": "څانګه",
+    "allDepartments": "ټولې څانګې",
+    "filterDoctor": "ډاکټر",
+    "allDoctors": "ټول ډاکټران",
+    "print": "چاپ",
+    "downloadCsv": "CSV ډاونلوډ کړئ",
+    "loading": "بار کیږي…",
+    "error": "دا راپور بار نشو.",
+    "empty": "پدې مهال کې هیڅ نشته.",
+    "ownScopeNotice": "یوازې ستاسو خپل ثبتونه ښودل کیږي.",
+    "open": "خلاص (روان)",
+    "tabs": {
+      "census": "سرشمېرنه",
+      "waitTimes": "د انتظار وخت",
+      "revenue": "عاید",
+      "diagnoses": "تشخیصونه",
+      "audit": "د پلټنې لړلیک",
+      "errors": "تېروتنې",
+      "export": "د ناروغانو لړلیک ایستل"
+    },
+    "census": {
+      "chartTitle": "ویزیټونه د ورځې له مخې",
+      "totals": "{{visits}} ویزیټونه · {{completed}} بشپړ شوي · {{cancelled}} لغوه شوي · {{noShow}} نشتون",
+      "open": "پرانیستی",
+      "col": {
+        "date": "نېټه",
+        "department": "څانګه",
+        "visits": "ویزیټونه",
+        "completed": "بشپړ شوي",
+        "cancelled": "لغوه شوي",
+        "noShow": "نشتون"
+      }
+    },
+    "waitTimes": {
+      "chartTitle": "منځنی انتظار د څانګې له مخې",
+      "minutes": "{{minutes}} دقیقې",
+      "col": {
+        "department": "څانګه",
+        "doctor": "ډاکټر",
+        "visits": "ویزیټونه",
+        "avg": "منځنی انتظار (دقیقې)",
+        "median": "میانه انتظار (دقیقې)"
+      }
+    },
+    "revenue": {
+      "grandTotal": "ټول راټول شوي",
+      "total": "ټول",
+      "trendTitle": "ورځنی راټول شوي",
+      "byDepartment": "د څانګې له مخې",
+      "otherDepartment": "نور",
+      "byMethod": "د طریقې له مخې",
+      "col": {
+        "date": "نېټه",
+        "total": "ټول"
+      }
+    },
+    "diagnoses": {
+      "chartTitle": "تر ټولو عام تشخیصونه",
+      "ownScopeNotice": "یوازې ستاسو خپل ناروغان ښودل کیږي.",
+      "col": {
+        "code": "د ICD کوډ",
+        "label": "تشخیص",
+        "count": "شمېر"
+      }
+    },
+    "audit": {
+      "action": "عمل",
+      "anyAction": "هر عمل",
+      "entity": "اړوند شی",
+      "entityPlaceholder": "ناروغ، بیل…",
+      "col": {
+        "when": "کله",
+        "who": "چا",
+        "action": "عمل",
+        "entity": "اړوند شی"
+      },
+      "pageOf": "مخ {{page}} د {{total}}",
+      "prev": "مخکینی",
+      "next": "راتلونکی"
+    },
+    "errors": {
+      "status": "حالت",
+      "anyStatus": "هر حالت",
+      "col": {
+        "when": "کله",
+        "status": "حالت",
+        "request": "غوښتنه",
+        "message": "پیغام",
+        "who": "چا"
+      },
+      "from": "له"
+    },
+    "export": {
+      "explain": "د ناروغانو بشپړ لړلیک د CSV په بڼه ایستل کیږي. یوازې ادمین، او هر ځل یې دلیل او وخت ثبتیږي.",
+      "reason": "د دې ایستلو دلیل",
+      "action": "د ناروغانو لړلیک ایستل",
+      "error": "د ناروغانو لړلیک ونه ایستل شو.",
+      "done": "{{count}} ناروغان ایستل شول."
+    }
   },
   "queue": {
     "mine": "ستاسو ناروغان چې نن انتظار باسي، اوږد انتظار لومړی.",
@@ -958,6 +1093,17 @@
       "keep": "لیدنه پاتې شي",
       "saving": "لغوه کېږي…",
       "failed": "د دې لیدنې لغوه کول ونشول."
+    },
+    "reassign": {
+      "start": "ډاکټر بدل کړئ",
+      "practitioner": "نوی ډاکټر",
+      "choose": "یو ډاکټر وټاکئ",
+      "reason": "ولې دا لیدنه بدلېږي؟",
+      "reasonPlaceholder": "ډاکټر شیرزی ناروغه شو",
+      "confirm": "بدل کړئ",
+      "keep": "لیدنه پاتې شي",
+      "saving": "بدلېږي…",
+      "failed": "د دې لیدنې بدلول ونشول."
     }
   },
   "consultations": {
@@ -1026,7 +1172,15 @@
     "seen": "لیدل شوی",
     "notSeen": "نه دی لیدل شوی",
     "noPhone": "د تیلفون شمېره نشته",
-    "openVisit": "کتنه پرانیستل"
+    "openVisit": "کتنه پرانیستل",
+    "response": {
+      "coming": "راځي",
+      "not_coming": "نه راځي",
+      "custom": "یادداشت",
+      "notePlaceholder": "هغه څه ویل؟",
+      "save": "خوندي کول",
+      "cancel": "لغوه کول"
+    }
   },
   "consult": {
     "loading": "د ریکارډ پرانیستل…",
@@ -1044,7 +1198,8 @@
       "prescription": "نسخه",
       "labs": "لابراتوار",
       "notes": "یادښتونه",
-      "history": "تاریخچه"
+      "history": "تاریخچه",
+      "trends": "رجحان"
     },
     "separator": "، ",
     "hint": {
@@ -1060,7 +1215,8 @@
       "saveFailed": "{{sections}} خوندي نشو. هیڅ چاپ نشو او مراجعه پای ته ونه رسېده.",
       "startFirst": "له پای ته رسولو مخکې معاینه پیل کړئ.",
       "finishFailed": "د دې مراجعې پای ته رسول ونشول. هیڅ بدلون ونشو.",
-      "saved": "{{sections}} خوندي شو."
+      "saved": "{{sections}} خوندي شو.",
+      "paperSize": "کاغذ"
     },
     "unsaved": {
       "title": "په {{sections}} کې ناخوندي کار شته.",
@@ -1367,6 +1523,22 @@
     "dose": "اندازه",
     "frequency": "تکرار",
     "duration": "موده"
+  },
+  "trends": {
+    "complaint": {
+      "title": "شکایتونه د وخت په اوږدو کې",
+      "empty": "په دې موده کې هیڅ شکایت نه دی ثبت شوی.",
+      "count": "{{count}} شکایتونه"
+    },
+    "diagnosis": {
+      "title": "تشخیصونه د وخت په اوږدو کې",
+      "empty": "په دې موده کې هیڅ تشخیص نه دی ثبت شوی.",
+      "count": "{{count}} تشخیصونه"
+    },
+    "lab": {
+      "title": "د لابراتوار پایلې د وخت په اوږدو کې",
+      "empty": "په دې موده کې هیڅ عددي او تایید شوې پایله نشته."
+    }
   },
   "codes": {
     "placeholder": "ولیکئ یا وټاکئ…",

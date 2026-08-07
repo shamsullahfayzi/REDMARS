@@ -1,27 +1,28 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Pill, Printer, Search, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, Pill, Search, TriangleAlert } from 'lucide-react'
 import type {
   AllergySeverity,
-  DispenseResponse,
   PharmacyAllergy,
+  PharmacyBill,
+  PharmacyDrugLine,
   PharmacyPrescription,
   PharmacyQueueItem,
   ReturnMedicineResponse,
 } from '@redmars/shared'
+import { moneySchema } from '@redmars/shared'
 import { useAuth } from '@/auth/authContext'
-import { InvoiceReceipt } from '@/components/InvoiceReceipt'
+import { InvoiceDetailView } from '@/components/InvoiceDetailView'
 import { PageHeader } from '@/components/PageHeader'
-import { PaymentForm } from '@/components/PaymentForm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { serverMessage } from '@/lib/api'
 import { useDebounced } from '@/hooks/useDebounced'
-import { useInvoiceDetail } from '@/hooks/useInvoices'
 import {
-  useDispense,
+  useBillPrescription,
+  useConfirmHandover,
   usePharmacyPrescription,
   usePharmacyQueue,
   usePharmacySearch,
@@ -195,6 +196,13 @@ function QueueRow({ item, onOpen }: { item: PharmacyQueueItem; onOpen: () => voi
   )
 }
 
+/**
+ * Task 6.10 — bill, wait for reception, hand over. Three states read off one field
+ * (`rx.bill`) rather than local mutation-result state, so reopening an already-billed
+ * prescription from the queue picks up exactly where it left off — a pharmacist who bills a
+ * sheet, gets called away, and comes back an hour later sees the SAME screen a colleague who
+ * just clicked "Bill" would, not a blank one.
+ */
 function PrescriptionView({
   prescriptionId,
   onBack,
@@ -206,29 +214,20 @@ function PrescriptionView({
   const { roles } = useAuth()
   const query = usePharmacyPrescription(prescriptionId)
   const rx = query.data
-  const dispense = useDispense()
-  const [bill, setBill] = useState<DispenseResponse | null>(null)
 
   const isPharmacist = roles.includes('pharmacist')
-
-  if (bill) {
-    return (
-      <DispensedBill
-        bill={bill}
-        canReceive={isPharmacist}
-        canPrint={isPharmacist}
-        canReturn={isPharmacist}
-        onDone={onBack}
-      />
-    )
-  }
+  // Once a bill exists, `InvoiceDetailView` below supplies its own back/print row — a second
+  // one here would just be a duplicate control fighting it for the same job.
+  const hasBill = !!rx?.bill
 
   return (
     <div className="space-y-5">
-      <Button variant="ghost" onClick={onBack}>
-        <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />
-        {t('pharmacy.back')}
-      </Button>
+      {!hasBill && (
+        <Button variant="ghost" onClick={onBack}>
+          <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />
+          {t('pharmacy.back')}
+        </Button>
+      )}
 
       {query.isPending && <p className="text-muted-foreground">{t('pharmacy.loading')}</p>}
       {query.isError && <p className="text-sm text-destructive">{t('pharmacy.detailError')}</p>}
@@ -239,22 +238,23 @@ function PrescriptionView({
           <AllergyPanel allergies={rx.allergies} />
           <DrugSheet rx={rx} />
 
-          {isPharmacist && rx.status === 'active' && (
-            <div className="space-y-2">
-              <Button
-                onClick={() => dispense.mutate(prescriptionId, { onSuccess: setBill })}
-                disabled={dispense.isPending}
-              >
-                {dispense.isPending ? t('pharmacy.dispensing') : t('pharmacy.dispense')}
-              </Button>
-              {dispense.isError && (
-                <p className="text-sm text-destructive">
-                  {serverMessage(dispense.error) ?? t('pharmacy.dispenseError')}
-                </p>
-              )}
-            </div>
+          {isPharmacist && rx.status === 'active' && !rx.bill && (
+            <BillForm prescriptionId={prescriptionId} items={rx.items} />
           )}
-          {rx.status !== 'active' && (
+
+          {rx.bill && (
+            <BillPanel
+              prescriptionId={prescriptionId}
+              bill={rx.bill}
+              rxStatus={rx.status}
+              isPharmacist={isPharmacist}
+              onHandedOver={onBack}
+            />
+          )}
+
+          {/* Falls through only for a status neither 'active' nor ever billed — a
+              cancelled/voided sheet found via search, never a real dispensing state. */}
+          {!rx.bill && rx.status !== 'active' && (
             <Badge variant="muted">{t('pharmacy.alreadyDispensed')}</Badge>
           )}
         </div>
@@ -264,37 +264,137 @@ function PrescriptionView({
 }
 
 /**
- * Task 6.10 — the medicine bill, dispensed and ready to settle at the pharmacy till. Reuses
- * the shared payment form and the invoice receipt: a pharmacy bill is paid and printed the
- * same way as any other. The receipt is fetched fresh so it reflects each instalment.
+ * The pricing form — the actual fix for "the bill is always zero." `Drug.sellPrice` only
+ * ever supplies `suggestedUnitPrice`, a pre-filled starting figure (many drugs have no
+ * catalog price at all, which used to mean a silent 0.00 bill with no way to correct it);
+ * every field here stays editable, and the amount that lands on the invoice is whatever the
+ * pharmacist typed, not what the formulary happened to say.
  */
-function DispensedBill({
+function BillForm({ prescriptionId, items }: { prescriptionId: string; items: PharmacyDrugLine[] }) {
+  const { t } = useTranslation()
+  const billMutation = useBillPrescription()
+  const [prices, setPrices] = useState<Record<string, string>>(() =>
+    Object.fromEntries(items.map((item) => [item.id, item.suggestedUnitPrice ?? ''])),
+  )
+
+  const qtyOf = (item: PharmacyDrugLine) => item.quantity ?? 1
+  const lineTotal = (item: PharmacyDrugLine) => {
+    const price = Number(prices[item.id])
+    return Number.isFinite(price) ? price * qtyOf(item) : 0
+  }
+  const billTotal = items.reduce((sum, item) => sum + lineTotal(item), 0)
+  const allPriced = items.every((item) => moneySchema.safeParse(prices[item.id]).success)
+
+  function submit() {
+    if (!allPriced || billMutation.isPending) return
+    billMutation.mutate({
+      prescriptionId,
+      body: { items: items.map((item) => ({ itemId: item.id, unitPrice: prices[item.id].trim() })) },
+    })
+  }
+
+  return (
+    <Card className="space-y-3 p-4">
+      <p className="text-sm font-medium text-foreground">{t('pharmacy.priceTitle')}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-muted-foreground">
+            <tr>
+              <th className="pb-2 text-start font-medium">{t('pharmacy.col.drugs')}</th>
+              <th className="pb-2 text-end font-medium">{t('pharmacy.col.qty')}</th>
+              <th className="pb-2 text-end font-medium">{t('pharmacy.col.unitPrice')}</th>
+              <th className="pb-2 text-end font-medium">{t('pharmacy.col.lineTotal')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id} className="border-t border-border">
+                <td className="py-2 pe-2 text-foreground">{item.drugName}</td>
+                <td className="py-2 text-end text-muted-foreground" dir="ltr">
+                  {qtyOf(item)}
+                </td>
+                <td className="py-2 ps-2 text-end">
+                  <Input
+                    value={prices[item.id] ?? ''}
+                    onChange={(e) =>
+                      setPrices((prev) => ({ ...prev, [item.id]: e.target.value }))
+                    }
+                    inputMode="decimal"
+                    dir="ltr"
+                    className="w-24 ms-auto text-end font-mono"
+                    aria-label={t('pharmacy.unitPriceFor', { drug: item.drugName })}
+                  />
+                </td>
+                <td className="py-2 ps-2 text-end font-mono text-foreground" dir="ltr">
+                  {lineTotal(item).toFixed(2)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center justify-between border-t border-border pt-3">
+        <span className="text-sm font-medium text-foreground">{t('pharmacy.billTotal')}</span>
+        <span className="font-mono text-base font-semibold text-foreground" dir="ltr">
+          {billTotal.toFixed(2)}
+        </span>
+      </div>
+
+      <Button onClick={submit} disabled={!allPriced || billMutation.isPending}>
+        {billMutation.isPending ? t('pharmacy.billing') : t('pharmacy.billIt')}
+      </Button>
+      {!allPriced && <p className="text-xs text-muted-foreground">{t('pharmacy.priceHint')}</p>}
+      {billMutation.isError && (
+        <p className="text-sm text-destructive">
+          {serverMessage(billMutation.error) ?? t('pharmacy.billError')}
+        </p>
+      )}
+    </Card>
+  )
+}
+
+/**
+ * The bill itself, in whichever of three states it's actually in:
+ *  - raised, unpaid — a message pointing at reception, no handover button yet;
+ *  - raised, paid — the handover button appears;
+ *  - handed over — the same success badge this screen always showed, plus the return flow.
+ *
+ * `InvoiceDetailView` is the same pay/discount/print view every other bill in this system
+ * already uses (task 6.1/6.4) — reused here for its proven `DiscountForm` (mandatory reason,
+ * R10's ceiling) and reprint, but with `canReceive` permanently false: the pharmacy counter
+ * no longer takes payment at all, on request — reception collects it, and the moment it does,
+ * this same invoice (already a `prescription_item` bill Collections already lists lab bills
+ * the identical way) shows as settled here too on the next fetch.
+ *
+ * `canRefund` stays OFF for the same reason it always was: a pharmacy bill's money reverses
+ * through `useReturnMedicine` below (the box coming back refunds what was paid for it), and a
+ * second, independent "refund this payment" control on the same screen would let the two
+ * paths double-handle the same cash.
+ */
+function BillPanel({
+  prescriptionId,
   bill,
-  canReceive,
-  canPrint,
-  canReturn,
-  onDone,
+  rxStatus,
+  isPharmacist,
+  onHandedOver,
 }: {
-  bill: DispenseResponse
-  canReceive: boolean
-  canPrint: boolean
-  canReturn: boolean
-  onDone: () => void
+  prescriptionId: string
+  bill: PharmacyBill
+  rxStatus: string
+  isPharmacist: boolean
+  onHandedOver: () => void
 }) {
   const { t } = useTranslation()
-  const detailQuery = useInvoiceDetail(bill.invoiceId)
-  const detail = detailQuery.data
-  const returned = useReturnMedicine(bill.prescriptionId)
+  const { roles } = useAuth()
+  const handover = useConfirmHandover()
+  const returned = useReturnMedicine(prescriptionId)
   const [showReturn, setShowReturn] = useState(false)
   const [reason, setReason] = useState('')
   const [result, setResult] = useState<ReturnMedicineResponse | null>(null)
 
-  const outstanding = detail
-    ? (() => {
-        const owed = Number(detail.invoice.total) - Number(detail.invoice.paidAmount)
-        return owed > 0 ? owed.toFixed(2) : null
-      })()
-    : null
+  const alreadyHandedOver = rxStatus !== 'active'
+  const canConfirmHandover = isPharmacist && bill.isPaid && !alreadyHandedOver
 
   function submitReturn() {
     if (reason.trim().length < 3 || returned.isPending) return
@@ -306,45 +406,59 @@ function DispensedBill({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-3 print:hidden">
-        <Button variant="ghost" onClick={onDone}>
-          <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />
-          {t('pharmacy.back')}
-        </Button>
-        {canPrint && detail && !result && (
-          <Button onClick={() => window.print()}>
-            <Printer className="size-4" aria-hidden />
-            {t('pharmacy.printBill')}
-          </Button>
+      <div className="print:hidden">
+        {result ? (
+          <Badge variant="danger">
+            {t('pharmacy.returned', {
+              amount: result.refundedAmount,
+              currency: result.currency,
+              receiptNo: result.refundReceiptNo ?? '—',
+            })}
+          </Badge>
+        ) : alreadyHandedOver ? (
+          <Badge variant="success">
+            {t('pharmacy.dispensed', {
+              invoiceNo: bill.invoiceNo,
+              total: bill.total,
+              currency: bill.currency,
+            })}
+          </Badge>
+        ) : bill.isPaid ? (
+          <Badge variant="success">{t('pharmacy.billPaid', { invoiceNo: bill.invoiceNo })}</Badge>
+        ) : (
+          <Badge variant="warning">
+            {t('pharmacy.awaitingPayment', {
+              invoiceNo: bill.invoiceNo,
+              outstanding: bill.outstanding,
+              currency: bill.currency,
+            })}
+          </Badge>
         )}
       </div>
 
-      <div className="print:hidden">
-        <Badge variant={result ? 'danger' : 'success'}>
-          {result
-            ? t('pharmacy.returned', {
-                amount: result.refundedAmount,
-                currency: result.currency,
-                receiptNo: result.refundReceiptNo ?? '—',
-              })
-            : t('pharmacy.dispensed', {
-                invoiceNo: bill.invoiceNo,
-                total: bill.total,
-                currency: bill.currency,
-              })}
-        </Badge>
-      </div>
-
-      {!result && canReceive && outstanding && detail && (
-        <PaymentForm
-          invoiceId={bill.invoiceId}
-          outstanding={outstanding}
-          currency={detail.invoice.currency}
-          onPaid={() => undefined}
-        />
+      {!result && !bill.isPaid && !alreadyHandedOver && (
+        <p className="text-sm text-muted-foreground print:hidden">
+          {t('pharmacy.waitingForReception')}
+        </p>
       )}
 
-      {!result && canReturn && (
+      {!result && canConfirmHandover && (
+        <div className="space-y-2 print:hidden">
+          <Button
+            onClick={() => handover.mutate(prescriptionId, { onSuccess: onHandedOver })}
+            disabled={handover.isPending}
+          >
+            {handover.isPending ? t('pharmacy.handingOver') : t('pharmacy.confirmHandover')}
+          </Button>
+          {handover.isError && (
+            <p className="text-sm text-destructive">
+              {serverMessage(handover.error) ?? t('pharmacy.handoverError')}
+            </p>
+          )}
+        </div>
+      )}
+
+      {!result && isPharmacist && alreadyHandedOver && (
         <Card className="max-w-2xl space-y-2 p-4 print:hidden">
           {!showReturn ? (
             <Button variant="destructive" onClick={() => setShowReturn(true)}>
@@ -381,16 +495,22 @@ function DispensedBill({
         </Card>
       )}
 
-      {detail && (
-        <Card className="max-w-2xl p-6 print:max-w-none print:border-0 print:p-0 print:shadow-none">
-          <InvoiceReceipt
-            facility={detail.facility}
-            patient={detail.patient}
-            visit={detail.visit}
-            invoice={detail.invoice}
-            receiptDate={detail.createdAt}
-          />
-        </Card>
+      {!result && (
+        <InvoiceDetailView
+          invoiceId={bill.invoiceId}
+          canPrint={isPharmacist}
+          canReceive={false}
+          canDiscount={isPharmacist || roles.includes('admin')}
+          discountUncapped={roles.includes('admin')}
+          canRefund={false}
+          canRefundPrint={false}
+          onBack={onHandedOver}
+          // This screen is the just-billed bill's own discount/print/status view, not a
+          // general invoice browser — a sibling bill on the same visit (reception's OPD
+          // fee, say) is shown in the totals panel for context, same as everywhere else,
+          // but opening one is what the Collections/Invoices screens are already for.
+          onOpen={() => undefined}
+        />
       )}
     </div>
   )

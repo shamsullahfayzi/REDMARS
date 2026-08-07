@@ -89,7 +89,8 @@
     "doctor": "Doctor",
     "lab_tech": "Lab technician",
     "pharmacist": "Pharmacist",
-    "management": "Management"
+    "management": "Management",
+    "call_center": "Call center"
   },
   "users": {
     "create": {
@@ -273,7 +274,7 @@
     "subtitle": "The medicine formulary for this hospital.",
     "import": {
       "title": "Import from CSV",
-      "hint": "Paste rows with a header line. Columns: code and genericName are required; brandName, atcCode, strength, form, isControlled are optional. Re-importing the same code updates it.",
+      "hint": "Paste rows with a header line. Columns: code and genericName are required; brandName, atcCode, strength, form, isControlled, sellPrice are optional. Re-importing the same code updates it.",
       "submit": "Import",
       "importing": "Importing…",
       "failed": "Import failed. Please try again.",
@@ -293,6 +294,9 @@
       "defaultFreq": "Default frequency",
       "defaultDuration": "Default duration",
       "isControlled": "Controlled substance",
+      "sellPrice": "Sell price",
+      "sellPricePlaceholder": "Free (leave blank)",
+      "sellPriceHint": "What the pharmacy charges per unit at dispense. Blank means free-issue — not a mistake, but check that's what you mean.",
       "submit": "Add drug",
       "submitting": "Saving…",
       "invalid": "Please check the form.",
@@ -311,6 +315,9 @@
       "genericName": "Generic name",
       "strength": "Strength",
       "form": "Form",
+      "sellPrice": "Price",
+      "noPrice": "No price",
+      "noPriceHint": "This drug has no price — dispensing it bills at 0.00.",
       "controlled": "Controlled",
       "status": "Status",
       "actions": "Actions",
@@ -778,10 +785,14 @@
   "collections": {
     "subtitle": "Every unpaid lab or pharmacy bill, in one list.",
     "searchPlaceholder": "Invoice number, patient name or MRN",
+    "allDates": "All dates",
     "error": "Could not load collections.",
     "empty": "Nothing outstanding right now.",
     "noMatch": "No bills match.",
-    "count": "{{count}} outstanding",
+    "count": "Showing {{shown}} of {{total}} outstanding",
+    "page": "Page {{page}} of {{pageCount}}",
+    "previous": "Previous",
+    "next": "Next",
     "new": "New",
     "col": {
       "origin": "Till",
@@ -869,7 +880,10 @@
       "ordered": "Ordered",
       "patient": "Patient",
       "drugs": "Drugs",
-      "prescriber": "Prescriber"
+      "prescriber": "Prescriber",
+      "qty": "Qty",
+      "unitPrice": "Unit price",
+      "lineTotal": "Line total"
     },
     "back": "Back to queue",
     "loading": "Loading…",
@@ -881,12 +895,22 @@
     "qty": "Qty {{count}}",
     "allergyOverride": "Prescribed despite allergy: {{reason}}",
     "advice": "Advice",
-    "dispense": "Dispense & bill",
-    "dispensing": "Dispensing…",
-    "dispenseError": "Could not dispense.",
+    "priceTitle": "Price this prescription",
+    "unitPriceFor": "Unit price for {{drug}}",
+    "billTotal": "Bill total",
+    "priceHint": "Enter a price for every drug before billing.",
+    "billIt": "Bill this prescription",
+    "billing": "Billing…",
+    "billError": "Could not bill this prescription.",
     "alreadyDispensed": "Already dispensed",
     "printBill": "Print bill",
-    "dispensed": "Dispensed · {{invoiceNo}} · {{total}} {{currency}}",
+    "dispensed": "Handed over · {{invoiceNo}} · {{total}} {{currency}}",
+    "billPaid": "Bill {{invoiceNo}} is paid — ready to hand over",
+    "awaitingPayment": "Bill {{invoiceNo}} — {{outstanding}} {{currency}} still owed",
+    "waitingForReception": "Print this and send the patient to reception to pay. Come back here once it's settled to hand over the medicine.",
+    "confirmHandover": "Confirm handover",
+    "handingOver": "Handing over…",
+    "handoverError": "Could not confirm the handover.",
     "return": "Return medicine",
     "returnReason": "Reason",
     "returnReasonPlaceholder": "Why the medicine is returned (required)",
@@ -919,6 +943,117 @@
     "total": "Total",
     "grandCash": "All tills — cash",
     "grandTotal": "All tills — total"
+  },
+  "reports": {
+    "subtitle": "Census, wait times, revenue, diagnosis counts, and the audit trail.",
+    "noAccess": "No report is open to your role.",
+    "from": "From",
+    "to": "To",
+    "presets": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "thisMonth": "This month",
+      "lastMonth": "Last month"
+    },
+    "filterDepartment": "Department",
+    "allDepartments": "All departments",
+    "filterDoctor": "Doctor",
+    "allDoctors": "All doctors",
+    "print": "Print",
+    "downloadCsv": "Download CSV",
+    "loading": "Loading…",
+    "error": "Could not load this report.",
+    "empty": "Nothing in this range.",
+    "ownScopeNotice": "Showing your own registrations only.",
+    "open": "Open (in progress)",
+    "tabs": {
+      "census": "Census",
+      "waitTimes": "Wait times",
+      "revenue": "Revenue",
+      "diagnoses": "Diagnoses",
+      "audit": "Audit log",
+      "errors": "Errors",
+      "export": "Patient export"
+    },
+    "census": {
+      "chartTitle": "Visits by day",
+      "totals": "{{visits}} visits · {{completed}} completed · {{cancelled}} cancelled · {{noShow}} no-shows",
+      "open": "Open",
+      "col": {
+        "date": "Date",
+        "department": "Department",
+        "visits": "Visits",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "noShow": "No-show"
+      }
+    },
+    "waitTimes": {
+      "chartTitle": "Average wait by department",
+      "minutes": "{{minutes}} min",
+      "col": {
+        "department": "Department",
+        "doctor": "Doctor",
+        "visits": "Visits",
+        "avg": "Avg wait (min)",
+        "median": "Median wait (min)"
+      }
+    },
+    "revenue": {
+      "grandTotal": "Total collected",
+      "total": "total",
+      "trendTitle": "Collected per day",
+      "byDepartment": "By department",
+      "otherDepartment": "Other",
+      "byMethod": "By method",
+      "col": {
+        "date": "Date",
+        "total": "Total"
+      }
+    },
+    "diagnoses": {
+      "chartTitle": "Most common diagnoses",
+      "ownScopeNotice": "Showing your own patients only.",
+      "col": {
+        "code": "ICD code",
+        "label": "Diagnosis",
+        "count": "Count"
+      }
+    },
+    "audit": {
+      "action": "Action",
+      "anyAction": "Any action",
+      "entity": "Entity",
+      "entityPlaceholder": "Patient, Invoice…",
+      "col": {
+        "when": "When",
+        "who": "Who",
+        "action": "Action",
+        "entity": "Entity"
+      },
+      "pageOf": "Page {{page}} of {{total}}",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "errors": {
+      "status": "Status",
+      "anyStatus": "Any status",
+      "col": {
+        "when": "When",
+        "status": "Status",
+        "request": "Request",
+        "message": "Message",
+        "who": "Who"
+      },
+      "from": "From"
+    },
+    "export": {
+      "explain": "Pulls the full patient register as a CSV. Admin only, and every pull is logged with who, when, and why.",
+      "reason": "Reason for this export",
+      "action": "Export patient list",
+      "error": "Could not export the patient list.",
+      "done": "Exported {{count}} patients."
+    }
   },
   "queue": {
     "mine": "Your patients waiting today, longest wait first.",
@@ -958,6 +1093,17 @@
       "keep": "Keep the visit",
       "saving": "Cancelling…",
       "failed": "Could not cancel that visit."
+    },
+    "reassign": {
+      "start": "Reassign doctor",
+      "practitioner": "New doctor",
+      "choose": "Choose a doctor",
+      "reason": "Why is this visit being reassigned?",
+      "reasonPlaceholder": "Dr. Sherzai called in sick",
+      "confirm": "Reassign",
+      "keep": "Keep the visit",
+      "saving": "Reassigning…",
+      "failed": "Could not reassign that visit."
     }
   },
   "consultations": {
@@ -1026,7 +1172,15 @@
     "seen": "Seen",
     "notSeen": "Not seen",
     "noPhone": "No phone number",
-    "openVisit": "Open the visit"
+    "openVisit": "Open the visit",
+    "response": {
+      "coming": "Coming",
+      "not_coming": "Not coming",
+      "custom": "Custom",
+      "notePlaceholder": "What did they say?",
+      "save": "Save",
+      "cancel": "Cancel"
+    }
   },
   "consult": {
     "loading": "Opening the record…",
@@ -1044,7 +1198,8 @@
       "prescription": "Prescription",
       "labs": "Labs",
       "notes": "Notes",
-      "history": "History"
+      "history": "History",
+      "trends": "Trends"
     },
     "separator": ", ",
     "hint": {
@@ -1060,7 +1215,8 @@
       "saveFailed": "Could not save {{sections}}. Nothing was printed and the visit was not finished.",
       "startFirst": "Start the consultation before finishing it.",
       "finishFailed": "Could not finish this visit. Nothing was changed.",
-      "saved": "Saved {{sections}}."
+      "saved": "Saved {{sections}}.",
+      "paperSize": "Paper"
     },
     "unsaved": {
       "title": "Unsaved work in {{sections}}.",
@@ -1367,6 +1523,22 @@
     "dose": "Dose",
     "frequency": "Frequency",
     "duration": "Duration"
+  },
+  "trends": {
+    "complaint": {
+      "title": "Complaints over time",
+      "empty": "No complaints recorded in this window.",
+      "count": "{{count}} complaint(s)"
+    },
+    "diagnosis": {
+      "title": "Diagnoses over time",
+      "empty": "No diagnoses recorded in this window.",
+      "count": "{{count}} diagnosis(es)"
+    },
+    "lab": {
+      "title": "Lab results over time",
+      "empty": "No numeric, verified results in this window."
+    }
   },
   "codes": {
     "placeholder": "Type or choose…",

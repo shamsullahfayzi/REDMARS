@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { allergySeveritySchema } from './allergy.js'
+import { moneySchema } from './reception.js'
 
 /**
  * Task 6.8 — the pharmacy queue: the doctor's orders, waiting to be dispensed.
@@ -88,6 +89,13 @@ export const pharmacyDrugLineSchema = z.object({
   instructions: z.string().nullable(),
   /** Medico-legal: the drug was prescribed to a patient recorded as allergic to it, and why. */
   allergyOverrideReason: z.string().nullable(),
+  /**
+   * A starting point for the price form, read off the formulary's `Drug.sellPrice` — never
+   * what actually lands on the invoice. Null when the drug has no catalog price at all, in
+   * which case the pharmacist types the amount from scratch rather than seeing a wrong
+   * pre-fill.
+   */
+  suggestedUnitPrice: z.string().nullable(),
 })
 export type PharmacyDrugLine = z.infer<typeof pharmacyDrugLineSchema>
 
@@ -102,6 +110,24 @@ export const pharmacyAllergySchema = z.object({
   notedAt: z.string(),
 })
 export type PharmacyAllergy = z.infer<typeof pharmacyAllergySchema>
+
+/**
+ * Whether this prescription has been billed yet, and whether that bill is settled —
+ * `PrescriptionView` reads this one field to decide which of the three screens to show:
+ * price it (`bill` is null), wait for reception (`bill.isPaid` is false), or hand the
+ * medicine over (`bill.isPaid` is true). Never null once it exists — a prescription is
+ * billed exactly once (see `bill()`'s own guard against billing twice).
+ */
+export const pharmacyBillSchema = z.object({
+  invoiceId: z.uuid(),
+  invoiceNo: z.string(),
+  total: z.string(),
+  paidAmount: z.string(),
+  outstanding: z.string(),
+  currency: z.string(),
+  isPaid: z.boolean(),
+})
+export type PharmacyBill = z.infer<typeof pharmacyBillSchema>
 
 export const pharmacyPrescriptionSchema = z.object({
   prescriptionId: z.uuid(),
@@ -123,6 +149,8 @@ export const pharmacyPrescriptionSchema = z.object({
   items: z.array(pharmacyDrugLineSchema),
   /** Active first, most severe first — the retracted ones last, but shown (a doctor removed them). */
   allergies: z.array(pharmacyAllergySchema),
+  /** Null until `bill()` has been called once — see `pharmacyBillSchema`. */
+  bill: pharmacyBillSchema.nullable(),
 })
 export type PharmacyPrescription = z.infer<typeof pharmacyPrescriptionSchema>
 
@@ -130,7 +158,7 @@ export type PharmacyPrescription = z.infer<typeof pharmacyPrescriptionSchema>
 // Dispensing and the pharmacy bill — task 6.10
 // ---------------------------------------------------------------------------------
 
-/** One priced medicine line on the pharmacy bill. Priced server-side from the formulary. */
+/** One priced medicine line on the pharmacy bill — the price the pharmacist typed for it. */
 export const dispenseLineSchema = z.object({
   description: z.string(),
   quantity: z.number().int(),
@@ -140,13 +168,34 @@ export const dispenseLineSchema = z.object({
 export type DispenseLine = z.infer<typeof dispenseLineSchema>
 
 /**
- * The result of dispensing a prescription: the sheet is marked dispensed (and leaves the
- * queue), and a pharmacy-origin invoice is raised for the drugs, priced from the formulary —
- * the browser sends nothing but the instruction to dispense. The patient then pays it at the
- * pharmacy till with the ordinary payment machinery (6.3); this returns the bill to settle.
+ * What the pharmacist billed a prescription at. The formulary's `Drug.sellPrice` only ever
+ * supplies a suggested starting figure (`PharmacyDrugLine.suggestedUnitPrice`) — many drugs
+ * have no catalog price at all, and a bill is real money, not a number the pharmacist is
+ * stuck with because a shelf entry happens to be blank. Every item on the prescription must
+ * be priced, and only those items; the server checks the set matches exactly, not the client.
+ */
+export const billPrescriptionRequestSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        itemId: z.uuid(),
+        unitPrice: moneySchema,
+      }),
+    )
+    .min(1),
+})
+export type BillPrescriptionRequest = z.infer<typeof billPrescriptionRequestSchema>
+
+/**
+ * The result of BILLING a prescription — step one of two. A pharmacy-origin invoice is
+ * raised for the drugs, priced from what the pharmacist typed on the form above. The sheet
+ * is NOT marked dispensed and does not leave the queue — that only happens once the bill is
+ * fully paid and `confirmHandover` is called.
  *
- * The request carries no body: quantities and prices are the server's, read from the
- * prescription and the drug catalogue, never sent by the till.
+ * The patient pays this bill at RECEPTION, not here: the invoice lands in the Collections
+ * worklist the moment this returns, exactly like a lab bill already does, and this screen
+ * has no payment form of its own — see PharmacyPage.tsx for why that was a real gap, not a
+ * design choice, until this task.
  */
 export const dispenseResponseSchema = z.object({
   prescriptionId: z.uuid(),
@@ -161,6 +210,19 @@ export const dispenseResponseSchema = z.object({
   items: z.array(dispenseLineSchema),
 })
 export type DispenseResponse = z.infer<typeof dispenseResponseSchema>
+
+/**
+ * The result of the HANDOVER — step two, and the one that actually completes the
+ * prescription and takes it off the queue. Only reachable once the bill `bill()` raised is
+ * fully paid; the server re-checks that itself rather than trusting the screen that offered
+ * the button.
+ */
+export const confirmHandoverResponseSchema = z.object({
+  prescriptionId: z.uuid(),
+  status: z.string(),
+  dispensedAt: z.string(),
+})
+export type ConfirmHandoverResponse = z.infer<typeof confirmHandoverResponseSchema>
 
 // ---------------------------------------------------------------------------------
 // Medicine return — task 6.11 (Rule R5)

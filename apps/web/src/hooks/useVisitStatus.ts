@@ -1,10 +1,12 @@
 import { useMutation } from '@tanstack/react-query'
 import {
   cancelVisitResponseSchema,
+  reassignPractitionerResponseSchema,
   visitHistoryResponseSchema,
   visitSummarySchema,
   type CancelVisitRequest,
   type ChangeVisitStatusRequest,
+  type ReassignPractitionerRequest,
 } from '@redmars/shared'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet, apiPatch, apiPost } from '@/lib/api'
@@ -42,6 +44,22 @@ export function useCancelVisit(visitId: string) {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['visits'] })
       void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
+  })
+}
+
+/**
+ * Fixing who a visit is booked under.
+ *
+ * Invalidates the same `visits` query as the status/cancel mutations — the queue and any
+ * open consult screen both key off it, and the row's doctor is now wrong until it refetches.
+ */
+export function useReassignPractitioner(visitId: string) {
+  return useMutation({
+    mutationFn: (input: ReassignPractitionerRequest) =>
+      apiPost(`/visits/${visitId}/reassign-practitioner`, input, reassignPractitionerResponseSchema),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['visits'] })
     },
   })
 }

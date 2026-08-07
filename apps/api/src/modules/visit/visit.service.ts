@@ -12,6 +12,8 @@ import type {
   ChangeVisitStatusRequest,
   ConsultContext,
   CreateVisitRequest,
+  ReassignPractitionerRequest,
+  ReassignPractitionerResponse,
   UpdateComplaintRequest,
   QueueEntry,
   QueueQuery,
@@ -21,6 +23,7 @@ import type {
   VisitSummary,
 } from '@redmars/shared';
 import {
+  CLINICAL_DEPARTMENT_TYPES,
   OPEN_VISIT_STATUSES,
   VISIT_STATUS_TRANSITIONS,
   allowedStatusChanges,
@@ -629,6 +632,97 @@ export class VisitService {
   }
 
   /**
+   * Fixing who a visit is booked under (a new task, same R5 shape as `cancel`).
+   *
+   * No money moves here, so there is no `payment.refund`-style second permission to
+   * check — only the same same-day / before-the-next-step guard, and the same
+   * department check `create` already applies to a chosen practitioner.
+   *
+   * Logged on `VisitStatusHistory` rather than a new table: the status does not change,
+   * but the row is still "who touched this visit, when, and why", which is exactly what
+   * that table is for. Written deliberately, once, per call — not the no-op guard
+   * `changeStatus` uses for a caller re-requesting the status it is already at.
+   */
+  async reassignPractitioner(
+    facilityId: string,
+    userId: string,
+    permissions: ReadonlyMap<string, string | null>,
+    id: string,
+    input: ReassignPractitionerRequest,
+  ): Promise<ReassignPractitionerResponse> {
+    const visit = await this.prisma.db.visit.findFirst({
+      where: { id, facilityId },
+      select: { id: true, status: true, startedAt: true, departmentId: true },
+    });
+    if (!visit) throw new NotFoundException('Visit not found');
+
+    if (!['planned', 'arrived', 'in_progress', 'on_hold'].includes(visit.status)) {
+      throw new BadRequestException({
+        message: `A ${visit.status} visit cannot be reassigned.`,
+        code: 'illegal_transition',
+        from: visit.status,
+      });
+    }
+
+    // Same shape as cancel's own R5 check: an unconditional grant is the admin's, 'R5'
+    // is everyone else's, and it is the conditions the guard could not check that get
+    // checked here.
+    const timeBoxed = permissions.get('visit.reassign_practitioner') === 'R5';
+    if (timeBoxed) {
+      const { start, end } = facilityDayBounds();
+      const startedToday =
+        visit.startedAt.getTime() >= start.getTime() && visit.startedAt.getTime() < end.getTime();
+      if (!startedToday) {
+        throw new ForbiddenException({
+          message: 'Only today’s visits can be reassigned here. Ask an administrator.',
+          code: 'outside_r5_window',
+        });
+      }
+      if (visit.status !== 'arrived' && visit.status !== 'planned') {
+        throw new ForbiddenException({
+          message: 'The doctor has already started this visit. Ask an administrator.',
+          code: 'next_step_occurred',
+        });
+      }
+    }
+
+    const practitioner = await this.prisma.db.practitioner.findFirst({
+      where: { id: input.practitionerId, facilityId },
+      select: {
+        isActive: true,
+        firstName: true,
+        lastName: true,
+        departments: {
+          where: { departmentId: visit.departmentId },
+          select: { departmentId: true },
+        },
+      },
+    });
+    if (!practitioner) throw new BadRequestException('Unknown practitioner');
+    if (!practitioner.isActive) throw new BadRequestException('Practitioner is not active');
+    if (practitioner.departments.length === 0) {
+      throw new BadRequestException('Practitioner does not work in that department');
+    }
+
+    const updated = await this.prisma.db.visit.update({
+      where: { id, facilityId, status: visit.status },
+      data: {
+        practitionerId: input.practitionerId,
+        statusHistory: {
+          create: {
+            status: visit.status,
+            changedBy: userId,
+            note: `Reassigned to ${practitioner.firstName} ${practitioner.lastName}: ${input.reason}`,
+          },
+        },
+      },
+      select: visitSummarySelect,
+    });
+
+    return { visit: this.toSummary(updated) };
+  }
+
+  /**
    * The trail, and the two durations it exists to make answerable: how long the patient
    * waited, and how long they were actually seen for.
    */
@@ -814,7 +908,11 @@ export class VisitService {
   async options(facilityId: string): Promise<VisitOptionsResponse> {
     const [departments, practitioners, services] = await Promise.all([
       this.prisma.db.department.findMany({
-        where: { facilityId, isActive: true },
+        // Only the five types a PATIENT is ever checked into — 'administration' (and any
+        // other non-clinical type) never belongs on the desk's own picker, same reasoning
+        // as omitting licence numbers below: this is the narrowed list a check-in screen
+        // chooses between, not the admin department list.
+        where: { facilityId, isActive: true, type: { in: [...CLINICAL_DEPARTMENT_TYPES] } },
         select: { id: true, code: true, name: true, nameLocalPrs: true, nameLocalPs: true },
         orderBy: { name: 'asc' },
       }),
@@ -822,6 +920,7 @@ export class VisitService {
         where: { facilityId, isActive: true, deletedAt: null },
         select: {
           id: true,
+          code: true,
           firstName: true,
           lastName: true,
           speciality: { select: { name: true } },
@@ -844,6 +943,7 @@ export class VisitService {
       services: services.map((service) => ({ ...service, fee: service.fee.toFixed(2) })),
       practitioners: practitioners.map((practitioner) => ({
         id: practitioner.id,
+        code: practitioner.code,
         name: fullName([practitioner.firstName, practitioner.lastName]),
         specialityName: practitioner.speciality?.name ?? null,
         departmentIds: practitioner.departments.map((link) => link.departmentId),

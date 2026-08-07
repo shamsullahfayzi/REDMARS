@@ -1,30 +1,8 @@
-import { useEffect, useState, useRef, type FormEvent, type KeyboardEvent } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
-import { Check, CreditCard, Printer, Search, UserPlus, X } from 'lucide-react'
-import {
-  DISCOUNT_MAX_PERCENT_DEFAULT,
-  PATIENT_SEARCH_MIN,
-  PAYMENT_METHODS,
-  VISIT_CREATE_TYPES,
-  checkInRequestSchema,
-  currentAgeYears,
-  type CheckInRequest,
-  type PaymentMethod,
-  type PatientSummary,
-  type VisitCreateType,
-  type VisitDepartmentOption,
-} from '@redmars/shared'
-import { CheckInReceipt } from '@/components/CheckInReceipt'
-import { DuplicateNotice } from '@/components/DuplicateNotice'
-import { PageHeader } from '@/components/PageHeader'
-import { PatientFormFields } from '@/components/PatientFormFields'
 import { PatientIdCard } from '@/components/PatientIdCard'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useDebounced } from '@/hooks/useDebounced'
 import { useDiscountCeiling } from '@/hooks/useDiscountCeiling'
@@ -34,6 +12,15 @@ import { conflictFromError, fromMinor, toMinor, useCheckIn } from '@/hooks/useRe
 import { useVisitOptions } from '@/hooks/useVisits'
 import { printTarget } from '@/lib/print'
 import { cn } from '@/lib/utils'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { checkInRequestSchema, currentAgeYears, DISCOUNT_MAX_PERCENT_DEFAULT, PATIENT_SEARCH_MIN, PAYMENT_METHODS, VISIT_CREATE_TYPES, type CheckInRequest, type PatientSummary, type PaymentMethod, type VisitCreateType, type VisitDepartmentOption, type VisitPractitionerOption } from '@redmars/shared'
+import { useTranslation } from 'react-i18next'
+import { CheckInReceipt } from '@/components/CheckInReceipt'
+import { DuplicateNotice } from '@/components/DuplicateNotice'
+import { PageHeader } from '@/components/PageHeader'
+import { PatientFormFields } from '@/components/PatientFormFields'
+import { Check, Printer, CreditCard, UserPlus, Search, X } from 'lucide-react'
+import { Link } from 'react-router'
 
 export function ReceptionPage() {
   const { t, i18n } = useTranslation()
@@ -55,6 +42,8 @@ export function ReceptionPage() {
   const [departmentSearch, setDepartmentSearch] = useState('')
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
   const [practitionerId, setPractitionerId] = useState('')
+  const [doctorSearch, setDoctorSearch] = useState('')
+  const [showDoctorDropdown, setShowDoctorDropdown] = useState(false)
   const [chiefComplaint, setChiefComplaint] = useState('')
 
   // --- Step 3: what it costs -----------------------------------------------------
@@ -71,8 +60,10 @@ export function ReceptionPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const departmentRef = useRef<HTMLDivElement>(null)
+  const doctorRef = useRef<HTMLDivElement>(null)
   const patientSearchInputRef = useRef<HTMLInputElement>(null)
   const departmentInputRef = useRef<HTMLInputElement>(null)
+  const doctorInputRef = useRef<HTMLInputElement>(null)
   const serviceSearchInputRef = useRef<HTMLInputElement>(null)
 
   const departments = optionsQuery.data?.departments ?? []
@@ -83,10 +74,21 @@ export function ReceptionPage() {
   const departmentServices = services.filter((s) => s.departmentId === departmentId)
   const otherServices = services.filter((s) => s.departmentId !== departmentId)
 
-  // Filter departments based on search
+  // Department search: code first (a receptionist typing "OPD" means the code, not
+  // the localized display name), name as a fallback for browsing — same reasoning as
+  // the doctor search just below.
   const filteredDepartments = departments.filter((d) => {
-    const name = departmentName(d).toLowerCase()
-    return name.includes(departmentSearch.toLowerCase())
+    const q = departmentSearch.trim().toLowerCase()
+    if (!q) return true
+    return d.code.toLowerCase().includes(q) || departmentName(d).toLowerCase().includes(q)
+  })
+
+  // Doctor search: code first (a receptionist typing "01" means the code, not four
+  // letters of a name), name as a fallback for browsing.
+  const filteredDoctors = availableDoctors.filter((p) => {
+    const q = doctorSearch.trim().toLowerCase()
+    if (!q) return true
+    return p.code.toLowerCase().includes(q) || p.name.toLowerCase().includes(q)
   })
 
   // Filter services based on search
@@ -102,11 +104,14 @@ export function ReceptionPage() {
     if (!departmentId && list?.length === 1) setDepartmentId(list[0].id)
   }, [optionsQuery.data, departmentId])
 
-  // Close department dropdown on outside click
+  // Close department/doctor dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (departmentRef.current && !departmentRef.current.contains(e.target as Node)) {
         setShowDepartmentDropdown(false)
+      }
+      if (doctorRef.current && !doctorRef.current.contains(e.target as Node)) {
+        setShowDoctorDropdown(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -134,7 +139,59 @@ export function ReceptionPage() {
     setDepartmentSearch('')
     setShowDepartmentDropdown(false)
     setPractitionerId('')
-    setQuantities({})
+    setDoctorSearch('')
+
+    // A department can BE a service too — Farhat's "OPD" department carries a same-named
+    // "OPD" consultation fee. Auto-apply it instead of making the receptionist find and
+    // click the very thing they just chose, a second time, in a list on the other side of
+    // the screen. Matched against the department's CODE or base name, never the localized
+    // display name — service names aren't translated, so "OPD" only ever matches "OPD".
+    const sameName = services.find(
+      (s) =>
+        s.departmentId === dept.id &&
+        (s.name.trim().toLowerCase() === dept.code.trim().toLowerCase() ||
+          s.name.trim().toLowerCase() === dept.name.trim().toLowerCase()),
+    )
+    setQuantities(sameName ? { [sameName.id]: 1 } : {})
+  }
+
+  function chooseDoctor(doctor: VisitPractitionerOption) {
+    setPractitionerId(doctor.id)
+    setDoctorSearch('')
+    setShowDoctorDropdown(false)
+  }
+
+  /**
+   * Same fast path as the doctor field below, one step earlier: type "OPD" and the
+   * department is chosen the instant it's the only code match, no click needed. Safe for
+   * the same reason a wrong doctor is — a wrong department here is a one-click fix
+   * (`chooseDepartment` clears the doctor/services it would otherwise mismatch) before the
+   * patient leaves the desk, not a clinical decision made at speed.
+   */
+  function onDepartmentSearchChange(value: string) {
+    setDepartmentSearch(value)
+    setShowDepartmentDropdown(true)
+    const needle = value.trim().toLowerCase()
+    if (!needle) return
+    const exact = departments.filter((d) => d.code.toLowerCase() === needle)
+    if (exact.length === 1) chooseDepartment(exact[0])
+  }
+
+  /**
+   * Speed over safety, on purpose — this is a doctor row on a bill, not a drug order. A
+   * receptionist typing a code should never have to look up from the keyboard: as soon as
+   * what's typed exactly matches exactly one available doctor's code, it's chosen. This is
+   * NOT the pattern for the prescription drug picker (`PrescriptionTab.tsx`'s `DrugPicker`),
+   * which stays a deliberate list — a wrong drug picked at speed is a dosing error, a wrong
+   * doctor on a reception bill is a one-click fix before the patient leaves the desk.
+   */
+  function onDoctorSearchChange(value: string) {
+    setDoctorSearch(value)
+    setShowDoctorDropdown(true)
+    const needle = value.trim().toLowerCase()
+    if (!needle) return
+    const exact = availableDoctors.filter((p) => p.code.toLowerCase() === needle)
+    if (exact.length === 1) chooseDoctor(exact[0])
   }
 
   // Everything on this screen lives in one <form>, so an Enter pressed anywhere would
@@ -143,12 +200,13 @@ export function ReceptionPage() {
   // patient in against the wrong bill. This is the one place that rule is enforced: Enter
   // only ever does the thing each field's own handler below says it does, never a submit
   // it wasn't asked for.
-  function onFormKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+  function onFormKeyDown(event:any) {
     const target = event.target
     if (!(target instanceof HTMLElement)) return
 
-    if (event.key === 'Escape' && showDepartmentDropdown) {
+    if (event.key === 'Escape' && (showDepartmentDropdown || showDoctorDropdown)) {
       setShowDepartmentDropdown(false)
+      setShowDoctorDropdown(false)
       return
     }
 
@@ -164,6 +222,14 @@ export function ReceptionPage() {
 
     if (target === departmentInputRef.current && showDepartmentDropdown) {
       if (filteredDepartments.length === 1) chooseDepartment(filteredDepartments[0])
+      return
+    }
+
+    // Falls back to name-browse: typing enough of a name to narrow to one doctor and
+    // pressing Enter selects them, same as the department field above. The instant
+    // code match in `onDoctorSearchChange` already covers the fast path.
+    if (target === doctorInputRef.current && showDoctorDropdown) {
+      if (filteredDoctors.length === 1) chooseDoctor(filteredDoctors[0])
       return
     }
 
@@ -444,10 +510,7 @@ export function ReceptionPage() {
                           ? departmentName(departments.find((d) => d.id === departmentId)!)
                           : ''
                     }
-                    onChange={(e) => {
-                      setDepartmentSearch(e.target.value)
-                      setShowDepartmentDropdown(true)
-                    }}
+                    onChange={(e) => onDepartmentSearchChange(e.target.value)}
                     onFocus={() => {
                       setShowDepartmentDropdown(true)
                       setDepartmentSearch('')
@@ -477,10 +540,16 @@ export function ReceptionPage() {
                           type="button"
                           onClick={() => chooseDepartment(dept)}
                           className={cn(
-                            'w-full px-3 py-1.5 text-start text-sm hover:bg-accent',
+                            'flex w-full items-center gap-2 px-3 py-1.5 text-start text-sm hover:bg-accent',
                             dept.id === departmentId && 'bg-accent'
                           )}
                         >
+                          <span
+                            dir="ltr"
+                            className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground"
+                          >
+                            {dept.code}
+                          </span>
                           {departmentName(dept)}
                         </button>
                       </li>
@@ -492,24 +561,73 @@ export function ReceptionPage() {
                 )}
               </div>
 
-              <div>
+              {/* Code-first doctor search — type "01" and it's chosen, no list to scan
+                  (see onDoctorSearchChange's comment on why this differs from the drug
+                  picker's deliberately list-driven UX). */}
+              <div ref={doctorRef} className="relative">
                 <Label className="text-xs" htmlFor="practitionerId">
                   {t('visits.fields.practitioner')}
                 </Label>
-                <Select
-                  id="practitionerId"
-                  value={practitionerId}
-                  disabled={!departmentId}
-                  onChange={(e) => setPractitionerId(e.target.value)}
-                  className="h-8 text-sm"
-                >
-                  <option value="">{t('visits.create.noDoctor')}</option>
-                  {availableDoctors.map((practitioner) => (
-                    <option key={practitioner.id} value={practitioner.id}>
-                      {practitioner.name}
-                    </option>
-                  ))}
-                </Select>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute start-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="practitionerId"
+                    ref={doctorInputRef}
+                    disabled={!departmentId}
+                    value={
+                      showDoctorDropdown
+                        ? doctorSearch
+                        : practitionerId
+                          ? (practitioners.find((p) => p.id === practitionerId)?.name ?? '')
+                          : ''
+                    }
+                    onChange={(e) => onDoctorSearchChange(e.target.value)}
+                    onFocus={() => {
+                      setShowDoctorDropdown(true)
+                      setDoctorSearch('')
+                    }}
+                    placeholder={t('visits.create.noDoctor')}
+                    className="h-8 ps-7 text-sm"
+                  />
+                  {practitionerId && !showDoctorDropdown && (
+                    <button
+                      type="button"
+                      onClick={() => setPractitionerId('')}
+                      className="absolute end-2 top-1/2 -translate-y-1/2"
+                    >
+                      <X className="size-3 text-muted-foreground hover:text-foreground" />
+                    </button>
+                  )}
+                </div>
+                {showDoctorDropdown && (
+                  <ul className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded border bg-popover shadow-lg">
+                    {filteredDoctors.map((doctor) => (
+                      <li key={doctor.id}>
+                        <button
+                          type="button"
+                          onClick={() => chooseDoctor(doctor)}
+                          className={cn(
+                            'flex w-full items-center gap-2 px-3 py-1.5 text-start text-sm hover:bg-accent',
+                            doctor.id === practitionerId && 'bg-accent'
+                          )}
+                        >
+                          <span
+                            dir="ltr"
+                            className="rounded bg-muted px-1 font-mono text-xs text-muted-foreground"
+                          >
+                            {doctor.code}
+                          </span>
+                          {doctor.name}
+                        </button>
+                      </li>
+                    ))}
+                    {filteredDoctors.length === 0 && (
+                      <li className="px-3 py-2 text-xs text-muted-foreground">
+                        {t('visits.create.noDoctor')}
+                      </li>
+                    )}
+                  </ul>
+                )}
               </div>
 
               <div>

@@ -1,0 +1,1782 @@
+code,name,grp
+00,Mohammad Ashraf Baha,CON     
+000,Abdul Wali Sahak,CON     
+0000,Yalda Hedayat,CON     
+002,Matullah,OPD     
+0034,Ahmad Bariz Sahibzada,CON     
+008,dr mati,OPD     
+360,360/MM Cotix,Medi    
+40 ,Optic,DENTA   
+60 ,Mahaz Ahmadzai,CON     
+A  ,Aquamox-125(Amoxicillin)125mg Susp,Medi    
+A--z,A-zit/Azithromycin 500mg Tab,Medi    
+A100,Anesthesia,OPEN    
+A123,Faizuddin,CON     
+ABD,ABDOMEN TAB,EME     
+ABDO,ABDOMENAL HESTRECTOMY,GYN     
+ABDOM   ,ABDOMEN ERECT,RAD     
+Abdome  ,Abdome(Domperidone)1mg Drop,Medi    
+ABT,AB.THYRID ,DENTA   
+Ace,Acepreg-plus/Preag+Meca,Medi    
+Actu,Actual(Artificial tears)Drop,Medi    
+Add,Addranil/Methylphenidate 10mg Tab,Medi    
+Adel,Adelflor(Probiotic)Sachet,Medi    
+Aden,Adenosine 6mg Amp,Medi    
+Afd,Afdol/ memantine 10mg Tab,Medi    
+AG ,AG RATIO,LAB     
+Agi,Agifen/ Ketotifen SYP 1mg,Medi    
+AGif,AGifen(Ketotifen) Syrup,Medi    
+Agip,Agipcin/Azithromycin 200mg Syp,Medi    
+Agipc   ,Agipcin/Azithromycin 500mg Tab,Medi    
+Airy,Airy(Mantelukast)4mg Sachets,Medi    
+Al Ras  ,AL Rashid,Medi    
+ALB,ALBUMIN,LAB     
+ALD,ALDOSTERONE,LAB     
+Alf,Alfa-wel/Alfacalcidol 0.5mcg Tab,Medi    
+Alid,Alides/Desloratadine 5mg Tab,Medi    
+ALK,ALKLINE,LAB     
+Alovi   ,Alovir(Aciclovir) 5g Cream,Medi    
+Alpr,Alprazolam Irani 0.5 Tab,Medi    
+Alpra   ,Alprazolam 0.5mg Tab,Medi    
+Amc,Amclav/Co-Amoxiclav 375mg Tab,Medi    
+Amcl,Amclav/Co-Amoxiclav 625mg Tab,Medi    
+Amcla   ,Amclav/Co-Amoxiclav 625mg Tab,Medi    
+AMH,AMH,LAB     
+Ami,Aminovel 600mg,Medi    
+Amo,Amoxi-Clav(Amoxicillin+Clavulanic Acid) 375mg Tab,Medi    
+Amp,Ampimod/Ampicilin 1g Vil,Medi    
+Ampe,Ampeur/Pure Ampicillin 1g Vil,Medi    
+Ampi,Ampicillin Inj 500,Medi    
+AMY,AMYLASE,LAB     
+ANA,ANA,LAB     
+ANALFIS ,ANAL FISSURECTOMY,OPEN    
+Ancl,Anclav-625(Amoxicillin+Clavulanate) Tab,Medi    
+And,Andrex/Testosterone 40mg Cap,Medi    
+ANE,ANESTHISIA ,ANE     
+Anep,Anepro/Metoprolol 25mg Tab,Medi    
+ANEU,ANEURISMAL SURGERY,NEURO   
+Angised ,Angised(glyceryl trinitrate)0.5mg Tab,Medi    
+ANKL,ANKLE JOINT X-RAY,RAD     
+Anp,Anpra(Alprazolam)0.25mg Tab,Medi    
+Anpra   ,Anpra(Alprazolam)0.5mg Tab,Medi    
+Anta,Antacid(Alumina.Magnesia.Simethicone) Susp,Medi    
+ANTE,ANTERIOR CERVICAL DLSCETOMY,NEURO   
+ANTER   ,ANTERIOR AND ANTERIOR LATERAL SPIN SURGRY,NEURO   
+ANTI,ANTI BODY TITER TEST,LAB     
+Anx,Anxie(Sertraline)50mg Tab,Medi    
+Anxie   ,Anxie(Sertraline)100mg Tab,Medi    
+Apa,Apase/Combinde Tab,Medi    
+APAM,ALPHA AMYLASE,LAB     
+APP,APPLYING OF IV CANOLA,PED     
+APPL,APPLYING OF SUTURES,EME     
+APTT,APTT,LAB     
+Aqu,Aqualine/Hypertonic Nasal Spr,Medi    
+Ari,Arinac/Ibuprofen/Pseu 100mg/15mg Syp,Medi    
+ASD,ASD/Rotacap,Medi    
+ASIIS   ,ASSITANT ,ASSIS   
+ASO,ASO,LAB     
+ASSI,DELIVERY ASSISTED BY EPISIOTOMY,GYN     
+asth,Asthotifen(Ketotifen) Syrup,Medi    
+Atchol-F,Atchol-F(Atorvastatin+Fenofibrate)10/160 Tab,Medi    
+Ato,Atoksilin/Amoxicillin 1G Tab,Medi    
+Atoks   ,Atoksilin/Amoxicillin 250mg SYP,Medi    
+AV ,AV FISTUAL,URO     
+Avi,Avil pheniramine 22.7mg Inj,Medi    
+Avim,Avimox(Amoxicillin)250mg Susp,Medi    
+Axo,Axofen/Fexofenadine 120mg Tab,Medi    
+Azin,Azinon/Azithromycin 500mg Tab,Medi    
+Azo,Azogen/Azithromycin 200mg Syp,Medi    
+B  ,Bright Nystat(Nystatin) Drops,Medi    
+Ban,Bandage/ mideam,Medi    
+Band,Bandage/ Small,Medi    
+Banda   ,Bandage/ Larg,Medi    
+Bangcl  ,Bangclovir-400(Acyclovir)400mg Tab,Medi    
+Banz,Banzapine-5(Olanzapine)5mg Tab,Medi    
+Banza   ,Banzapine/Olanzapine 10mg Tab,Medi    
+Banzo   ,Banzole-TZ(Tinidazole)500mg,Medi    
+BC ,BLOOD CULTURE,LAB     
+BED,BED FEE/HR,EME     
+Ben,Benaquin/Chloroquine 250mg Tab,Medi    
+Bep,Bepsar(Losartan Potassium)50mg Tab,Medi    
+BETA,BETA HCG,LAB     
+BILI,BILIRUBIN DIRECT,LAB     
+BILIR   ,BILIRUBIN INDIRECT,LAB     
+BILIRU  ,BILIRUBIN TOTAL,LAB     
+Bio,Biotin/5mg Inj,Medi    
+Biol,Biolac(Pre-Probiotic) Cap,Medi    
+Biola   ,Biolac/Probiotic Cap,Medi    
+BIOPS   ,BIOPSY SMALL,LAB     
+BIOPSY  ,BIOPSY LARGE,LAB     
+Biov,Biovas/Combinde Cap,Medi    
+Bla,Blades,Medi    
+Bli,Bliss(Escitalopram)15mg Tab,Medi    
+BLO,BLOOD TRANSFUTION,EME     
+BLO F   ,BLOOD FILM,LAB     
+BLOO,BLOOD BANK ,EME     
+BLOOD   ,BLOOD PREGANANCY,LAB     
+BLOOD G ,BLOOD GROUP,LAB     
+BLOODT  ,BLOOD TRANSFUSION`,EME     
+Blus,Blush-S(Iron susroe complex) Amp,Medi    
+BO ,BOTH ANKLE JOINT X-RAY,RAD     
+Bon,Bonjilla/Combinde 10g Gel,Medi    
+Bone,Bone-Care/Alfacalcidol 0,5 ug Tab,Medi    
+Bos,Boss Baby,Medi    
+BOT,BOTH WREST JOINT X-RAY,RAD     
+BOTH,BOTH KNEE JOINT X-RAY,RAD     
+BOTHF   ,BOTH FEET JOINT X-RAY,RAD     
+BOTHH   ,BOTH HAND JOINT X-RAY,RAD     
+BP ,BP BY NURSE,EME     
+BPC,BP CHECK,EME     
+Br ,Bright Fen DS(Ibuprofen)200mg Susp,Medi    
+BRA,BRAIN TUMOR,NEURO   
+BRAI,BRAIN ABSCES DRAINAG,NEURO   
+Brain   ,BrainOne Drops,Medi    
+BRE,BREAST,ULT     
+BREAST A,BREAST ABSCES,URO     
+BRES,BREST,ULT     
+Brigh   ,Bright Nisolone(Prednisolone)5mg Syrup,Medi    
+Bright  ,Bright-Lactulose(Lactulose) Syrup,Medi    
+Bro,bromalex/Bromazepam 3mg Tab,Medi    
+Bron,Bronolac(Ambroxol)30mg/5ml Syrup,Medi    
+BRS,AB.PELVIC,ULT     
+BRU,BRUCELLA,LAB     
+BRUC,BRUCELLA IGG/IGM,LAB     
+Bruf,Brufen(Ibuprofen) 400mg Tab,Medi    
+BT ,BT /CT,LAB     
+Bu ,Butrin XL(Bupropion)150mg Tab,Medi    
+Bud,Budecort(Budesonide) 0.5mg Susp,Medi    
+BUN,BUN,LAB     
+Buspir  ,Buspirax(Buspirone)5mg Tab,Medi    
+buz,Buzon/Risperidone 1mg Tab,Medi    
+Buzo,Buzon/Risperidone 2mg Tab,Medi    
+C  ,Cetee(Cetirizine)10mg Tab,Medi    
+C C PLAT,C C PLATE DENTURE,DENTA   
+C SEC   ,C SECTION,URO     
+CA125   ,CA 125,LAB     
+CAL,CALCIUM,LAB     
+CALA,Calamox/Co-amoxiclav 1.2g Vil,Medi    
+Calan   ,Calan/Verapamil 240mg Tab,Medi    
+Calan V ,Calan/Verapamil 80mg Tab,Medi    
+Calanv  ,Calan/Verapamil 40mg Tab,Medi    
+Calc,Calcimax+Cal/zinc/D3 SYP,Medi    
+CALCAN  ,CALCANEUS X-RAY,RAD     
+Calcee  ,Calcee Pow,Medi    
+Calci   ,Calcidin/calcium Tab500mg,Medi    
+Cap,Capcidol 0.075% Cer,Medi    
+Capto   ,Captopril(Captopril)25mg Tab,Medi    
+CAR,CARTID DOPPLER,DOPPL   
+CARD,CARDIAC PROFILE,LAB     
+CARDI   ,CARDIAC MONITORING,EME     
+CARDIAC ,CARDIAC MONITORING,INTER   
+Cardn   ,Cardnit(Nitroglycerin)2.6mg Tab,Medi    
+Cardo   ,Cardon(Losartan potassium)25mg Tab,Medi    
+Cardon  ,Cardon(Losartan potassium)50mg Tab,Medi    
+Cardop  ,Cardoplus 50(Losartan+Hydrochlorothiazide) Tab,Medi    
+Caro,Carodek/Cranberry vit C Sach,Medi    
+CART,CARTISOL,LAB     
+CASH,CASH RECEIVE,CASHR   
+CBC,CBC,LAB     
+CC ,CCU,INTER   
+CCU,CCU,RO      
+CDK,CDK/Combind,Medi    
+Cee,Cee Goss/Cefixime 400mg Tab,Medi    
+Cef,Ceftriace1/ceftriaxone 1g Vil,Medi    
+Cefa,Cefacoast/Ceftriaxone 500mg Vil,Medi    
+Cefi,cefixime 400mg Tab,Medi    
+Cefig   ,Cefiget/Cefixime 100mg Syp,Medi    
+Cefo,Cefocoast/cefotaxime 1g Vil,Medi    
+Cefob   ,Cefobact(Cefoperazone+Sulbac)2gm Vail,Medi    
+Cel,Celbex/Celecoxib 200mg Cap,Medi    
+Cele,Celenon/Celecoxib 200mg Cap,Medi    
+CER,CERVICAL LAMENECTOMY,NEURO   
+Cerb,Cerbilep(Topiramate)25mg Tab,Medi    
+Cere,Ceremin/piracetam 400mg Tab,Medi    
+Cerol   ,Cerol(Omeprazole)20mg Cap,Medi    
+CERV,DEPO INJECTION,GYN     
+CERVIC  ,CERVICAL SPIN X-RAY,RAD     
+CES,INSERTION OF IUCD,GYN     
+CESA,CESAREAN SECTION,GYN     
+Cet,Ceten/Cetirzine 10mg Tab,Medi    
+Che,Chestone/ INHALER,Medi    
+CHEM,CHEMOTHERAPY,OPEN    
+CHES,SHECHT TUBE INSERTION(CHECHT INTUBATION),EME     
+CHEST   ,CHEST X-RAY,RAD     
+CHLO,CHLORIDE ,LAB     
+CHOL,CHOLESTROL,LAB     
+CHOLEDU ,CHOLEDUHOLITHOTOMY,OPEN    
+CHRO,CHRONIC SUB DURAL HEMATOMA,NEURO   
+Chy,chymoral Forte/trypsin,Medi    
+Ci ,Ciproxin(Ciprofloxacin)250mg Tab,Medi    
+Cic,Cicatrin/Neomycin/zinc 20g Pow,Medi    
+Cil,Cilapen/Impenem 500mg Vil,Medi    
+Cim,Cimet/Cimetidine 400mg Tab,Medi    
+Cip,Cipesta/ciprofloxacin Inf 200mg,Medi    
+Cipe,Cipesta/Ciprofloxacin Inf 400mg,Medi    
+Cipr,Ciproxin/Ciprofloxacin 500mg Tab,Medi    
+Cipro   ,Ciproxent/Ciprofloxacin 500mg Tab,Medi    
+Ciprof  ,Ciprofloxacine SYp 250mh,Medi    
+Ciprol  ,Ciprolox/ Ciprofloxacin Syp 125Mg,Medi    
+Cit,Citralka/HydrogenCitrate LIQ 150ml,Medi    
+Cita,Citanew/Escitalopram 5mg Tab,Medi    
+citan   ,Citanew (Escitalopram) 20mg Tab,Medi    
+CKMB,CKMB,LAB     
+Cl ,Clexane(Enoxaparin)60mg Inj,Medi    
+Clarit  ,Claritek(Clarithromycin)250mg Sryp,Medi    
+CLAVI   ,CLAVICOLA BONE X-RAY,RAD     
+Clex,Clexane Enoxaparin 0.6ml,Medi    
+Clind   ,Clind-Aura(Clindamycin) 300mg Cap,Medi    
+Clo,Clop-75/Clopidogrel 75mg Tab,Medi    
+Clof,Clofol(Folic Acid)5mg Tab,Medi    
+Clom,Clomipramine 10mg,Medi    
+Clomi   ,Clomitab(Clomifene)50mg Tab,Medi    
+Clomi-50,Clomi-50(Clomifene)50mg Tab,Medi    
+Clomip  ,Clomipramine 10mg Tab,Medi    
+Clomipr ,Clomipril(Clomipramine)25mg Tab,Medi    
+Clomipra,Clomipramine 10mg Tab,Medi    
+Clomit  ,Clomitab(Clomifene)50mg Tab,Medi    
+Cloro   ,Cloron(Clonazepam)2mg Tab,Medi    
+CMV,CMV IGG/IGM,LAB     
+co ez   ,Co Eziday TAB,Medi    
+Co-,Co-Extor/Amlo/Val/Hydro 5mg Tab,Medi    
+Co-A,Co-Amoxiclav 625,Medi    
+Co-Am   ,Co-Amoxiclav/Amoxicilin+Clavun 625mg Tab,Medi    
+Co-Amoxi,Co-Amoxiclav/1000mg,Medi    
+Co-Dep  ,Co-Depricap(Olanzapine+Fluoxetine)3.25mg Cap,Medi    
+Co-Depri,Co-Depricap(Olanzapine+Fluoxetine)6+25mg Cap,Medi    
+Co-E,Co-Extor/Amlo/Val/Hydro 10mg Tab,Medi    
+Co-T,Co-Telsan/Telmisartan 40/12.5 Tab,Medi    
+Co-Tri  ,Co-Trimoxazole Tab,Medi    
+Co-V,Co-Valtec/Valsartan+Hydro 160/12.5mg Tab,Medi    
+COA,COAGULATION PROFILE  ,LAB     
+Cob,Cobal/Mecobalamin 500mcg Tab,Medi    
+COCCYX  ,COCCYX X-RAY,RAD     
+Cof,Cofif/Hedera helix 70mg Syp,Medi    
+Cofc,Cofcol Elixir,Medi    
+Cofe,Coferb Plus/120ml Syp,Medi    
+Cofif   ,Cofif Cough Syrup 120ml,Medi    
+col,Clomfranil Clomipramine 10mg Tab,Medi    
+cold,ColdRub,Medi    
+Colg,Colgate/Toothcreem 77g,Medi    
+Colic   ,Colic(Combend)Drops,Medi    
+COLO,COLONOSCOPY,ENDO    
+COLP,EVACUATION & CURTTEGE,GYN     
+COLPR   ,DEILATATION &CURTTEGE,GYN     
+Colq,Colgate maxfresh,Medi    
+Com,Combivair/combined 400mg Cap,Medi    
+comf,Comfrey Adult Diapers,Medi    
+Comi,Comin(Mecobalamin)500mcg Tab,Medi    
+COMP,COMPELETE PATIENT MONITORING / HR,EME     
+CON,CONGENITAL HYDROCEPHALUS VC SHUNT,NEURO   
+CONG,CONGENITAL HYDROCEPHALUS,NEURO   
+CONSUL  ,CONSULTATION,OPD     
+CONTR   ,CONTRAST DOPPLER,DOPPL   
+COO,COOM'S INDIRECT,LAB     
+COOM,COOMB'S DIRECT,LAB     
+Corti   ,Cortisol(Hydrocortisone) Vial,Medi    
+Cot,Co-Telsan/ Telmi/Hydro 80/12.5 Tab,Medi    
+Cota,Cotasmi/Telmisartan+Hydrochlorthiazide 40mg/12,5mg,Medi    
+Cov,Co-Valtec/Val/hyd 80/12.5 Tab,Medi    
+CPK,CPK,LAB     
+CRA,CRANIO SYNOSTOSIS,NEURO   
+Crab,Crab Power(Sildenafil+Dapoxetine+Diclofenac) Cap,Medi    
+Cran,Cran Max/Cranberry Pow,Medi    
+Cranhe  ,Cranheal Sachets,Medi    
+CREA,CREATININE,LAB     
+CROS,CROSS MATCH,LAB     
+CRP,CRP,LAB     
+CTG,CTG,GYN     
+Cyro,Cyrocin(Ciprofloacin)500mg Tab,Medi    
+CYS,CYSTESCOPE CHECKUP,URO     
+CYST,CYSTOSCOPE+BIOPSY,URO     
+CYSTO   ,CYSTOLITHOTOMY ,OPEN    
+D  ,Dapoxilar-60(Dapoxetine)60mg Tab,Medi    
+D 54,Jafar Ahmadi,CON     
+D 65,Hoda ,OPD     
+D-DI,D-DIMER,LAB     
+D-Z,D-Zak(Vitamin D3)50,000I.U Cap,Medi    
+D004,Ameena Tabibzada,CON     
+D10,Mirwais Saleh Noorzai,CON     
+D11,Najia Fazli,CON     
+D12,Haris Rashid,CON     
+d13,Tawfiq Mushkani,CON     
+d14,Haroon Aziz,CON     
+D15,Zabihullah Safi,CON     
+D16,Roh Afza Hemmat,CON     
+D17,Shakir,CON     
+D18,Said Omar,CON     
+D19,Zahra Sadaat,CON     
+D2 ,Bashir,CON     
+D20,OUT,CON     
+D200,Shafiullah Nasrati,CON     
+D21,Nilab,CON     
+D22,Emran Kamal,CON     
+D23,Khalid Azhar,CON     
+D24,Fawad Ayazi,CON     
+D25,Ahmadullah Ahmadi,CON     
+D26,Mujib ur Rahman Hamrah,CON     
+D27,NASAR  AIMAQ,CON     
+D28,MOHIB,OPD     
+D29,Fawad,CON     
+D3 ,Faizuddin,CON     
+D30,Qais Qayomi,CON     
+D31,Khalid azhar,CON     
+D32,Maiwand Khalidzai,CON     
+D33,Khalid Yaqoobi,CON     
+D34,Hezbullah,CON     
+D35,Tawfiq Sulimani,CON     
+D350,Sahar,CON     
+D36,KHALID AZHAR,CON     
+D37,Mubariz Bakhshi,CON     
+D38,Zahra Sadaat,CON     
+D39,NAJEEB NIAZI,CON     
+D4 ,FARDIN FARAHMAND,CON     
+D40,Fawad,CON     
+d400,Shakir Mansoor Zada,CON     
+D41,Masiha,CON     
+D42,AJMAL ARIFI,CON     
+D43,Hafizullah Fayzi,CON     
+D45,MUSTAFA,CON     
+D47,ABDULLAH,CON     
+D48,FARED RASHED,CON     
+D5 ,serat sana,CON     
+D50,Mirwais,CON     
+D51,AKHGAR,CON     
+D52,JAWID DARML,CON     
+d58,Dr. Zekria Shadab,OPD     
+D6 ,shabnam shahabi,CON     
+d60,dr,CON     
+D67,Hoda forotan,CON     
+D6975   ,Maiwand Khalidzai,CON     
+D7 ,Dr,CON     
+D75,Hoda ,CON     
+D76,Abdul Basit Mayeel,CON     
+D8 ,Amrkhuda anwari,CON     
+D9 ,585,CON     
+D95,Mati Siddiqi,CON     
+DA ,DAY CARE FOR PRIVET,EME     
+Dal,Dalacin C/Clindamycin 300mg Cap,Medi    
+Dan-,Dan-D(Cholecalciferol)200.000IU Amp,Medi    
+Dap,Daplyza-M(Dapagliflozin+Metformin)5mg+1000mg Tab,Medi    
+Dapl,Daplyza-M(Dapagliflozin+Metformin)5mg+850mg Tab,Medi    
+Dapox   ,Dapoxilar-30(Dapoxetine)30mg Tab,Medi    
+DAY,DAY CARE FOR WARD,EME     
+De ,Deprex(Olanzapine)10mg Tab,Medi    
+Deg,Degra(Sildenafil)50mg Tab,Medi    
+DENT X  ,DENTAL X-RAY,DENTA   
+DENTU   ,DENTUR 1,DENTA   
+DENTUR  ,DENTUR 2,DENTA   
+DENTUR3 ,DENTUR 3,DENTA   
+Dep,Depsit/Escitalopram 20mg Tab,Medi    
+Depe,Depexin(Fluoxetine)20mg Cap,Medi    
+DEPR,DEPRESSED FRACTURE SIMPLE,NEURO   
+DEPRE   ,DEPRESSED FRACTURE SIMPLE WITH FIXITION,NEURO   
+DEPRES  ,DEPRESSED FRACTURE COMPLEX,NEURO   
+Deps,Depsit/Escitalopram 5mg Tab,Medi    
+DESIGN  ,DESIGN-PORCELLIN ,DENTA   
+Det,Dettol/Soap,Medi    
+Dev,Devenda/Levetiracetam 500mg Tab,Medi    
+dex,Dextrose 25% Inj,Medi    
+Dext,Dextor(Dexamethasone)0,5mg Tab,Medi    
+DIA,DIALYSIS WITH DOUBLE LUMEN,DIALY   
+DIAL,DIALETION,URO     
+Diap,Diapers/Larg,Medi    
+Die,Diecold Rub,Medi    
+DILA,DILATATION & CURETTAGE,GYN     
+Dio,DioPlus/Amlo+Vals 5/80mg Tab,Medi    
+Diop,Dio Plus/Amlo/Vals 10/160mg Tab,Medi    
+DIOS,DIOSTHOMYTHOMYLIA,NEURO   
+Diso,Disolar(Desloratadine)5mg Tab,Medi    
+DISP,DISPOSIBLE INSTRUMENT SET,DENTA   
+Div,Divalpro/Divalproex 250mg Tab,Medi    
+Diva,Divalpro/Divalproex 500mg Tab,Medi    
+DLC,DLC,LAB     
+Doba,Dobalta/Duloxetine Cap 20mg,Medi    
+Dol,Dolmen/Duloxetine 30Mg Tab,Medi    
+Domi,Domista/Domperidone Drop,Medi    
+Don,Donep (Donepezil) 10mg Tab,Medi    
+Donep   ,Donep(Donepezil)5mg Tab,Medi    
+DORS,DORS LUMBER SPAIN X-RAY,RAD     
+DOUB,DENTAL X-RAY,RAD     
+Doxyc   ,Doxycycline 100mg Tab,Medi    
+Doxyn   ,Doxyn(Doxycycline)100mg Cap,Medi    
+DR ,Wranga ,CON     
+DRAIN   ,DRAINAGE PROCEDURE,OPEN    
+Dres,Dressing/Palster,Medi    
+Dsp,Dspa/Drotaverine 40mg Amp,Medi    
+Dulan   ,Dulan(Duloxetine) 30mg Cap,Medi    
+Dule,Dulexin/Duloxetine 30mg Tab,Medi    
+Dus,Dustalosine/Dutasteride+Tamsulosin,Medi    
+ECG,ECG,EME     
+ECHO,ECHO,EME     
+ECT,ECTOPIC PRAGNANCY,GYN     
+Efe,Efectal/Ceftriaxone 1G Vil,Medi    
+ELBOW   ,ELBOW JOIN X-RAY,RAD     
+ELEC,ELECTROLYTES,LAB     
+Eme,Emeset Ondansetron 4ml Inj,Medi    
+ENDO,ENDOSCOPY,ENDO    
+ENDOS   ,ENDOSCOPY ,ENDO    
+ENDOV   ,ENDOVAGINAL V/S,ULT     
+ENE,ENEMA,EME     
+ENGO,ENGOGRAPHY,CAR     
+ENGOP   ,ENGOPLASTY,CAR     
+Ent,Entamizole-DS/Diloxanide Metr 500/400mg Tab,Medi    
+Entam   ,Entamizole DS/Diloxanide+Metronidazole,Medi    
+Entaz   ,Entazel-D/Rabeprazole/Domperidon Cap,Medi    
+Epit,Epitira/Levetiracetam 500mg Tab,Medi    
+Esc,Escerol/Esomeprazol 40mg Vil,Medi    
+ESR,ESR 2 /HOUR,LAB     
+ESR1,ESR 1 /HOUR,LAB     
+Est,Estra/Escitalopram 10mg Tab,Medi    
+ESTR,ESTRODIOL,LAB     
+Etir,Etirich/Melatonin 5mg Tab,Medi    
+ETT,ETT,INTER   
+Evion   ,Evion(Vitamin E)400mg Cap,Medi    
+Exc,Exceco/Escitalopram 10Mg Tab,Medi    
+Exi,Eximinth plus/Albendazole Syp 200mg,Medi    
+Exozin  ,Exozin/Zinc Sulfate 20mg SYP,Medi    
+EXTR,EXTRA DURAL HEMATOMA,NEURO   
+EXTRAC  ,EXTRACTION,DENTA   
+Exv,Exval-A/Amlodipine/Vals 10/160 Tab,Medi    
+FACIAL  ,FACIAL BONSE X-RAY,RAD     
+Falraf  ,Falraf(Pregabalin)75mg Cap,Medi    
+Fam,Famot/ Famotidine SYP 10mg,Medi    
+FAMO,Famotidin/Syp 10mg,Medi    
+Famot   ,Famotidine 40mg Tab,Medi    
+Famot4  ,Famot/Famotidine 40mg Tab,Medi    
+FBS,FBS,LAB     
+FEMUR   ,FEMUR X-RAY,RAD     
+FERR,FERRTIN,LAB     
+FETA,FETAL WELL BEING(OBS),ULT     
+Fexe,Fexet/Fexofenadine 60mg Tab,Medi    
+FILLING ,FILLING (RCT),DENTA   
+Fin,Fingar Plaster,Medi    
+Firo,FIROOZ Shampoo,Medi    
+FISTU   ,FISTULECTOMY,OPEN    
+Fit,Fitvit/Multi vitamin Tab,Medi    
+fl ,Floxxi(Fluoxetine)20mg Cap,Medi    
+FLA,Flagyl/metronidazole/500mg/inf,Medi    
+Floey   ,Foley Catheter 16,Medi    
+Flu,Flumazenil/0.5mg Inj,Medi    
+Fluco   ,Flucolar-150(Fluconazole) Cap,Medi    
+Flumazen,Flumazenil 0.5mg Amp,Medi    
+fob,FOB,LAB     
+FOL,FOLEY CATHETER INSERTION,EME     
+FOLE,FOLEY CATHETER REMOVAL,EME     
+Foley B ,Foley Catheter,Medi    
+FOLL,FOLLICULAR STUDY,ULT     
+FOLLY   ,FOLLY CATHETER REMOVAL,EME     
+FOOT,FOOT X-RAY,RAD     
+For,Fort-Max/combined Cap ,Medi    
+FRE,FREE T3,LAB     
+FREE,FREE T 4,LAB     
+FRET,FREE TESTTOSTERONE,LAB     
+FSH,FSH,LAB     
+FU ,FULLY,EME     
+FULI,FULID THERAPY/HR,EME     
+FULID   ,FULID ANALYSIS,LAB     
+FULL AT1,FULL DENTURE,DENTA   
+FULL ATT,FULL ATTACHMENT+4 CROWN PORCELLIN,DENTA   
+Gaba,Gaba(Gabapentin)300mg Cap,Medi    
+Gals,Galsit(Sitagliptin)50mg Tab,Medi    
+GAM,GAMMA GT,LAB     
+GAS,GASTRIC LAVAGE,EME     
+GAST,GASTRECOTMY,OPEN    
+GASTR   ,GASTRIC LAVAGE ,PED     
+Gastro  ,Gastro-D/Rabeprazol+Domperidone 20mg Cap,Medi    
+Gau,Guaze Pad,Medi    
+gavi,Gavimax(Levetiraxetam)500mg Tab,Medi    
+Ge ,Getryl/Glimepiride 1mg Tab,Medi    
+Gel,Gelofusine 500ml Ser,Medi    
+gen,Genesis(Gliclazide) 30mg Tab,Medi    
+Genesi  ,Genesis/Gliclazide 60mg Tab,Medi    
+Geox,Geoxit /fluoxetine/20mg cap,Medi    
+Get,Getryl/Glimepiride 2mg Tab,Medi    
+Geto,Getofin(Ceftriaxone)1g Vail,Medi    
+Getof   ,Getofin/Ceftriaxone 500mg Vil,Medi    
+Getr,Getryl/Glimepiride 3mg Tab,Medi    
+Getry   ,Getryl/Glimepiride 4mg Tab,Medi    
+Glo,Gloves/7.5,Medi    
+GLOB,GLOBULIN,LAB     
+Glu,Glucophage/Metformin 1G Tab,Medi    
+Gluco   ,Glucophage(Metformin) 1g Tab,Medi    
+Gly,Glycon-M/Sita+Metf 50/500mg Tab,Medi    
+Glyt,Glytec-M(Sitagliptin+Metformin)50mg/500mg Tab,Medi    
+Glytec  ,Glytec-M(Sitagliptin+Metformin)50mg/1000mg Tab,Medi    
+Glyz,Glyzia/Sitagliptin/Metformin 50/500mg Tab,Medi    
+GOLD,GOLD CROWN,DENTA   
+Gom,Gomen/Combined Tab,Medi    
+Gon,Gonadotrophin/5000 IU Inj,Medi    
+Goois   ,Gooiscan,Medi    
+GOU,GOUTER,OPEN    
+Gour,Gouric/Febuxostat 40mg Tab,Medi    
+GPP,GPP,LAB     
+GRA,GRAM STAIN,LAB     
+Gri,Gripe Water/Syp combin,Medi    
+GROW,GROWTH HORMONE,LAB     
+GTN Fort,GTN Forte,Medi    
+GTT,GTT ,LAB     
+Gvia,Gvia-M/Sitaglptin+Metformin 50/500 Tab,Medi    
+H  ,HEMO-B Plus Syrup,Medi    
+H-PYL   ,H-PYLORI(STOOL),LAB     
+H2F,H2F(Famotidine) 20mg Tab,Medi    
+H700,H-Pylori Quantitative,LAB     
+HAB,HAB,LAB     
+HAEMO   ,HAEMOGLOBIN,LAB     
+HAEMOR  ,HAEMORRHOIDECTOMY,OPEN    
+Hag,Hagimox/Amoxicilin 250mg Cap,Medi    
+Hagi,Hagimox(Amoxicillin)250mg Cap,Medi    
+HALF,HALF ATTACHMENT+2CROWN PORCELLIN,DENTA   
+HALF ATT,HALF ATTACHMENT+2CROWN DESIGN PORCELLIN,DENTA   
+Halo,Haloperidol 0.5 Tab,Medi    
+Haloperi,Haloperidol 5mg Amp,Medi    
+HALT,HALTER MONITORING /24 HR,INTER   
+Haltide ,Halide HFA(Salbutamol+Beclometasone) Inhaler,Medi    
+HAND,HAND X-RAY,RAD     
+HAV,HAV,LAB     
+HBA1C   ,HBA1C,LAB     
+HBE,HBE AG ,LAB     
+HBQ,HEPATITIS B QUANTITATIVE,LAB     
+HBQL,HEPATITIS B QUALITITATIVE,LAB     
+HBS,HBS AG,LAB     
+HBS E   ,HBS ELISA,LAB     
+HBSA,HBS AG BY ELISA,LAB     
+HBSP,HBS PATIENT HEMODIALYSIS,DIALY   
+HBV,HBV PROFILE,LAB     
+HCBA,HCB AB BY ELISA,LAB     
+HCQ,HEPATITIS C QUANTITATIVE,LAB     
+HCQL,HEPATITIS C QUALITITATIVE,LAB     
+HCV,HCV,LAB     
+HCV E   ,HCV ELISA,LAB     
+HCV HD  ,HCV HD CHARGES,DIALY   
+HDL,HDL,LAB     
+Hel,Helen/Fluoxetine 20mg Cap,Medi    
+HEM,HEMRIDITOMY,OPEN    
+HEMRI   ,HEMRIDICTOMY,URO     
+HER,HERONPLASTY,OPEN    
+Herb,herbesser/Diltiazem 90mg Tab,Medi    
+HERNI   ,HERNIORRHAPHY,OPEN    
+HERO,HERONPLASTY,URO     
+Hexi,Hexidyl/Trihexyphenidyl 2MG Tab,Medi    
+Hig,Highgrow(Ketoconazole+Zinc) Shampoo,Medi    
+HIP,HIP JOINT X-RAY,RAD     
+HIV,HIV,LAB     
+HIV HD  ,HIV HD,DIALY   
+HP ,H PYLORI (BLOOD),LAB     
+HSG,HSG X-RAY,RAD     
+HSV1,HSV 1 IGG,LAB     
+HSV1I   ,HSV 1 IGM,LAB     
+HSV2,HSV 2 IGG,LAB     
+HSV2M   ,HSV 2 IGM,LAB     
+HUM,HUMERS X-RAY,RAD     
+HYD,HYDROCEL,OPEN    
+HYDA,HYDATID CYST OF LIVER,OPEN    
+Hydr,Hydroderm/Gel 150g,Medi    
+HYDRO   ,HYDROCEL,URO     
+HYDROCEL,HYDROCELECTOMY,OPEN    
+Hydrog  ,Hydrogen Peroxide,Medi    
+Hydroz  ,Hydrozole/Hydrocortisone 1% Cre,Medi    
+HYS,HYSTRECTOMY,URO     
+Hytrin  ,Hytrin(Terazosin Hydrochloride)2mg Tab,Medi    
+ICU,ICU BED FEE/24HR,EME     
+IM ,IM INJECTION,EME     
+IM IN   ,IM INJECTION ,PED     
+IMPLANT ,IMPLANT CASE WITH CROWN PROCELIN ,DENTA   
+IMPLANT1,IMPLANT CASE WITH CROWN DESIGN PORCELIN,DENTA   
+INC,INCUBATOR FOR 24/H,EME     
+INCO,HYSTERECTOMY,GYN     
+Ind,Indmethacin 25mg Cap,Medi    
+Inf,Infusion Set,Medi    
+Infex   ,Infexin/Cephradin 500mg Cap,Medi    
+INR,INR,LAB     
+ins,Insulin Syringe 100u,Medi    
+Insert  ,Insertion Of Implant,GYN     
+INTESTI ,INTESTINAL RESECTION AND ANASTOMOSIS,OPEN    
+Ipri,Ipride SR/Itopride 150mg Tab,Medi    
+IQ ,IQ Gold/Combinde Syp,Medi    
+IRON,IRON,LAB     
+Iso,Isotonic/ Nasal Relif Spray,Medi    
+Itp,ITP/itopride 50mg Tab,Medi    
+ITP i   ,ITP OD(Itopride)150mg Tab,Medi    
+IU ,PREVIOUS C/S DELIVERY,GYN     
+IUD,POST-TERM DELIVERY,GYN     
+IV ,IV INJECTION,EME     
+IV INJ  ,IV INJECTION/ IV CANNULA,EME     
+Iv P,Iv/Plaster,Medi    
+IVC,IV CANULLA+SERUN+STAY,EME     
+IVCA,IV CANNULA,EME     
+IVF,IV FLUID,EME     
+IVP,IVP X-RAY,RAD     
+Jen,Jentin Met/Sitagliptin/Metformin 50/500 Tab,Medi    
+Joh,Johnsoni/ Baby jelly,Medi    
+Johar   ,Johar Joshanda,Medi    
+Jui,Juice ORS,Medi    
+K  ,Kitpain(Ketorolac) 30mg Amp,Medi    
+K-k,K-kort/Triamcinolone 40mg inj,Medi    
+Kar,Karis/Glycerin Cream,Medi    
+Keep,Keep Healthy,Medi    
+Ket,Ketopal/Ketoconazole 2% Shampoo,Medi    
+KIDNE   ,KIDNEY STONE ,OPEN    
+Kin,KING POWER  TAB,Medi    
+King,King Power(Sildenafil+Dapoxetine) Tab,Medi    
+Kip D   ,Kip Drymin Syrup,Medi    
+Kle,Kleen Enema/COMBINED Losh,Medi    
+KNEE,KNEE JOINT X-RAY,RAD     
+Kor,Korzin/Serratiopeptidase 5mg Tab,Medi    
+KUB,KUB X-RAY,RAD     
+Kuf,Kufdri (Expectorant Cough)Syrup,Medi    
+L  ,Levobrax(Levosulpiride)50mg Tab,Medi    
+La ,Lamitor(Lamotriginr)25mg Tab,Medi    
+Lab,Labetalol 50mg/10ml Inj,Medi    
+LAB C   ,LAB CHOLESTOECTOMY,URO     
+Labo,Labo-Spas(Drotaverine)40mg Tab,Medi    
+LAC,ABRUPTIO PLACENTA,GYN     
+LACE,PLACENTA PREVIA,GYN     
+LAM,LAMENECTOMY DISCECTOMY MULTI LEVEL,NEURO   
+LAME,LAMENECTOMY DISCECTOMY SINGLE LEVEL,NEURO   
+Lami,Lamitor(Lamotrigine)50mg Tab,Medi    
+Lan,Lanoxin/Digoxin 0.25mg Tab,Medi    
+LAP,LAPRAROMY,OPEN    
+LAP AP  ,LAP APPENDICTOMY,URO     
+LAP TU  ,LAP TUBLIGATION,URO     
+LAPOR   ,LAPORATOMY,URO     
+LAR,LARGE DRESSING WITH SUTURE,EME     
+Larg,Largopen/Amoxicillin 125mg SYP,Medi    
+Largo   ,Largopen/Amoxicillin 250mg SYP,Medi    
+Lasi,Lasix/Furosemide 40mg Tab,Medi    
+LDH,LDH,LAB     
+LDL,LDL,LAB     
+Le ,Levopiride(Levosulpiride)50mg Tab,Medi    
+Ledaf   ,Ledaflor 10mg Drops,Medi    
+Ledal   ,Ledalur 250ml Syp,Medi    
+LEG,TIBAI&FIBULA X-RAY,RAD     
+Leos,Leos(Levosulpiride)50mg Tab,Medi    
+Leps,Lepsi/Levetiracetam 1000mg Solu,Medi    
+Lev,Levomerc/Levofloxacin 250mg Tab,Medi    
+Leve,Levegetam-500(Levetiracetam)500mg Tab,Medi    
+Levet   ,Levetafine/Levetiracetam 500mg Tab,Medi    
+levor   ,Levoride(Levosulpride)50mg Tab,Medi    
+Levox   ,Levoxinr(Levothyroxine)100mcg Tab,Medi    
+LFT,LFT,LAB     
+LH ,LH TEST,LAB     
+Lido,Lidosporin Ear Drops,Medi    
+Lil,Lilac(Lactulose) 120ml Syrup,Medi    
+LIP,LIPID  PROFILE,LAB     
+Lipg,Lip Guard,Medi    
+Lipi,Lipiget(Atorvastatin)20mg Tab,Medi    
+LIV,LIVER HYDATID CYST,URO     
+LIVER   ,LIVER ABSCESS,OPEN    
+LIVERD  ,LIVER DOPPLER,DOPPL   
+Liz,Lizolix/linezolid 600mg Tab,Medi    
+Lo ,Lo-aram Lorazepam 2mg Tab,Medi    
+Lo-A,Lo-Aram/Lorazepam 2mg Tab,Medi    
+Lok,Loko/plaster 7.5,Medi    
+loko,Loko/Plaster 2.5cm,Medi    
+Long,Long Last(Sildenafil)100mg Tab,Medi    
+Lor,Lorgy/Loratadine 10mg Tab,Medi    
+Lora,Lorazepam 2mg Tan,Medi    
+Loraz   ,Lorazepam 1mg Tab,Medi    
+LP ,LP,PED     
+Lul,lulla Baby/Diapers,Medi    
+LUM,LUMBER SPIN X-RAY,RAD     
+LYP,LIPASE,LAB     
+Lys,lysovit/B-Comp/Vit C 120ml Syp,Medi    
+Lzid,Lzid(Linezolid)600mg Tab,Medi    
+M  ,Moxvid-500(Amoxycillin)500mg Cap,Medi    
+M00001  ,Real-Vit (Multivitamins)/ Syp,MEDI    
+M00002  ,Cofaid-D/ Syp,MEDI    
+M00003  ,Focin (Fosfomycin) 250mg/ Syp,MEDI    
+M00004  , Urocran (Cranberry)/ 250mg/ Sach,MEDI    
+M00005  ,Ulsanic (Sucralfate) 1g/ Syp,MEDI    
+M00006  ,Trimetabol/ Syp,MEDI    
+M00007  ,Novidat (Ciprofloxacin) 400mg/ Inf,MEDI    
+M00008  ,Novidat (Ciprofloxacin) 200mg/ Inf,MEDI    
+M00009  ,Neurozin (Multiglycerophosphate)/ Syp,MEDI    
+M0001   ,DELTACORTRIL TAB,Medi    
+M00010  ,Multiglycerophosphate/ Syp,MEDI    
+M00011  ,Neutrix (Multiglycerophophate) /Syp,MEDI    
+M00012  ,Urofast /Syp,MEDI    
+M00013  ,Nefrolit 100mg/ Syp,MEDI    
+M00014  ,Kidfow 100mg/ Syp,MEDI    
+M00015  ,Neuro Nerve (Ginkobiloba+B Complx)/ Syp,MEDI    
+M00016  ,Tres-Orix Forte /Syp,MEDI    
+M00017  ,Fairodoll/ Syp,MEDI    
+M00018  ,Vidaylin/ Syp,MEDI    
+M00019  ,Vidaylin L/ Syp,MEDI    
+M00020  ,Motilium (Dompridone) 1mg/ Syp,MEDI    
+M00021  ,Duphalac (Lactolose) 66.7%/Syp,MEDI    
+M00022  ,Gastracid / SYP,MEDI    
+M00023  ,Pepsil/ Syp,MEDI    
+M00024  ,Iberet/ Syp,MEDI    
+M00025  ,Spaslar P(Hosin) 5mg/ Syp,MEDI    
+M00026  ,Steron(Prednisolne) 15mg/ Syp,MEDI    
+M00027  ,Flagyl(Metrandazole) 200mg/ Syp,MEDI    
+M00028  ,Metodine/ Syp,MEDI    
+M00029  ,Moxilium(Amoxycillin) 125mg/ Syp,MEDI    
+M00030  ,Moxilium(Amoxycillin) 250mg/ Syp,MEDI    
+M00031  ,Monteur(Montelukast+Levocetirizine) 4/2.5mg Syp,MEDI    
+M00032  ,Ond(Ondansetron) 4mg/ Syp,MEDI    
+M00033  ,Sanaflu/ Syp,MEDI    
+M00034  ,Zetro(Azithromycin) 200mg/ Syp,MEDI    
+M00035  ,Brufen(Ibuprofen) 100mg/ Syp,MEDI    
+M00036  ,Brufen(Ibuprofen) 200mg/ Syp,MEDI    
+M00037  ,Pedifen(Ibuprofen) 100mg/ Syp,MEDI    
+M00038  ,Total Vit(Multivitamins)/ Syp,MEDI    
+M00039  ,Total Vit Junior(Multivitamins)/ Syp,MEDI    
+M00040  ,Voren(Diclofenac) 75mg,MEDI    
+M00041  ,Amclav(Co-Amoxiclav)156mg/ Syp,Medi    
+M00042  ,Curecef(Cefixime)200mg/ Syp,MEDI    
+M00043  ,Amclav DS(Co-Amoxiclav)312.5mg/ Syp,MEDI    
+M00044  ,Curecef(Cefixime)100mg/ Syp,MEDI    
+M00045  ,Cefiget DS(Cefixime)200mg/ Syp,MEDI    
+M00046  ,Novidat(Ciprofloxacin)125mg/ Syp,MEDI    
+M00047  ,Novidat(Ciprofloxacin)250mg/ Syp,MEDI    
+M00048  ,Infixiin(Cephradin)125mg/ Syp,MEDI    
+M00049  ,Infixiin(Cephradin)250mg/ Syp,MEDI    
+M00050  ,Disprin(Aspirin) Tab,MEDI    
+M00051  ,Parol(Paractamol)120mg/ Syp,MEDI    
+M00052  ,Calpol(Paractamol)120mg/ Syp,MEDI    
+M00053  ,Zinc/ Syp,MEDI    
+M00054  ,OBH Plus/ Syp,MEDI    
+M00055  ,Milak oF Magnasiam 160mg/ Syp,MEDI    
+M00056  ,Keflex(Cehalexin)125mg/ Syp,MEDI    
+M00057  ,Keflex(Cehalexin)250mg/ Syp,MEDI    
+M00058  ,Lorgy(Lortadine)5mg/ Syp,MEDI    
+M00059  ,Cetri(Cetrizine)5mg/ Syp,MEDI    
+M00060  ,Mosegor(Pizotnen)0.25mg/ Syp,MEDI    
+M00061  ,F Tone(Phenobarbitone)20mg/ Syp,MEDI    
+M00062  ,Kidflow 30ml/ Drop,MEDI    
+M00063  ,Sabal Serr 30ml/ Drop,MEDI    
+M00064  ,Nefrolit B 30ml/ Drop,MEDI    
+M00065  ,Yohimbinum 30kml/ Drop,MEDI    
+M00066  ,Rigix(Cetrizine)5mg/ Syp,MEDI    
+M00067  ,Grucid(Omeprazole) Cap,MEDI    
+M00068  ,Vermox(Mebendazole)/ Syp,MEDI    
+M00069  ,Zental(Albendazole)/ Syp,MEDI    
+M00070  ,Actidil(Trirolidine)1.25mg/ Syp,MEDI    
+M00071  ,Ariadry(Dipenhydramine)/ Syp,MEDI    
+M00072  ,Septran DS(Co-trimoxazole)80/400mg/ Syp,MEDI    
+M00073  ,Cosom/ Syp,MEDI    
+M00074  ,Cosom E/ Syp,MEDI    
+M00075  ,Corex D/ Syp,MEDI    
+M00076  ,Hydryilin/ Syp,MEDI    
+M00077  ,Mucine/ Syp,MEDI    
+M00078  ,Cremaffin/ Syp,MEDI    
+M00079  ,Gaviscan/ Syp,MEDI    
+M00080  ,Gravinate(Dimenhydriate)12.5mg/ Syp,MEDI    
+M00081  ,Listamine 15%/ Sol,MEDI    
+M00082  ,Fexet D 60/120mg/ Tab,MEDI    
+M00083  ,Melatonin 3mg/ Tab,MEDI    
+M00084  ,Paroxogen(Paroxetine)20mg/ Tab,MEDI    
+M00085  ,Acylex(Aclalovir)800mg/ Tab,MEDI    
+M00086  ,Nerovon(Mecobalamin)500mcg/ Tab,MEDI    
+M00087  ,Fifex(Fexofenadine)60mg/ Tab,MEDI    
+M00088  ,Ytig Plus/ Tab,MEDI    
+M00089  ,Clomfranil(Clomipramine)10mg/ Tab,MEDI    
+M00090  ,Leedoz(Levonorgestrel)/ Tab,MEDI    
+M00091  ,Depex(Fluoxetine)/ Tab,MEDI    
+M00092  ,Clomfranil(Clomipramine)25mg/ Tab,MEDI    
+M00093  ,Imipramine 25mg/ Tab,MEDI    
+M00094  ,Olanzia(Olanzapine) 5mg/ Tab,MEDI    
+M00095  ,Sensival(Nortriptyline) 25mg/ Tab,MEDI    
+M00096  ,Busron(Buspirone) 5mg/ Tab,MEDI    
+M00097  ,Cyproheptadine 4mg/ Tab,MEDI    
+M00098  ,Limigzol(Zolmitriptan) 2.5mg/ Tab,MEDI    
+M00099  ,Imipramine 10mg/ Tab,MEDI    
+M00100  ,Tegral(Carbamazepine)200mg/ Tab,MEDI    
+M00101  ,Phenobarbital 100mg/ Tab,MEDI    
+M00102  ,Depoxevis(Dapoxetine)30mg/ Tab,MEDI    
+M00103  ,Tryptanol(Amitriptyline)25mg/ Tab,MEDI    
+M00104  ,Amitriptyline10mg/ Tab,MEDI    
+M00105  ,Amitriptyline25mg/ Tab,MEDI    
+M00106  ,Avonum(Promethazine)/ Tab,MEDI    
+M00107  ,Librax(Chlordiazepoxide+Clidinium)/ Tab,MEDI    
+M00108  ,Tenaxit(Flupentixol+Melitracen)05/10mg/ Tab,MEDI    
+M00109  ,Paromax CR(Paroxetine)12.5mg/ Tab,MEDI    
+M00110  ,Prothiaden(Dosulepin)25mg/ Tab,MEDI    
+M00111  ,Prothiaden(Dosulepin)75mg/ Tab,MEDI    
+M00112  ,Inderal(Propranolol)40mg/ Tab,MEDI    
+M00113  ,Inderal(Propranolol)10mg/ Tab,MEDI    
+M00114  ,Seroft(Sertraline)50mg/ Tab,MEDI    
+M00115  ,Seroft(Sertraline)100mg/ Tab,MEDI    
+M00116  ,Qusel(Quetiapine)25mg/ Tab,MEDI    
+M00117  ,Epival(Divalproex sodium)250mg/ Tab,MEDI    
+M00118  ,Epival(Divalproex sodium)500mg/ Tab,MEDI    
+M00119  ,Napsum(sumatriptan+Naproxen)80/500mg/ Tab,MEDI    
+M00120  ,Prolexa(Escitalopram)10mg/ Tab,MEDI    
+M00121  ,Olanzia(Olanzapine) 5mg/ Tab,MEDI    
+M00122  ,Olanzia(Olanzapine) 10mg/ Tab,MEDI    
+M00123  ,Dulan(Duloxetine)20mg/ Cap,MEDI    
+M00124  ,Cetralex(Sertraline)50mg/ Tab,MEDI    
+M00125  ,Cetralex(Sertraline)100mg/ Tab,MEDI    
+M00126  ,Pequit(Quetiapine)25mg/ Tab,MEDI    
+M00127  ,Ventolin(Sailbutamol+Guaiphenesin)/ Syp,MEDI    
+M00128  ,Ventolin(Sailbutamol)/ Syp,MEDI    
+M00129  ,Jetepar(Detoxicating agent)/ Syp,MEDI    
+M00130  ,Pulmonol/ Syp,MEDI    
+M00131  ,Hepa Merz/ Syp,MEDI    
+M00132  ,Evion(Vitamin E)600mg Cap,MEDI    
+M00133  ,Evion(Vitamin E)200mg Cap,MEDI    
+M00134  ,Skinwell/ Tab,MEDI    
+M00135  ,Clomace(Clomifene)50mg/ Tab,MEDI    
+M00136  ,Real-Vit (Multivitamins)/ Tab,MEDI    
+M00137  ,Maxna(Tranexamic Acid)500mg/ Tab,MEDI    
+M00138  ,Ovacare/ Tab,MEDI    
+M00139  ,Navidoxine(Meclizine+B6)/ Tab,MEDI    
+M00140  ,Vitamin B6/ Tab,MEDI    
+M00141  ,Calcium Carbonate/ Tab,MEDI    
+M00142  ,Mosegor(Pizotnen)0.25mg/ Tab,MEDI    
+M00143  ,Prequin(Conjugate Estrogens)0.625mg/ Tab,MEDI    
+M00144  ,Brotin(Bromocriptine)/ Tab,MEDI    
+M00145  ,Flu-con(Fluconazole)150mg/ Cap,MEDI    
+M00146  ,Diane 35/ Tab,MEDI    
+M00147  ,Ferfolic/ Cap,MEDI    
+M00148  ,Multibionta(Multivitamins)/ Cap,MEDI    
+M00149  ,Sangobion/ Cap,MEDI    
+M00150  ,Ovocept-LD(Contraceptive)/ Tab,MEDI    
+M00151  ,Osteocare/ Tab,MEDI    
+M00152  ,Ferfix-FA/ Tab,MEDI    
+M00153  ,Duphaston(Dydrogesterone)10mg/ Tab,MEDI    
+M00154  ,Vivioptal/ Cap,MEDI    
+M00155  ,Momfolic(L-Methul Folate)/ Tab,MEDI    
+M00156  ,Zinc Sulphate 20mg/ Tab,MEDI    
+M00157  ,Surbex Z Tab,MEDI    
+M00158  ,Folic Acid/ Tab,MEDI    
+M00159  ,Flagyl(Metrandazole) 400mg/ Tab,MEDI    
+M00160  ,Ansaid(Flurbiprofen)100mg Tab,MEDI    
+M00161  ,Vitamin A 5000IU/ Cap,MEDI    
+M00162  ,Calcimax Forte/ Tab,MEDI    
+M00163  ,Omega3/ Cap,MEDI    
+M00164  ,Cabersen(Cabergoline)0.5/ Tab,MEDI    
+M00165  ,Spinster(Misoprostol)200mg/ Tab,MEDI    
+M00166  ,Calcimax OP/ Tab,MEDI    
+M00167  ,Folic(Folic Acid)5mg/ Tab,MEDI    
+M00168  ,Vitamin C Amp,MEDI    
+M00169  ,Decadron Inj,MEDI    
+M00170  ,Repramol(Paracetamol)750mg Inj,MEDI    
+M00171  ,Omni/ Tab,MEDI    
+M00172  ,Trihemic 600mg/ Tab,MEDI    
+M00173  ,Fefol Vit/ Cap,MEDI    
+M00174  ,Zyloric(Allopurinol)300g/ Tab,MEDI    
+M00175  ,Plicamol(Paracetamol) 150mg Inj,MEDI    
+M00176  ,Phenazomex(Phenazopyridine)100mg/ Tab,MEDI    
+M00177  ,Abnil(Orlistat)120mg/ Tab,MEDI    
+M00178  ,Arinac(Ibuprofen+Pseuoephedrinr)400mg/ Tab,MEDI    
+M00179  ,Arinac(Ibuprofen+Pseuoephedrinr)200mg/ Tab,MEDI    
+M00180  ,Mits(Meloxicam)15mg/ Tab,MEDI    
+M00181  ,Musidin(Tinizidine)4mg/ Tab,MEDI    
+M00182  ,Cytopan(Diclofenac+Misoprostol)50mg/ Tab,MEDI    
+M00183  ,Solifen(Solifenacin)10mg/ Tab,MEDI    
+M00184  ,Solifen(Solifenacin)5mg/ Tab,MEDI    
+M00185  ,Urocan(Flavoxate)100mg/ Tab,MEDI    
+M00186  ,Urocan(Flavoxate)200mg/ Tab,MEDI    
+M00187  ,Dynalip PT/ Tab,MEDI    
+M00188  ,Contiflo(Tamsulosin)0.4mg/ Cap,MEDI    
+M00189  ,Silorap(Silodosin)8mg/ Cap,MEDI    
+M00190  ,Gabix(Gabapentin)100mg/ Cap,MEDI    
+M00191  ,Gabix(Gabapentin)300mg/ Cap,MEDI    
+M00192  ,Dobalta(Duloxitin)30mg/ Cap,MEDI    
+M00193  ,Pgap-MB(Pregabalin+Methylcobalamin)75/500mg Tab,MEDI    
+M00194  ,Ricknil(Alfacacidol)0.5/ Tab,MEDI    
+M00195  ,Maxflo D(Dutasteride+Tamsulosin)/ Cap,MEDI    
+M00196  ,Calbex(Celecoxib)200mg/ Cap,MEDI    
+M00197  ,Active Plus/ Cap,MEDI    
+M00198  ,COQ-10(Coenzyme)/ Cap,MEDI    
+M00199  ,Mirabet(Mirabegron)25mg/ Tab,MEDI    
+M00200  ,Oxybutynini 5mg/ Tab,MEDI    
+M00201  ,Nimace(Nimesuild)100mg/ Tab,MEDI    
+M00202  ,Naprox(Naproxin)250mg/ Tab,MEDI    
+M00203  ,Naprox(Naproxin)500mg/ Tab,MEDI    
+M00204  ,Spiromide(Spironolactone+Furosemide)/ Tab,MEDI    
+M00205  ,Aldactone(Spironolactone)100mg/ Tab,MEDI    
+M00206  ,Chymral Forth(Trypsin+Chymotrypsin)/ Tab,Medi    
+M00207  ,Actho P(Thiocolchicoside+Acelofenac+paracetamol,MEDI    
+M00208  ,Voltral  50mg( Diclofenan 50mg)Tab,MEDI    
+M00209  ,Voltral  100mg (Diclofenac 100mg)Tab,MEDI    
+M00210  , Urigo 40mg (Febuxostat 40mg)Tab,MEDI    
+M00211  ,Fenoget  67 mg(Fenofibrate 67mg)Tab,MEDI    
+M00212  ,Fenoget  200mg(Fenofibrate 20mg)Tab,MEDI    
+M00213  ,Nuberol Forte(Paracetamol+orphenadrine)Tab,MEDI    
+M00214  ,Beflam 75mg(Diclofenac 75mg)Tab,MEDI    
+M00215  ,OAD(STRENGTH AND STAMINA)Tab,MEDI    
+M00216  ,Hairfin 1mg(Finasteride  1mg)Tab,MEDI    
+M00217  ,Proviron(Mesterolone)Tab,MEDI    
+M00218  ,Cytotrexate 10MG (Methotrexate 10mg)Tab,MEDI    
+M00219  ,Oligo  Care(Combeind)Tab,MEDI    
+M00220  ,Gonadil F (Tribuls terrestrise ext comp)cop,MEDI    
+M00221  ,Caver Nos (Libido Enhancer)Cop,MEDI    
+M00222  , Voren 5mg (Diclofenac 50mg)Cop,MEDI    
+M00223  ,Duragesic (Orphenadrine citrate+paracetamol)Tab,MEDI    
+M00224  ,Pritone 4mg(Chlorpheniramine 4mg)Tab,MEDI    
+M00225  ,Actived Charchol (Carbon)Tab,MEDI    
+M00226  ,Spasmolyte (Dicyloverine hydrochloride20mg)Tab,MEDI    
+M00227  ,Acetaminophen (Acetaminophen +codeine)Tab,MEDI    
+M00228  ,Neurobion(Vit B1.B6.B12) Inj,MEDI    
+M00229  ,Tenorimn 100MG(Atenolol 100mg) Tab,MEDI    
+M00230  ,Bepsar  25MG(Losartan potassium25mg)Tab,MEDI    
+M00231  ,Misar 80MG(Telmisartan80mg)Tab,MEDI    
+M00232  ,Rampice 5MG(Rampril 5mg)Tab,MEDI    
+M00233  ,Norplat  S (Clopidogrelaspirin 75/75mg)Tab,MEDI    
+M00234  ,Metonce 25mg(Metoprolol 25mg)Tab,MEDI    
+M00235  ,Concor  5MG(Bisoprolol Hemifuarate)Tab,MEDI    
+M00236  ,Concor 2.5M(Bisoprolol Hemifuarate)Tab,MEDI    
+M00237  ,Emhart 5mg/160mg(Amlodipine/valsartan)Tab,MEDI    
+M00238  ,Amlo 5MG(Amlodopine 10mg)Tab,MEDI    
+M00239  ,Amlo10MG(Amlodopine 10mg)Tab,MEDI    
+M00240  ,Vidace-M PLUS(VILDAGLIPTIN+METFORMIN50/1000MG)Tab,MEDI    
+M00241  ,Getformin 1mg/500mg(Glimepiride+Metformin)Tab,MEDI    
+M00242  ,Getformin2mg/500mg(Glimepiride+Metformin)Tab,MEDI    
+M00243  ,Sitagliptin  50mg Tab,MEDI    
+M00244  ,Glucophage XR 500MG(Metformin +Hydrochloride)Tab,MEDI    
+M00245  ,Glucophage XR 750mg(Metformin +Hydrochloride)Tab,MEDI    
+M00246  ,Glucophage 500mg(Metformin +Hydrochloride)Tab,MEDI    
+M00247  ,Glucophage 850mg(Metformin +Hydrochloride)Tab,MEDI    
+M00248  ,Dapa 5Mg(Dapagliflozin 5mg)Tab,MEDI    
+M00249  ,Dapa Met  XR(Dapagliflozin &metformin)Tab,MEDI    
+M00250  , Spermixeed(Combeind)Power,MEDI    
+M00251  ,Sitaglumet 50/500mg(Sitagliptin+metformin)Tab,MEDI    
+M00252  ,Kapril 25MG(Captopril 25mg)Tab,MEDI    
+M00253  ,Coptopril 25mg  Tab,MEDI    
+M00254  ,Capotin 25mg(Captopril 25mg)Tab,MEDI    
+M00255  ,Loprin 75mg(Aspirin 75mg)Tab,MEDI    
+M00256  ,Tiovair 18mcg(tiotropium 18mcg)Tab,MEDI    
+M00258  ,Lipvas 20mg(Atorvastatin 20mg)Tab,MEDI    
+M00259  ,A-ferin(Combeind)Tab,MEDI    
+M00260  ,Mont-LC 10/5mg(Montelukast+Levocetirizine)Tab,MEDI    
+M00261  ,Eziday 25mg(Losartan potassium 25mg)Tab,MEDI    
+M00262  ,Eziday 50mg(Losartan potassium 50mg)Tab,MEDI    
+M00263  ,Citriz 10mg(Cetirizine 10mg)Tab,MEDI    
+M00264  ,Larinex 5mg(Desloratadine 5mg)Tab,MEDI    
+M00265  ,Lipiget 10mg(Atorvastatin 10mg)Tab,MEDI    
+M00266  ,Urinac 25mg(Bethanechol 25mg)Tab,MEDI    
+M00267  ,Jovastatin-f 10/160mg(Atorvastatin+Fenofibrate)Tab,MEDI    
+M00268  ,Dexamethasone 0,5mg  Tab,MEDI    
+M00269  ,Bismol 265mg(Bismuth Subsalicylate265)Tab,MEDI    
+M00270  ,Brufen 600mg(Ibuprofen600mg)Tab,MEDI    
+M00271  ,Ascard  75mg(Aspirin 75mg),MEDI    
+M00272  ,Realfenac(Diclofenac)25mg,MEDI    
+M00273  ,Oil Gominol 5%/Drop,MEDI    
+M00274  ,Glycerince Boric 5%   /Lotion,MEDI    
+M00275  ,Glycerince Soda 5%/Lotion,MEDI    
+M00276  ,Metodine DF 500/400mg(Metronidazole+Diloxanide)Tab,MEDI    
+M00277  ,Entamizole(Diloxanide+Metronidazole)Tab,MEDI    
+M00278  ,Xcept 15mg(Rivaroxaban 15mg)Tab,MEDI    
+M00279  ,Xcept 20mg(Rivaroxaban 20mg)Tab,MEDI    
+M00280  ,Danzen DS 10mg(Serratiopeptidase 10mg)Tab,MEDI    
+M00281  ,Metronidazole 250mg(Metronidazole 250mg)Tab,MEDI    
+M00282  ,Imodium(Loperamide 2mg)Cop,MEDI    
+M00284  ,Pepzym(Combeind)Tab,MEDI    
+M00285  ,Zopent 40mg(Pantoprazole 40mg)Tab,MEDI    
+M00286  ,Onset-8(Ondansetron 8mg)Tab,MEDI    
+M00287  ,Ganaton OD(Itopride 150mg)Tab,MEDI    
+M00288  ,Stemetil(Prochlorperazine 5mg)Tab,MEDI    
+M00289  ,Avil(Pheniramine maleate )Tab,MEDI    
+M00290  ,Famoscot 20mg(Famotidine 20mg)Tab,MEDI    
+M00291  ,Famoscot 40mg(Famotidine 40mg)Tab,MEDI    
+M00292  ,Vermox 100mg(Mebendazole 100mg )Tab,MEDI    
+M00293  ,Laxoberon(Sodium Picosulfate)Tab,MEDI    
+M00294  ,Lasix(Furosemide 20mg)Tab,MEDI    
+M00295  ,Leos(Levosulpiride 25mg)Tab,MEDI    
+M00296  ,Dowsul 50mg(Levosulpiride 50mg)Tab,MEDI    
+M00297  ,Ridon 10mg(Domperidone 10mg)Tab,MEDI    
+M00298  ,Trichogin 500mg(Tinidazole 500mg)Tab,MEDI    
+M00299  ,Metnizol 500mg(Metronidazole500mg)Tab,MEDI    
+M00300  ,Delax 5mg(Bisacodyl 5mg)Tab,MEDI    
+M00301  ,Lansor 30mg(Lansoprazole 30mg)Tab,MEDI    
+M00302  ,Voniza 20mg(Vonoprazan 20mg)Tab,MEDI    
+M00303  ,Gravinate(Dimenhydriate) Tab,MEDI    
+M00304  ,Genopra DR(Pantoprazole 40mg)Tab,MEDI    
+M00305  ,Esoline-L 40/75mg(Esomeprazole+Levosulpiride)Cop,MEDI    
+M00306  ,Colofac 135mg(Mebeverine 135mg)Tab,MEDI    
+M00307  ,Esovic 40mg(Esomeprazole 40mg)Cop,MEDI    
+M00308  ,Pridegex 50mg(Itopride 50mg)Tab,MEDI    
+M00309  ,Zeespa 135mg(Mebeverine 135mg)Tab,MEDI    
+M00310  ,Stomdex 30mg(Dexlansoprazole 30mg)Cop,MEDI    
+M00311  ,Senex forte(Secnidazole 1g)Tab,MEDI    
+M00312  ,Lenzeu(Dexlansoprazole 60mg)Cop,MEDI    
+M00313  ,Rebline-D(Rabeprazole+Domperidon)Cop,MEDI    
+M00314  ,Biolac(Probiotics+Zinc)Powder,MEDI    
+M00315  , Benaquin(Chloroquine Phosphate) Tab,MEDI    
+M00316  ,Thyrox (Throxine 100mcg) Tab,MEDI    
+M00317  ,Ponstan Forte(Mefenamic acid),MEDI    
+M00318  ,Angised(Glyceryl trinitrate)0.5 Tab,MEDI    
+M00319  ,Thyrox (Throxine 50mcg) Tab,MEDI    
+M00320  ,Nen-mercazole(Carbimazole)5mg Tab,MEDI    
+M00321  ,Xaltide HFA(Salbutamol+Beclometasone) Inhaler,MEDI    
+M00322  ,Salbo HFA(Salbutamol) Inhaler,MEDI    
+M00323  ,Nitromint(Nitroglycerinn)2.6mg Tan,MEDI    
+M00324  ,Nimixa(Rifaximin)550mg Tab,MEDI    
+M00325  ,Cara(Leflunomide)20mg Tab,MEDI    
+M00326  ,No-spa(Drotaverine)40mg Tab,Medi    
+M00327  ,Methimazole 5mg Tab,MEDI    
+M00328  ,Clenil(Beclomethasone) Vial,MEDI    
+M00329  ,Prolex(Probiyotik) Powder,MEDI    
+M00330  ,Atem(Ipratropium) Solution,MEDI    
+M00331  ,Novidat(Ciprofloxacin)500mg Tab,MEDI    
+M00332  ,Termigen(Levofloxacin)250mg Tab,MEDI    
+M00333  ,Doxyspor(Doxycycline)100mg Cap,MEDI    
+M00334  ,FocinUltra (Fosfomycin) 3mg/ Sachet,MEDI    
+M00335  ,No-Spa(Drotaverine)40mg Inj,Medi    
+M00336  ,Nitrofurantoin 100mg Tab,MEDI    
+M00337  ,M-floxin(Moxifoxacin)400mg Tab,MEDI    
+M00338  ,Ecasil(Linezolid)600mg Tab,MEDI    
+M00339  ,Levomerc(Levofloxacin)500mg Tab,MEDI    
+M00340  ,Ospamox(Amoxicillin)1g Tab,MEDI    
+M00341  ,Zithrolide(Azitromycinn)250mg Cap,MEDI    
+M00342  ,Amoxi-Clav(Amoxicillin+Clavulanin acid) Tab,MEDI    
+M00343  ,Calamox(Co-amoxiclav)625mg Tab,MEDI    
+M00344  ,Cinrol(Ciprofloxacin)500mg Tab,MEDI    
+M00345  ,Zithrolide(Azitromycinn)500mg Tab,MEDI    
+M00346  ,Cinrol(Ciprofloxacin)250mg Tab,MEDI    
+M00347  ,Erythrocin(Erythromycin)500mg Tab,MEDI    
+M00348  ,Cefiget (Cefixime)400mg Cap,MEDI    
+M00349  ,Cefiget (Cefixime)200mg Cap,MEDI    
+M00350  ,Erythrocin(Erythromycin)250mg Tab,MEDI    
+M00351  ,Ciprocoast(Ciprofloxacin)500mg Tab,MEDI    
+M00352  ,Focin(Fosfomycin)500mg Cap,MEDI    
+M00353  ,Sarf(Ciprofloxacin)750mg Tab,MEDI    
+M00354  ,Lenwin(Cephradine)250mg Tab,MEDI    
+M00355  ,Lenwin(Cephradine)500mg Tab,MEDI    
+M00356  ,Sulpiride 500mg Cap,MEDI    
+M00357  ,Keflex(Cephalexin)500mg Cap,MEDI    
+M00358  ,Olaxcin(Ofloxacin)400mg Tab,MEDI    
+M00359  ,Claritek(Clarithromycin)250mg Tab,MEDI    
+M00360  ,Colimex(Dicyclomine+Simethicone) Drop,MEDI    
+M00361  ,Babygesic(Acetaminophen) Drop,MEDI    
+M00362  ,Panadol(Paracetamol) Drop,MEDI    
+M00363  ,Cylip-P Drop,MEDI    
+M00364  ,Colorest Drop,MEDI    
+M00365  ,Coferb Drop,MEDI    
+M00366  ,Glybiotic Drop,MEDI    
+M00367  ,Colic Drop,MEDI    
+M00368  ,Ventolin(Salbutamol) Drop,MEDI    
+M00369  ,Gravinate(Dimenhydriate)12.5mg/ Inj,MEDI    
+M00370  ,Eargol Drop,MEDI    
+M00371  ,Rubifer Drop,MEDI    
+M00372  ,Nospay Drop,MEDI    
+M00373  ,Metsil(Simethicone) Drop,MEDI    
+M00374  ,Vita-C(Ascorbic acid) Drop,MEDI    
+M00375  ,Rhino-Sone-P Drop,MEDI    
+M00376  ,Xynosine(Xylometazoline) Drop,MEDI    
+M00377  ,Xynosine child(Xylometazoline) Drop,MEDI    
+M00378  ,Nilstat(Nystatin) Drop,MEDI    
+M00379  ,Domlar(Domperidone)5mg Drop,MEDI    
+M00380  ,Gravinate(Dimenhydriate) Tab,MEDI    
+M00381  ,Kidgro(Vitamin A+D3) Drop,MEDI    
+M00382  ,Ad-nex(VitaminA+D3) Drop,MEDI    
+M00383  ,Quench(Silver) Cream,MEDI    
+M00384  ,Lignocaine Gel,MEDI    
+M00385  ,Lingab(Pregabalin) 75mg Cap,MEDI    
+M00386  ,Tramal SR(Tramadol)100mg Tab,MEDI    
+M00387  ,ALP(Alprazolam)0.5mg Tab,MEDI    
+M00388  ,ALP(Alprazolam)0.25mg Tab,MEDI    
+M00389  ,Rivotril(Clonazepam)0.25 Tab,MEDI    
+M00390  ,Rivotril(Clonazepam)2mg Tab,MEDI    
+M00391  ,Clonazepam Subhan 1mg Tab,MEDI    
+M00392  ,Clonazepam Subhan 2mg Tab,MEDI    
+M00393  ,Lexotonil(Bromoazepam)3mg Tab,MEDI    
+M00394  ,Hexidyl(Trihexyphenidyl)2mg Tab,Medi    
+M00395  ,Gencate Depot(Fluphenazine)25mg Amp,MEDI    
+M00396  ,Morphine(Morohinesulfate)10mg/ml Amp,MEDI    
+M00397  ,Tramal (Tramadol)50mg Tab,MEDI    
+M00398  ,Promethazine(Prommethazinehydrochloride) Amp,MEDI    
+M00399  ,Phenobarbital 200mg Amp,MEDI    
+M00400  ,Pentazocin 30mg Amp,MEDI    
+M00401  ,Kinz(Nalbuphin HCL)10mg Amp,MEDI    
+M00402  ,Akinidic(Biperden)5mg Amp,MEDI    
+M00403  ,Valum(Diazpam)10mg/2ml Amp,MEDI    
+M00404  ,Pofol(Propofol)200mg/20ml Amp,MEDI    
+M00405  ,Kamin(Ketamine)50mg Vial,MEDI    
+M00406  ,Serenace(Haloperidol)5mg Amp,MEDI    
+M00407  ,Adenosinw(Adenosine)6mg/2ml Amp,MEDI    
+M00408  ,Pan amin G Serum,MEDI    
+M00409  ,Haemaccel(Polygeline) Serum,MEDI    
+M00410  ,Cofcal Tab,MEDI    
+M00411  ,Multivitamins EFF Tab,MEDI    
+M00412  ,Vit C Tab,MEDI    
+M00413  ,ORS Powder,MEDI    
+M00414  ,Softovac Powder,MEDI    
+M00415  ,Protect(Mouth wash) Solution,MEDI    
+M00416  ,Daze junior Spray,MEDI    
+M00417  ,Mecobal(Mecobalam)500mg Amp,MEDI    
+M00418  ,Cimetidine(Cetidine) Amp,MEDI    
+M00419  ,Serlix(Lidocain)10% Spray,MEDI    
+M00420  ,Magnesium 500mg Amp,MEDI    
+M00421  ,Hyoscine 20mg Amp,MEDI    
+M00422  ,Streptomycin 1gr Vail,MEDI    
+M00423  ,Progesterone 50mg Amp,MEDI    
+M00424  ,Depo Medrol(Methylprednisolone)40mg Vail,MEDI    
+M00425  ,Hydralazine 20mg Amp,MEDI    
+M00426  ,Betamethazone 4mg Amp,MEDI    
+M00427  ,Risek(Omeprazole) 40mg Vail,MEDI    
+M00428  ,Risek(Omeprazole) 20mg Powder,MEDI    
+M00429  ,Risek(Omeprazole) 40mg Powder,MEDI    
+M00431  ,Jectosol(Iron+Vit B12+Folicacid) Amp,MEDI    
+M00432  ,Brufen 200mg,MEDI    
+M00433  ,VitaminD3 600000 Amp,MEDI    
+M00434  ,Vitamin D3 200000 Cap,MEDI    
+M00435  ,Maxna(Tranexamic Acid) Amp,MEDI    
+M00436  ,Lignocaine  Amp,MEDI    
+M00437  ,Atropine Amp,MEDI    
+M00438  ,Adrinaline Amp,MEDI    
+M00439  ,Grasil(Amikacin)100mg Amp,MEDI    
+M00440  ,Grasil(Amikacin)500mg Amp,MEDI    
+M00441  ,Calcuim Carbonate Amp,MEDI    
+M00442  ,Laxis(Furosemide)20mg Amp,MEDI    
+M00443  ,Bupicain(Bupivacain) Amp,MEDI    
+M00444  ,Ketrolac Amp,MEDI    
+M00445  ,Vitamin K Amp,MEDI    
+M00446  ,Oxytixcin Amp,MEDI    
+M00447  ,Naloxone 0.4 Amp,MEDI    
+M00448  ,Lignocain Vail,MEDI    
+M00449  ,Lignocain+Adrenaline Vail,MEDI    
+M00450  ,Hydrocortizone 100mg Vail,MEDI    
+M00451  ,Hydrocortizone 250mg Vail,MEDI    
+M00452  ,Hepamerz Amp,MEDI    
+M00453  ,Capcidol(Topical Analgesic) Cream,MEDI    
+M00454  ,Bio-Calamin-D Lotion,MEDI    
+M00455  ,Curine(Naphazoline) Drops,MEDI    
+M00456  ,Clycin-T(Clindamycin) Lotion,MEDI    
+M00457  ,Somogel Grams,MEDI    
+M00458  ,Betagenic Ointment,MEDI    
+M00459  ,Maxolon(Metoclopramide) Tab,MEDI    
+M00460  ,Liceguard(Permethrin)5% Cream,MEDI    
+M00461  ,Betnoesol-N Drops,MEDI    
+M00462  ,G.T.N Ointment,MEDI    
+M00463  ,Naprisol(Naphazoline)0.05% Drops,MEDI    
+M00464  ,Betamethasone-N Oitment,MEDI    
+M00465  ,Polyfax Skin Oitment,MEDI    
+M00466  ,Ichtyol 10% Pamthyol,MEDI    
+M00467  ,Hadensa Ointment,MEDI    
+M00468  ,Maxolon(Metoclopramide) Inj,MEDI    
+M00469  ,Xerovit(Vitamin A) Ointment,MEDI    
+M00470  ,Betnoesol-N Eye Ointment,MEDI    
+M00471  ,Polyfax Eye Oitment,MEDI    
+M00472  ,Suction Connecting Tube,MEDI    
+M00473  ,Skilax(Sodium Picosulfate) Drops,MEDI    
+M00474  ,Prednisolone Tab,MEDI    
+M00475  ,Septran DS(Co-trimoxazole) Tab,MEDI    
+M00476  ,Biobrain Drops,MEDI    
+M00477  ,Sodium Chloride Drops,MEDI    
+M00478  ,Rowatinex Drops,MEDI    
+M00479  ,Otosporin Drops,MEDI    
+M00480  ,Neuro-Bedoxine Plus Tab,MEDI    
+M00481  ,Parol(Paractamol)500mg Tab,MEDI    
+M00482  ,Panadol(Paracetamol) 500mg Tab,MEDI    
+M00483  ,Amoxicillin 500mg Cap,MEDI    
+M00484  ,Atoksilin(Amoxicillin)500mg Cap,Medi    
+M00485  ,Neurobion(Vit B1.B6.B12) Tab,MEDI    
+M00486  ,Panadol CF Tab,MEDI    
+M00487  ,Trisil Plus Tab,MEDI    
+M00488  ,Supramycin(Doxycycline)100mg Cap,MEDI    
+M00489  ,Budifen(Ibuprofen)400mg Tab,MEDI    
+M00490  ,Buscopan Plus Tab,MEDI    
+M00491  ,Metrozine(Metronidazole)200mg Tab,MEDI    
+M00492  ,Gauze Swabs,MEDI    
+M00493  ,IV.Cannula 24G,MEDI    
+M00494  ,IV.Cannula 26G,MEDI    
+M00495  ,IV.Cannula 18G,MEDI    
+M00496  ,IV.Cannula 22G,MEDI    
+M00497  ,Mix(Dextrose+Sodium Chloride) 500cc Serum,MEDI    
+M00498  ,Glucose(Dextrose) 5% 1000cc Serum,MEDI    
+M00499  ,Glucose(Dextrose) 5% 500cc Serum,MEDI    
+M00500  ,N/S (Sodium Chloride) 1000cc Serum,MEDI    
+M00501  ,N/S (Sodium Chloride) 500cc Serum,MEDI    
+M00502  ,N/S (Sodium Chloride) 100cc Serum,MEDI    
+M00503  ,R/L(Ringer Lactate) 1000cc Serum,MEDI    
+M00504  ,R/L(Ringer Lactate) 500cc Serum,MEDI    
+M00505  ,Mix(Dextrose+Sodium Chloride) 1000cc Serum,MEDI    
+MAG,MAGNISIUM,LAB     
+MAL,MALARIA PARASITE ICT,LAB     
+MANDI   ,MANDIBULA X-RAY,RAD     
+MAS,MASTOID X-RAY,RAD     
+Mask,Mask/ B and bl,Medi    
+Mask O  ,Mask Oxygen Adult,Medi    
+MASTEC  ,MASTECTOMY,OPEN    
+Max,Maxna/Tranexamic acid 500mg Cap,Medi    
+Maxf,Maxfresh/Tooth Gel,Medi    
+Maxfl   ,Maxflow/Tamsulosin 0.4mg Cap,Medi    
+Maxi,Maxicold-plus/Combined Tab,Medi    
+Maxo,Maxolon(Metoclopramide) 5mg Syp,Medi    
+MAY,POST-PARTUM HEMORHAGE,GYN     
+Me ,Metodine DF Sus,Medi    
+Mecoba  ,Mecobalar-500(Mecobalamin)500mcg Cap,Medi    
+Med,Medola/Talc,Medi    
+MED2,MEDICINE OUT,MED     
+MEDI,MEDICINE INCOME,MED     
+Medora  ,Medora Perfumed Talc,Medi    
+Mef,Meflox/Moxifloxacin 400mg Tab,Medi    
+Melat   ,Melatonin Natural 5mg Tab,Medi    
+Melato  ,Melatonin 10mg Tab,Medi    
+Melaton ,Melatonin 5mg Tab,Medi    
+MEN,MENINGOCELE,NEURO   
+Ment,Menthol Crystal,Medi    
+Menth   ,Menthosil/ Cough Lozenges,Medi    
+Met,Metodine/Combined 350/250mg Tab,Medi    
+METAL   ,MONOPLAST,DENTA   
+Metn,Metneon/Metronidazole 500mg Tab,Medi    
+meto,Metonce (Metoprolol) 50mg,Medi    
+Metocl  ,Metoclopramide 10mg Amp,Medi    
+Metol   ,Metolar Metoprolol 5ml Inj,Medi    
+Metr,Metroda/Metronidazol 400mg Tab,Medi    
+Metro   ,Metroda/Metronidazol 500mg Tab,Medi    
+MEYA,MEYALO MENINGOCELE,NEURO   
+Mg-,Mg-Vox/Magnesium Glycinate 500mg Tab,Medi    
+Mi ,Mirtadil-7.5(Mirtazapine)7.5mg Tab,Medi    
+Mic,Micronema/Combined Losh,Medi    
+Mida,Midazolam 5mg Amp,Medi    
+Min,Minpre/Pregabalin+methylcobalamin Cap,Medi    
+Mind,Mind peace-3(Melatonin)3mg Tab,Medi    
+Minir   ,Minirin(Desmopressin)0.2mg Tab,Medi    
+Mir,mirofen/Combine Gel 30g,Medi    
+Mirab   ,Mirabet(Mirabegron)50mg Tab,Medi    
+Mirta   ,Mirtaris-15(Mirtazapine)15mg Tab,Medi    
+Mirtad  ,Mirtadil(Mirtazapine)30mg Tab,Medi    
+Mirtadil,Mirtadil-15(Mirtazapine)15mg Tab,Medi    
+Mis,MisarAm/Telmisartan+Amlodipine 5/80mg Tab,Medi    
+MISS,ATONIA OF UTERUS,GYN     
+Mit,Mitaz/ Mirtazapin 15mg Tab,Medi    
+Mita,Mitaz/ Mirtazapin 30mg Tab,Medi    
+Mix,Mixtard/ Insulin 30Hm Vil,Medi    
+Modax   ,Modaxen(Naproxen)500mg Tab,Medi    
+Modke   ,Modkem/Modafinil 200mg Tab,Medi    
+Mof,Mofest/Moxifloxacin 400mg Tab,Medi    
+Mol,Molox/Moxifloxacin 400mg Tab,Medi    
+MOLE,OVARIAN CYST,GYN     
+MON,MONITORING,EME     
+Mono,Monodoks/Doxycyline 100mg Cap,Medi    
+MONOB   ,MONOBLAST DENTUR,DENTA   
+Mor,Moringa/Combined Tab,Medi    
+More,More Biotic(Probiotic) Cap,Medi    
+mot,Motilium/Domperidone 10mg Tab,Medi    
+Move,Move Fast,Medi    
+Mox,Moxiget(Moxifloxacin)400mg Tab,Medi    
+Moxin   ,Moxinof(Moxifloxacin)400mg Tab,Medi    
+Moxv,Moxvid/Amoxycillin 250mg Cap,Medi    
+MP ,MALARIA PARASITE MP,LAB     
+Mul,Multi-Vitamin Green TAb,Medi    
+Mult,Multibionta/Multivitamin INJ 10Ml,Medi    
+MUS,MUSCULO SKLETAL-ALL JOINTS,ULT     
+MVD,MVD FOR TRIGEMINAL NEURALGIA SIMPLE,NEURO   
+MVD F   ,MVD FOR TRIGEMINAL NEURALGIA COMPLEX,NEURO   
+MYO,MYOGLOBIN,LAB     
+Myt,Myteka/Montelukast Sach 4mg,Medi    
+N  ,Novamentin-625(Combined)625mg Tab,Medi    
+nab,Neblizer Mask  Baby,Medi    
+Napr,Naproxen 500mg,Medi    
+Napro   ,Naproxen/Iran 500mg Tab,Medi    
+Nas,Nasvit-D3/Multivitamin Combined,Medi    
+NASAL   ,NASAL BONE X-RAY ,RAD     
+Naso, Nasocan/Xylometazoline Drop,Medi    
+Nasoc   ,Nasocan/Xylometazoline Drop,Medi    
+Nass,Nassa/ Miratzapin 15mg Tab,Medi    
+Nassa   ,Nassa(Mirtazapine)30mg Tab,Medi    
+Nasv,Nasvit-D3/Combind Cap,Medi    
+NEB,NEBULIZATION,EME     
+nebu,Nebulizer Mask Lareg,Medi    
+NEBUL   ,NEBULIZATION,PED     
+NECK,NECK SOFT TISSUE ,RAD     
+Neo,Neo-Mercazole/Carbimazole 100mg Tab,Medi    
+NEO-,NEO-RISP(Risperidone)2mg Tab,Medi    
+Neoc,Neocard-ATN/Amlodipine&Atenolol 5/50mg Tab,Medi    
+Neog,Neoglip/Metformin+Sitagliptin 50/500mg Tab,Medi    
+Neol,Neolepra-F/Combined 6mg/25mg Cap,Medi    
+Neole   ,Neolepra-F Combined 3mg/25mg Cap,Medi    
+NEON,NEONATAL RESUCITATION,PED     
+NEONA   ,NEONATAL RESUCITATION,PED     
+Neonc   ,Neon/Cough Syrup,Medi    
+NEPHRECT,NEPHRECTOMY,OPEN    
+NERO,NERO VASCULAR LESION,NEURO   
+NEU,NEURO CONSULTATION(COMPLETE NEUROLOGICAL EXAM),NEURO   
+Neur,Neuroka-Fast/Methylcobalamin Amp 1500mcg,Medi    
+Nev,Nevakson/CeftriXONE 1G Vil,Medi    
+NEWB,NEW BORN BED/FEE/24HR,PED     
+Nex,Nexm/Esomeprazole 40mg IV,Medi    
+Nexc,Nexcip(Ciprofloxacin)250mg Sus,Medi    
+Next,Nextfor(Metformin)500mg Tab,Medi    
+NG ,NG TUBE INSERTION,EME     
+Ni ,Nims(Nimesulide)100mg Tab,Medi    
+Nimo,Nimosol/Nimesulide 100mg Tab,Medi    
+Nimum   ,Nimumac Cold/Combind Tab,Medi    
+Nog,Nogerd SR / Itopride Tab 150mg,Medi    
+NOR,COMPLICATED DELIVERY,GYN     
+Norb,Norbac/Ceftriaxone 500mg Vil,Medi    
+NORM,NORMAL DELIVERY,GYN     
+Nos,No-Spa/Drotaverine 40mg Tab,Medi    
+Note,Notense(Mirtazapine) 15mg Tab,Medi    
+Nov,Novom/doxylamine/p/ Tab 10mg,Medi    
+NTB,Ntbec/Ciprofloxacin 200mg Inf,Medi    
+Ntbe,Ntbec/Ciprofloxacin 500mg Tab,Medi    
+Ntz,Ntzone(Nitazoxanide)500mg Tab,Medi    
+Nuba,Nubaquel/Quetiapin 25mg Tab,Medi    
+Nut,Nutri-C,Medi    
+Nyt,Nytrig/Fluphenazine&Nortriptyline 0.5/10mg Tab,Medi    
+O  ,Olanzya-5(Olanzapine)5mg Tab,Medi    
+O2 ,O2 /HOUR,EME     
+Ocmin   ,Ocmin 50(Fluvoxamine)50mg Tab,Medi    
+OESOP   ,OESOPHAGECTOMY,OPEN    
+Ofl,Oflobid/Ofloxacin 200mg Tab,Medi    
+OIU,OIU FOR URETHRASTRICTURE,URO     
+Ol ,Olanzya-2.5(Olanzapine)2.5mg Tab,Medi    
+Ola,Olanzi/Olanzapin 10mg Tab,Medi    
+Olanzi  ,Olanziris-5(Olanzapine)5mg Tab,Medi    
+Ole,Olepra/Olanzapine Tab 10mg,Medi    
+Olep,Olepra/Olanzapine Tab 5mg,Medi    
+OM ,OMP X-Ray,RAD     
+Ome,Omes-20/Omeprazole 20mg Cap,Medi    
+omn,Omnidol/Paracetamol.caffein 500mg Tab,Medi    
+Omz,Omzee D /Ompraz+Domper 20/10 Cap,Medi    
+Ond,Ondris-8/Ondansetron 8mg Amp,Medi    
+OP ,OPD+PROCEDURE,URO     
+OPD,OPD,OPD     
+OPD1,OPD,OPD     
+OPD2,OPD,OPD     
+OPE,CHOLESTECTOMY,OPEN    
+OPEN,OPEN APPINDECTOMY,OPEN    
+OPEN AP ,APPANDICTOMY,URO     
+OPEN CH ,OPEN CHOLESTECTOMY,URO     
+OPEN K  ,OPEN KIDNEY STONE,URO     
+opt,Optic,ANE     
+ORCH,ORCHIDECTOMY,OPEN    
+ORCHI   ,ORCHIDECTOMY,URO     
+ORCHID  ,ORCHIDECTOMY,OPEN    
+org,salamat,CON     
+orgi,Orgie/Tadalafil 20mg Str,Medi    
+Orgie   ,Orgie Plus/Tadalafil 20mg Dapoxe 10mg str,Medi    
+Orphe   ,Orphegesic(Orphenadrine+Paracetamol)50+650mg Tab,Medi    
+ORS,Prolyte/ORS 200ml jus,Medi    
+ORS Nu  ,ORS Nutri-C Sol,Medi    
+ORTHO   ,ORTHODENCY,DENTA   
+ORTHO CA,ORTHO USA CASE 2,DENTA   
+ORTHO US,PARTIAL PER UNIT,DENTA   
+Ost,Ostemen/vitk2 vit D3 Cap,Medi    
+Osti,Ostir-UP/Memantine Hydrochloride 10mg Tab,Medi    
+OT ,OT,RO      
+OUT P   ,OUT PATION IV CANULLA,EME     
+Ovi,OVI-F/Clomiphene 50mg Tab,Medi    
+Oxc,Oxcym DR/Duloxetine 30mg Cap,Medi    
+OXY,OXYGEN/MINUATE,EME     
+OXYG,OXYGEN THERAPY/HR,PED     
+Oxysp   ,Oxyspas(Oxybutynin)5mg Tab,Medi    
+Oxyt,oxytetracycline/Cap 250mg,Medi    
+P  ,Pacimol(Paracetamol)1g Inf,Medi    
+PALEU   ,PLEURAL TAP,PED     
+PALIS   ,BLEECHING,DENTA   
+pan,Panadol Syp,Medi    
+Pana,Panadol CF / Combind Tab,Medi    
+Pant,Pantoline/Pantoprazole Vil 40mg,Medi    
+Panta   ,Pantacoast/Pantoprazole Vil 40mg,Medi    
+Panto   ,Pantonas Plus/Pantoprazole+Domperidone 40mg Cap,Medi    
+Pantom  ,Pantomac(Pantoprazole)40mg Vail,Medi    
+par,paromax paroxiten 20mg,Medi    
+Para,Paracoast/Paracetamol Inf 1gr,Medi    
+parac   ,Paracetamol 300mg Inj,Medi    
+parace  ,Paracetamol 600mg Inj,Medi    
+paracet ,Paracetamol 750mg Inj,Medi    
+Param   ,Paramyl Osteo(Paracetamol)665mg Tab,Medi    
+Parax   ,Paraxyl CR(Paroxtine)25mg Tab,Medi    
+Parayl C,Paraxyl CR(Paroxetine)12.5mg Tab,Medi    
+PARO,AB.PERVIC TESTES,ULT     
+Pars,Parsazole/Metronidazole 500mg Inf,Medi    
+parsa   ,Parsacip/Ciprofloxacin 200mg INF,Medi    
+Parsac  ,Parsacip/Ciprofloxacin 400 INF,Medi    
+Pavo,Pavodin 10%,Medi    
+PCNL,PCNL FOR KIDNY STONE,URO     
+Ped,Pedrol total/Paracetamol/chlorph 120mg Syp,Medi    
+PEDIA   ,PEDIATRIC BED/FEE/24 HR,PED     
+Pedif   ,Pedifen(Ibuprofen)100mg Susp,Medi    
+PELV,PELVIC,ULT     
+PELVIS  ,PELVIS X-RAY,RAD     
+Pen,Pentazocine/ 30mg Inj,Medi    
+PEPTIC  ,PEPTIC PERFORATION ,OPEN    
+Per,Perfect/Mouthwash 110ml Sul,Medi    
+PERI,PERITONEAL TAP,PED     
+PERICAR ,PERICARDIOCENTESIS,INTER   
+PERIP   ,PERIPHERAL SMEAR BLOOD FILM,LAB     
+Pexet   ,Pexet(Naproxen)500mg Tab,Medi    
+PF ,PERITONEAL FLUID,LAB     
+PFT,P.F.T,DOPPL   
+Pharm   ,Pharma Dip(Amlodipine)10mg Tab,Medi    
+Pharma  ,Pharma Dip(Amlodipine)5mg Tab,Medi    
+PHOS,PHOSPORUS,LAB     
+PHY1,PHYSIOTRAPY FOR 1 DAY,PHYS    
+PHY10   ,PHYSIOTRAPY FOR 10 DAYS,PHYS    
+PHY2,PHYSIOTRAPY FOR 2 DAYS,PHYS    
+PHY3,PHYSIOTRAPY FOR 3 DAYS,PHYS    
+PHY4,PHYSIOTRAPY FOR 4 DAYS,PHYS    
+PHY5,PHYSIOTRAPY FOR 5 DAYS,PHYS    
+PHY6,PHYSIOTRAPY FOR 6 DAYS,PHYS    
+PHY7,PHYSIOTRAPY FOR 7 DAYS,PHYS    
+PHY8,PHYSIOTRAPY FOR 8 DAYS,PHYS    
+PHY9,PHYSIOTRAPY FOR 9 DAYS,PHYS    
+Pi ,pirofen(Paracetamol)500mg Tab,Medi    
+Pir,Piriton/Chlorpheniramine 4mg Tab,Medi    
+Plast   ,Plaster ,Medi    
+PLAT,PLATELET COUNT,LAB     
+PLE,PLEURA TAB,EME     
+PLEUR   ,PLEURAL TAB,INTER   
+PLEURA  ,PLEURAL TAB,INTER   
+PLF,PLEURAL FLUID,LAB     
+POR,BREST DOPPLER,DOPPL   
+PORC,PROCELLIN PER UNIT,DENTA   
+PORCE   ,STEEL COVER PER UNIT,DENTA   
+POST,POST FOSSA TUMORS,NEURO   
+POT,POTASIUME,LAB     
+pow,Powder ORS,Medi    
+Power   ,Power-RIS(Sildenafil)100mg Tab,Medi    
+Pra,Pracit/Venlafaxine 37.5mg Tab,Medi    
+Praz,Prazol_D/Panto/Dompe 40mg/30 Cap,Medi    
+Pre,Prednisolone 20mg Tab,Medi    
+Predn   ,Prednisolone 10mg Tab,Medi    
+PREG,PREGNANCY TEST,LAB     
+Prega   ,prega-M/Pregabalin+Methylcobalamin,Medi    
+Pregab  ,Pregabalin+Methylcobalamin Cap,Medi    
+Pregz   ,Pregzin-P(Methylcobalamin+Pregabalin) Tab,Medi    
+Preq,Prequel(Quetiapine)25mg Tab,Medi    
+Pri,Pridogen/Levosulpiride 50mg Tab,Medi    
+PRO,PROLECTIN,LAB     
+PROCE   ,PROCEDURE DJ STENT REMOVE,URO     
+PROCED  ,PROCEDURE STENT,URO     
+PROG,PROGRSTERONE,LAB     
+PROGO   ,PRO-GOLD PER UNIT,DENTA   
+Prol,prolexa/Escitalopram 20mg Tab,Medi    
+Prolex  ,Prolex plus sachet,Medi    
+PROSTA  ,PROSTATECTOMY,OPEN    
+Prota   ,protae/paroxetine 20mg Tab,Medi    
+PSA,PSA,LAB     
+PT ,PT TEST,LAB     
+PTH,PTH,LAB     
+PTT,PTT,LAB     
+PUC,PUS CULTURE,LAB     
+Pul,Pulmonol/Combinde syp,Medi    
+PYEL,PYELOPLASTY,URO     
+Pzol,Pzole D /Panto+Domper Cap,Medi    
+Quin,Quinox(Ciprofloxacin)500mg Tab,Medi    
+R  ,Relaxi(Olanzapine)10mg Tab,Medi    
+R-Cin   ,R-Cin/Rifampicin 300mg Cap,Medi    
+R.C.T MT,REMAKING OF DENTURE,DENTA   
+R.C.T+FI,R.C.T+FILLING BY COMPOSIT,DENTA   
+R202,ROOM 202,RO      
+R203,ROOM 203,RO      
+R204,ICU ROOM 204,RO      
+R205,ROOM 205,RO      
+R206,ROOM 206,RO      
+R207,ROOM 207,RO      
+R208,VIP ROOM 2,RO      
+R301,VIP ROOM 1,RO      
+R302,ROOM 302,RO      
+R306,RECOVERY ROOM(GYN) 306,RO      
+R401,ROOM 401,RO      
+R402,ROOM 402,RO      
+R403,ROOM 403,RO      
+R404,ROOM 404,RO      
+R405,VIP ROOM 3,RO      
+R502,ROOM(PED) 502,RO      
+R503,ROOM(PED) 503,RO      
+R504,ROOM(PED) 504,RO      
+R506,ROOM(PED) 506,RO      
+R508,NURSARY ROOM(PED) 508,RO      
+RA ,RA FACTOR,LAB     
+Rab,Rabesec-D SR/Combined Cap,Medi    
+Rabor   ,Raboreg40 DSR Cap,Medi    
+Ram,Ramipace/Ramipril 2.5mg Tab,Medi    
+Rash,Rashnil/Combined Cream,Medi    
+Rashed  ,Rashed,CON     
+RBC,RBC (Iron Sucrose) 100mg Inj,Medi    
+RBS,RBS,LAB     
+Real,Real-One(Ceftriaxone) 1g vial,Medi    
+Reb,Rebline-E/Rabeprazole D Cap ,Medi    
+REf,Refobacin/Getamicin Inj 80mg,Medi    
+Refo,Refobacin/Gentamicin Inj 40mg,Medi    
+Rel,Realcef/ceftriaxone 1g Vil,Medi    
+Relex   ,Relexafe-200(Celecoxib)200mg Cap,Medi    
+Remo,Remove Of IUCD,GYN     
+Remove  ,Remove Of Implant,GYN     
+REN,RENAL (KIDNEY) DOPPLER,DOPPL   
+Repla   ,Replax(Risperidone)2mg Tab,Medi    
+Replax  ,Replax(Risperidone)1mg Tab,Medi    
+RETENOR ,RETENOR,DENTA   
+RETI,RETICULOCYTE COUNT,LAB     
+RFT,RFT,LAB     
+Rhi,Rhino Gold 160/Sildenafil+dapox 100/60mg tab,Medi    
+RHIN,Rhinogra Forte/Sildenafil+Dapox 100/60mg Tab,Medi    
+Rid,Ridon/Domperidone 5mg SYP,Medi    
+Rif,Rifazed-Rifampicin 300mg Cap,Medi    
+Rifa,Rifaxa(Rifaximin)550mg Tab,Medi    
+RIGHT   ,RIGHT HEMICOLECTOMY,OPEN    
+Risp,Risp(Risperidone)1mg Sol,Medi    
+Risper  ,Risperidone 2mg Tab,Medi    
+Rit,Rithmo/Clarithromycin 250mg Tab,Medi    
+Rivo,Rivotril/Clonazepam 0.5mg Tab,Medi    
+Rivot   ,Rivotril(Clonazepam)2.5mg Drops,Medi    
+Rom,Romega/OMG3 Cap ,Medi    
+Ron,Ronex/Cetirizine 10mg Tab,Medi    
+Rot,Rotaflo,Medi    
+ROU,ROUTIN DIALYSIS,DIALY   
+Rox,Roxib/Celecoxib 200mg Cap,Medi    
+Roxx,Roxxi/Paroxetine 20mg Tab,Medi    
+Roy,Royal/Petrolem jelly,Medi    
+Roya,Royal/Shampoo,Medi    
+RUB,RUBELLA IGG/IGM,LAB     
+Ruxa,Ruxaclam(Amoxicillin+Clavulanate)625mg Tab,Medi    
+S  ,Snomol (Paracetamol)125mg Susp,Medi    
+s11,Nilab,GYN     
+Saf,Safacid cap ,Medi    
+Salbu   ,Salbutamol Syrup,Medi    
+San,Sankol/Herbal Drop,Medi    
+Sana,Sana Flu/ Combinde Syp,Medi    
+Sante   ,Santedyne Toothpaste,Medi    
+SAP,SPINAL FENESTRATION,NEURO   
+SC ,SC INJECTION,EME     
+SCAL,SCALLING,DENTA   
+SCU,STOOL CULTUER,LAB     
+Sem,Sematide/Semaglutide 0.25mg INJ,Medi    
+seme,SEMEN CULTURE,LAB     
+SEMEN   ,SEMEN ANALYSIS,LAB     
+Sen,Sensodyne/teeth creem,Medi    
+Sens,Sensit(Flupentixol-Melitracen)0.5 10mg tab,Medi    
+SER,SERUM INFUSION ,EME     
+serc,serc/Betahhistine 16mg tab,Medi    
+Sert,Sertaris 100(Sertraline)100mg Tab,Medi    
+SERU,SERUM FERRITIN,LAB     
+SERUM   ,SERUM INFUSION,PED     
+SGOT,SGOT,LAB     
+SGPT,SGPT,LAB     
+SHOUL   , AP X-RAY,RAD     
+Si ,Sitafor-M(Metformin,Sitagliptin)50,500 Tab,Medi    
+Sid,Sidoplus/Amlodipin&Atenolo 5/50 Tab,Medi    
+Sie,Siezta/Sildenafil 100mg Str,Medi    
+Sign,Signapine/Olanzapine 10mg Tab,Medi    
+SIM,SIMPLE DRESSING,EME     
+SIMP,SYNOSE X-RAY,RAD     
+Sin,Sinus Pro/ Combinde SYP 100Ml,Medi    
+SING,SINGMOIDONCOPY,ENDO    
+Sit,Sitafor/Sitagliptin 50mg Tab,Medi    
+Sita,Sitafor-M(Metformin,Sitagliptin)50,1000 Tab,Medi    
+Sitn,Sitnas(Sitagliptin)50mg Tab,Medi    
+SKUL,SKULL TUMOR,NEURO   
+SKULL   ,AP-Lat- X-RAY,RAD     
+SMAL,DRESSING,EME     
+Snhag   ,Suhagra-50(Sildenafil)50mg tab,Medi    
+Snob,Snobalin-75/Pregabalin 75mh Tab,Medi    
+Snol,Snoloz(Lactulose)66.7g Sol,Medi    
+Snom,Snomol Ds/Paracetamol 250 MG SYP,Medi    
+SOB,STOOL OCULT BLOOD,LAB     
+SOD,SODIUM,LAB     
+Sol,Solfy Solifenacin/5mg Tab,Medi    
+Solif   ,Solif(Solifenacin)10mg Tab,Medi    
+Sor,Sorecare Gel,Medi    
+Spas,Spas-Go(Drotaverine)40mg Inj,Medi    
+Spe,Spermixeed/Sperm Sachet,Medi    
+SPEC,SPECIAL EXAMINATION,RAD     
+SPIN,SPINAL STENOSIS SINGLE LEVEL,NEURO   
+SPINA   ,SPINAL STENOSIS MULTI LEVEL,NEURO   
+SPINAL  ,SPINAL STENOSIS COMPLECATED,NEURO   
+SPINAL I,SPINAL INSTRUMENTATIONS AND FIXATIONS,NEURO   
+SPINAL T,SPINAL TUMOR,NEURO   
+SPL,SPLEENECTOMY,URO     
+SPLENECO,SPLENECOTMY,OPEN    
+SPTC,SPUTUM AFB,LAB     
+STE,STERNUM ,RAD     
+Ster,Sterol D/Vitamin D3/Cap,Medi    
+Sterd   ,Sterdispo/Seratiopeptidase 10mg Tab,Medi    
+Steri-St,Steri-Strip,Medi    
+STO,STOMACH LAVAGE,EME     
+Stom,Stomdex/Dexlansoprazole 60mg Cap,Medi    
+STON,STONE ANALYSIS,LAB     
+STOO,STOOL H.PYLORI,LAB     
+STOOL   ,STOOL EXAM,LAB     
+STRES   ,STRESS ECHO.,INTER   
+Stu,Stugeron/Cinnarizine 25mg Tab,Medi    
+SUB,SUB DURAL HYGROMA,NEURO   
+SUB D   ,SUB DURAL EYMPYMA,NEURO   
+SUB DU  ,SUB DURAL HEMATOMA,NEURO   
+Suc,Sucrapil/Sucralfate 1g SYP,Medi    
+Sucra   ,Sucra Plus/ Sucralfate Syp 1G,Medi    
+Suh,Suhagra/Sildenafil 100MG Tab,Medi    
+suha,SUHAGRA SILDENAFIL 50MG TAB,Medi    
+Suhag   ,Suhagra-100(Sildenafil)100mg Tab,Medi    
+Sulv,Sulvorid/Levosulpiride 50mg Tab,Medi    
+SUP,SUPRA TENTORIAL MENINGIOMA,NEURO   
+SUT,SUTURE REMOVE,EME     
+Syr,Syringe/10ml/cc,Medi    
+Syri,Syringe/5ml/cc,Medi    
+Syrin   ,Syringe/60mlcc,Medi    
+Syring  ,Syringe/50ml/cc,Medi    
+syringe ,Syringe 20,Medi    
+T3 ,T3 TEST,LAB     
+T4 ,T4 TEST,LAB     
+tada,TADACIP TANDANAFIL 20ML TAB,Medi    
+Tag,Tagipmet/Sitagliptin+Metformin 50/500mg Tab,Medi    
+Tagip   ,Tagipmet(Sitagliptin+Metformin)50+1000mg Tab,Medi    
+Tal,Taline/Sertraline 100mg tab,Medi    
+Tali,Taline/Sertralin 50mg Tab,Medi    
+Tam,Tamspas-d/Tamsulosin Hy 0.4/Dutasteride 0.5 Tab,Medi    
+Tamm,Tammislin-D/Tamsulosin&Dutasteride Tab,Medi    
+Tamo,Tamomide-40 /Combinde Tab,Medi    
+Tan,Tanzo/Combined 4.5g Vil,Medi    
+Tard,Tardocef(Ceftriaxone)1g Vail,Medi    
+Tas,Tasmi(Telmisartan)40mg Tab,Medi    
+tasm,tasmi/Telmisartan 80mg Tab,Medi    
+Tasmi   ,Tasmi/Telmisartan 20mg Tab,Medi    
+TB ,TB TEST,LAB     
+TB IG   ,TB IGG/IGM,LAB     
+Ted,Tedaprox 500mg Naproxen Tab,Medi    
+Tegri   ,Tegrital(Carbamazepine)200mg Tab,Medi    
+TEMP,TEMPORARY FILLING,DENTA   
+Ten,Tenormin/Atenolol 50mg Tab,Medi    
+TES,AB.TESTES,ULT     
+TEST,TESTOSTRONE,LAB     
+TESTI   ,TESTICLE DOPPLER,DOPPL   
+TESTIS  ,TESTIS ,ULT     
+Testo   ,Testoviron Depot/Testosterone 250mg Amp ,Medi    
+TETH,TETHERED CORD SYNDROME,NEURO   
+Tetra   ,Tetrakim(Tetracycline)250 Cap,Medi    
+Tetrac  ,Tetracycline Eye Ointment,Medi    
+Thiro   ,ThiroAce(Thyroxine)100mg Tab,Medi    
+ThiroA  ,ThiroAce(Thyroxine)50mg Tab,Medi    
+THOR,THORACIC SPIN X-RAY,RAD     
+THYR,THYRID,ULT     
+Thyro   ,Thyrox(Thyroxine)100mg Tab,Medi    
+THYROD  ,THYROIDECTOMY,OPEN    
+THYROI  ,THYROID DOPPLER,DOPPL   
+Thyrox  ,Thyrox(Thyroxine)25mg Tab,Medi    
+Thyroxi ,Thyroxine/Levothyroxine 50mcg Tab,Medi    
+Tiag,Tiagra Gold/Combinde Cap,Medi    
+tin,Tinidazol(Tinidazole)500mg tab,Medi    
+Tini,Tinibact(Tinidazole)500mg Tab,Medi    
+tiog,Tioget(Tiotropium)18mcg Cap,Medi    
+TLC,TLC,LAB     
+Tom,Tomax/Topiramate 50mg Tab,Medi    
+Toma,Tomax/Topiramate 25mg Tab,Medi    
+Ton,Tonoflex-p/ Tramadol+Paracetamol,Medi    
+TOR,TORCH PROFILE QUALTITIVE,LAB     
+TORC,TORCH PROFILE QUANTITIVE,LAB     
+TORCHH  ,SIMPLE TORCH ,LAB     
+TOT,TOTAL BILIRUBIN,LAB     
+TOTA,TOTAL PROTEIN,LAB     
+TOX,TOXOPLASMOSIS,LAB     
+TOXO,TOXO IGG/IGM,LAB     
+Tra,Transamin/Tranexamic acid 250mg Cap,Medi    
+Tram,Tramal/Tramadol 100mg Inj,Medi    
+Tramal  ,Tramal(Tramadol)50mg Cap,Medi    
+TRAN,TRAN THORACIC ECHO,INTER   
+Trani   ,Tranexamic Acid 5ml Amp,Medi    
+TRANS   ,TRANSESOPHAGEAL ECHO.TEE,INTER   
+Tre,trexate/Methotrexate 10mg tab,Medi    
+Trevia  ,Treviamet(Sitagliptin+Metformin)50-1000mg Tab,Medi    
+Tri,Triforge(Amlodipine+Valsartan Hydro)10.160.12 Tab ,Medi    
+Tri-,Tri-VEE(Triamcinolone)40mg Amp,Medi    
+TRIG,TRIGLYCERIDES,LAB     
+TRO,TROPNINE I,LAB     
+TROP,TROPNINE T,LAB     
+TRYR,AB.PERVIC THYROID,ULT     
+TSC,THROAT SWAB CULTURE,LAB     
+TSH,TSH,LAB     
+TUBE,TUBE LIGATION,GYN     
+Tuf,Tufcold/Combined Cap,Medi    
+TURB,TURB FOR BLADDER TUMOR,URO     
+TURP,TURP FOR PROSTAT,URO     
+Txo,Txol-M/Flupentixol&Melitracen 0.5/10mg Tab,Medi    
+TYP,TYPHIDOT IGG IGM,LAB     
+U1 ,DOPPLER U/S,ULT     
+U2 ,ECHO (ADULT),ULT     
+U3 ,ECHO (PEDIATRIC),ULT     
+U4 ,SCROTAL,ULT     
+U5 ,SCROLAP COLOR DOPPLER,ULT     
+U6 ,TCD,ULT     
+U7 ,PAROTIT,ULT     
+Ubg,UBGLIB-M/Vildagliptin+Metformin Tab 50/500,Medi    
+UCU,UCULAR DOPPLER,DOPPL   
+UD ,URINE DRUG,LAB     
+ULTR,ULTRASOUND ,ULT     
+UPP,UPPER AND LOWER LIMB DOPPLER,ULT     
+ur ,URINE EXAM,LAB     
+URE,URETAR REMIPLATATION,URO     
+UREA,UREA,LAB     
+URETER  ,URETEROLITHOTOMY,OPEN    
+uri,URINE PREGNANCY TEST,LAB     
+URIC,URIC ACID,LAB     
+Urico   ,Uricon/Flavoxate 100mg Tab,Medi    
+Urif,Uriflosin(Tamsulosin)0.4mg Cap,Medi    
+Urig,Urigo/Febuxostat 40mg Tab,Medi    
+Urima   ,Urimax(Tamsulosin)0.4 Cap,Medi    
+URIN,URINE EXAM,LAB     
+URINE   ,URINE KETONE,LAB     
+urine ba,Urine bag,Medi    
+uro,Urocran/cranberry/sach,Medi    
+Urocit  ,Urocit-K potassium citrate 1080mg,Medi    
+Urok,Urokit/Potassium 10mg Tab,Medi    
+Urosis  ,Urosis D(Tamsulosin+Dutasteride)0.4/0.5mg Cap,Medi    
+URS,URS,URO     
+URUIN   ,URINE CULTURE ,LAB     
+V  ,Valmi(Amlodipine+Valsartan)10-160 Tab,Medi    
+Val,Valium/Diazepam 5mg Tab,Medi    
+Vali,Valium/Diazepam 10mg Tab,Medi    
+Valm,Valmi(Amlodipne+Valsartan) 5-80mg Tan,Medi    
+Valmi   ,Valmi(Amlodipine+Valsartan)5-160 Tab,Medi    
+vaz,Vazonidin(Clonidine)0.2mg Tab,Medi    
+VC ,VAGINAL CULTURE,LAB     
+VDRL,VDRL,LAB     
+Ve ,Vergo(Betahistine)8mg Tab,Medi    
+Venlo   ,Venlor-XR(Venlafaxine)75mg Cap,Medi    
+Vep,Vepridone/Risperidone 2mg Tab,Medi    
+Vepar   ,Veparil(Verapamil)5mg Amp,Medi    
+Ver,Vergo/Betahistine 16mg Tab,Medi    
+Vera,Verazine/Levocetirizine 5mg Tab,Medi    
+VERC,VARICOCELECTOMY,OPEN    
+VERCO   ,VERCOCELECTOMY,URO     
+vic,vicast D3 300000 Amp,Medi    
+Vico,Vitamin D3 300000IU Inj,Medi    
+Vigl,Viglip-M/Vildagliptin+Metformin 50/1000mg Tab,Medi    
+Vigro   ,Vugrodit(Sildenafil)100mg Tab,Medi    
+Vilac   ,Vildacoast-M 850 Tab,Medi    
+VIP,VIP BED FEE/24HR,INTER   
+VIS,VISIT,OPD     
+VIT,VITAMIN B12,LAB     
+vit B   ,Vitamin B1  300mg Tab,Medi    
+Vit D   ,Vit D3 200000 IU,Medi    
+VIT1,VITAMIN D3,LAB     
+VITAM   ,VITAMIN D,LAB     
+Vitamin ,Vitamin B Complex Amp,Medi    
+Vitc,Vitamin C 240mg Tab,Medi    
+VITD,VITAMIN D,LAB     
+Vitg,Vigrodit(Sildenafil)100mg Tab,Medi    
+Viv,Vivioptal/Cap,Medi    
+vivi,Vivioptal/Cap,Medi    
+Vka,Vkazin/Zinc S SYP 28,Medi    
+Vomit   ,Vomitin(Domperidone)10mg Tab,Medi    
+Vor,Voren/Diclofenc Sodium 50mg Cap,Medi    
+Voxi,Voxiquin(Levofloxacin)500mg Tab,Medi    
+WARD,WARD BED FEE/24HR,INTER   
+Wari,Warior(Levofloxacin)500mg Tab,Medi    
+Wat,Water Inj,Medi    
+WC ,WOUND CULTURE,LAB     
+WIDAL   ,WIDAL,LAB     
+WISDOM  ,WISDOM TOOTH EXT,DENTA   
+WRIST   ,WRIST X-RAY,RAD     
+Xall,Xaller(Sertraline) 50mg Tab,Medi    
+Xantho  ,Xanthofyl(Doxofylline) 400mg Tab,Medi    
+Xcep,Xcept/Rivaroxaban/15mg Tab,Medi    
+Xengri  ,Xengripe Forte 60ml Syp,Medi    
+Xorbact ,Xorbact(Cefoperazone+Sulbactam)2g Inj,Medi    
+Xylo,Xyloson/Xylometazoline 0.1% Drop,Medi    
+Xyloso  ,Xyloson/Xylometazoline 0.5% Drop,Medi    
+Yti,Ytig Plus/Combend Tab,Medi    
+Ytig,Ytig,Medi    
+Z123,Zarghona,CON     
+Zaptaaz ,Zaptaaz(Mirtazapine)30mg Tab,Medi    
+ZARCON  ,ZARCONIUM,DENTA   
+zee,Zeegap/Pregabalin 75mg Cap,Medi    
+Zen,Zentel/Albendazole 200mg Tab,Medi    
+Zena,Zenator(Atorvastatin+Fenofibrate)10/160mg Tab,Medi    
+Zenat   ,Zenator(Atorvastatin)20mg Tab,Medi    
+Zend,Zendon/ondansetron 8mg Tab,Medi    
+Zep,Zepoxin(Pantoprazole)40mg Vail,Medi    
+Zepox   ,Zepoxin-LVS(Pantoprazole+Levosulpiride),Medi    
+Zet,zetro/Azithromycin 500mg Tab,Medi    
+Zevc,Zevclinda(Clindamycin)300mg Cap,Medi    
+Zitop   ,Zitoprid/Itopride 150mg Tab,Medi    
+ZN ,Zincomax/Zinc 20 Tab,Medi    
+Zofr,Zofra(Ondansetron) Sol,Medi    
+Zol,Zolp/Zolpidem 10mg Tab,Medi    
+Zon,Zoniper/Cefoperzone 2g Vil,Medi    

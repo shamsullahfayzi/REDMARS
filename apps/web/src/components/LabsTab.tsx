@@ -359,6 +359,12 @@ function ResultValue({ item }: { item: VisitLabResultItem }) {
  * Type to find a test, Enter to add the first match — the same shape as the drug picker, so
  * a doctor moving between the two tabs uses one muscle memory. The price rides along in the
  * suggestion so the cost is known before the test is chosen, not after.
+ *
+ * Code-first, like the reception desk's department/doctor pickers (`ReceptionPage.tsx`): as
+ * soon as what's typed exactly matches exactly one test's code, it's added — no click, no
+ * Enter. Chosen deliberately over the drug picker's list-only pattern for this list: a lab
+ * test order is a request for information, reversible with one click on the same screen
+ * before it's ever billed, unlike a dosing decision.
  */
 function TestPicker({
   tests,
@@ -386,6 +392,14 @@ function TestPicker({
     setQuery('')
   }
 
+  function onQueryChange(value: string) {
+    setQuery(value)
+    const needle = value.trim().toLowerCase()
+    if (!needle) return
+    const exact = tests.filter((test) => test.code.toLowerCase() === needle)
+    if (exact.length === 1) pick(exact[0])
+  }
+
   return (
     <div className="space-y-2">
       <Label htmlFor="labTestSearch">{t('labs.addTest')}</Label>
@@ -393,7 +407,7 @@ function TestPicker({
         id="labTestSearch"
         value={query}
         placeholder={t('labs.addTestPlaceholder')}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => onQueryChange(e.target.value)}
         onKeyDown={(e) => {
           if (e.key !== 'Enter' || matches.length === 0) return
           e.preventDefault()

@@ -1,0 +1,40 @@
+# REDMARS LAN HTTPS front door (task 7.2).
+#
+# Static self-signed cert (scripts/gen-lan-cert.sh -> ./certs/), NOT Caddy's
+# own `tls internal` on-demand issuer. That issuer's GetCertificate callback
+# sends a fatal TLS "internal_error" alert the instant a ClientHello carries
+# an ALPN extension — which is every real client (curl, Node, browsers all
+# offer h2/http1.1 ALPN by default). Verified across curl, Node's https, and
+# Windows schannel: all three fail identically against `tls internal`, all
+# three work against a plain loaded cert. See gen-lan-cert.sh for the retest
+# note if a future Caddy version is worth trying again.
+#
+# The cert has no CA of its own to install separately — it IS what each LAN
+# client trusts directly (see docs/https-lan.md for the one-time per-client
+# install step; that step, not this file, is what actually kills the browser
+# warning).
+#
+# Two ports under one host rather than one path-routed site: the web app
+# calls its API via a full origin (VITE_API_URL), not a same-origin `/api/*`
+# prefix, and the API sets no global prefix — path-based routing would
+# collide with the SPA's own client-side routes (both the app and the API
+# have a `/reports` path, for one). Splitting by port avoids touching either
+# app to add one.
+#
+# host.docker.internal reaches the dev servers running on the host (apps/api,
+# apps/web are not containerized yet — that's task 7.13). Once they are, this
+# should point at their container names on the compose network instead.
+# Vite's dev server must be started with --host or host.docker.internal can't
+# reach it (it binds loopback-only otherwise).
+
+:443 {
+	tls /certs/redmars.crt /certs/redmars.key
+	reverse_proxy host.docker.internal:5173
+	log
+}
+
+:8443 {
+	tls /certs/redmars.crt /certs/redmars.key
+	reverse_proxy host.docker.internal:3000
+	log
+}

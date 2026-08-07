@@ -1,0 +1,21 @@
+# REDMARS LAN HTTPS front door — CONTAINERIZED variant (task 7.13).
+#
+# Same TLS setup and same "why port-split, not path-split" reasoning as the
+# base ./Caddyfile (see that file's own comments) — the only thing that
+# changes here is WHERE the two upstreams live: real containers on this same
+# compose network, reached by service name, instead of a host-run dev server
+# reached through host.docker.internal. Used only when docker-compose.prod.yml
+# is layered on top of the base compose file (`pnpm deploy:up`); local
+# Windows dev keeps using the base Caddyfile unchanged.
+
+:443 {
+	tls /certs/redmars.crt /certs/redmars.key
+	reverse_proxy web:80
+	log
+}
+
+:8443 {
+	tls /certs/redmars.crt /certs/redmars.key
+	reverse_proxy api:3000
+	log
+}

@@ -68,6 +68,7 @@ export function DrugsPage() {
                     <th className="p-3 text-start font-medium">{t('drugs.list.genericName')}</th>
                     <th className="p-3 text-start font-medium">{t('drugs.list.strength')}</th>
                     <th className="p-3 text-start font-medium">{t('drugs.list.form')}</th>
+                    <th className="p-3 text-end font-medium">{t('drugs.list.sellPrice')}</th>
                     <th className="p-3 text-start font-medium">{t('drugs.list.status')}</th>
                     <th className="p-3 text-end font-medium">{t('drugs.list.actions')}</th>
                   </tr>
@@ -116,14 +117,14 @@ function ImportDrugs() {
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">{t('drugs.import.hint')}</p>
         <code className="block overflow-x-auto rounded-lg bg-muted px-3 py-2 text-xs text-foreground" dir="ltr">
-          code,genericName,brandName,strength,form,isControlled
+          code,genericName,brandName,strength,form,isControlled,sellPrice
         </code>
         <Textarea
           value={csv}
           onChange={(e) => setCsv(e.target.value)}
           rows={6}
           dir="ltr"
-          placeholder={'code,genericName,strength,form\nPARA500,Paracetamol,500mg,tablet'}
+          placeholder={'code,genericName,strength,form,sellPrice\nPARA500,Paracetamol,500mg,tablet,25'}
           className="font-mono"
         />
         <div className="flex items-center gap-3">
@@ -175,6 +176,7 @@ function CreateDrugForm() {
   const [defaultFreq, setDefaultFreq] = useState('')
   const [defaultDuration, setDefaultDuration] = useState('')
   const [isControlled, setIsControlled] = useState(false)
+  const [sellPrice, setSellPrice] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   function resetForm() {
@@ -188,6 +190,7 @@ function CreateDrugForm() {
     setDefaultFreq('')
     setDefaultDuration('')
     setIsControlled(false)
+    setSellPrice('')
   }
 
   function onSubmit(event: FormEvent) {
@@ -205,6 +208,7 @@ function CreateDrugForm() {
       defaultFreq,
       defaultDuration,
       isControlled,
+      sellPrice,
     })
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? t('drugs.create.invalid'))
@@ -310,14 +314,29 @@ function CreateDrugForm() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-foreground">
-            <input
-              type="checkbox"
-              checked={isControlled}
-              onChange={(e) => setIsControlled(e.target.checked)}
-            />
-            {t('drugs.create.isControlled')}
-          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="d-price">{t('drugs.create.sellPrice')}</Label>
+              <Input
+                id="d-price"
+                value={sellPrice}
+                onChange={(e) => setSellPrice(e.target.value)}
+                inputMode="decimal"
+                dir="ltr"
+                className="font-mono"
+                placeholder={t('drugs.create.sellPricePlaceholder')}
+              />
+              <p className="text-xs text-muted-foreground">{t('drugs.create.sellPriceHint')}</p>
+            </div>
+            <label className="flex items-center gap-2 self-end pb-6 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={isControlled}
+                onChange={(e) => setIsControlled(e.target.checked)}
+              />
+              {t('drugs.create.isControlled')}
+            </label>
+          </div>
 
           {error && (
             <p role="alert" className="text-sm text-destructive">
@@ -370,6 +389,15 @@ function DrugRow({ drug }: { drug: DrugSummary }) {
         </td>
         <td className="p-3 text-muted-foreground">{drug.strength ?? '—'}</td>
         <td className="p-3 text-muted-foreground">{drug.form ?? '—'}</td>
+        <td className="p-3 text-end font-mono" dir="ltr">
+          {drug.sellPrice ? (
+            <span className="text-foreground">{drug.sellPrice}</span>
+          ) : (
+            <span className="text-warning" title={t('drugs.list.noPriceHint')}>
+              {t('drugs.list.noPrice')}
+            </span>
+          )}
+        </td>
         <td className="p-3">
           <Badge variant={drug.isActive ? 'active' : 'muted'}>
             {drug.isActive ? t('drugs.list.active') : t('drugs.list.inactive')}
@@ -389,7 +417,7 @@ function DrugRow({ drug }: { drug: DrugSummary }) {
       {isEditing && (
         <tr className="border-b border-border last:border-0 bg-muted/30">
           <td />
-          <td colSpan={6} className="p-3">
+          <td colSpan={7} className="p-3">
             <DrugEditor drug={drug} onDone={() => setIsEditing(false)} />
           </td>
         </tr>
@@ -411,6 +439,7 @@ function DrugEditor({ drug, onDone }: { drug: DrugSummary; onDone: () => void })
   const [defaultFreq, setDefaultFreq] = useState(drug.defaultFreq ?? '')
   const [defaultDuration, setDefaultDuration] = useState(drug.defaultDuration ?? '')
   const [isControlled, setIsControlled] = useState(drug.isControlled)
+  const [sellPrice, setSellPrice] = useState(drug.sellPrice ?? '')
   const [error, setError] = useState<string | null>(null)
 
   function onSubmit(event: FormEvent) {
@@ -427,6 +456,7 @@ function DrugEditor({ drug, onDone }: { drug: DrugSummary; onDone: () => void })
       defaultFreq,
       defaultDuration,
       isControlled,
+      sellPrice,
     })
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? t('drugs.edit.invalid'))
@@ -483,6 +513,20 @@ function DrugEditor({ drug, onDone }: { drug: DrugSummary; onDone: () => void })
             {t('drugs.create.form')}
           </Label>
           <Input id={`d-form-${drug.id}`} value={form} onChange={(e) => setForm(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`d-price-${drug.id}`} className="text-xs text-muted-foreground">
+            {t('drugs.create.sellPrice')}
+          </Label>
+          <Input
+            id={`d-price-${drug.id}`}
+            value={sellPrice}
+            onChange={(e) => setSellPrice(e.target.value)}
+            inputMode="decimal"
+            dir="ltr"
+            className="font-mono"
+            placeholder={t('drugs.create.sellPricePlaceholder')}
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor={`d-route-${drug.id}`} className="text-xs text-muted-foreground">

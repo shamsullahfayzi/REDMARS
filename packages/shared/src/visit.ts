@@ -150,6 +150,9 @@ export type VisitDepartmentOption = z.infer<typeof visitDepartmentOptionSchema>
 
 export const visitPractitionerOptionSchema = z.object({
   id: z.uuid(),
+  // The short per-facility-unique code (e.g. "01") a receptionist can TYPE instead of
+  // hunting a name in a list — the same speed the department/service pickers already have.
+  code: z.string(),
   name: z.string(),
   specialityName: z.string().nullable(),
   // Which departments this practitioner may be booked into. A doctor works OPD and IPD
@@ -285,6 +288,27 @@ export const cancelVisitResponseSchema = z.object({
   refund: refundSummarySchema.nullable(),
 })
 export type CancelVisitResponse = z.infer<typeof cancelVisitResponseSchema>
+
+// ---------------------------------------------------------------------------------
+// Reassigning who a visit belongs to
+// ---------------------------------------------------------------------------------
+
+/**
+ * Fixing who a visit is booked under — same R5 shape as cancel and for the same reason:
+ * the desk may correct a mistaken booking same-day, before the doctor has actually
+ * started seeing the patient. Once a consultation is under way, moving it to someone
+ * else is an admin call, not a front-desk one.
+ */
+export const reassignPractitionerRequestSchema = z.object({
+  practitionerId: z.uuid('Choose a practitioner.'),
+  reason: z.string().trim().min(3, 'Say why this visit is being reassigned.').max(300),
+})
+export type ReassignPractitionerRequest = z.infer<typeof reassignPractitionerRequestSchema>
+
+export const reassignPractitionerResponseSchema = z.object({
+  visit: visitSummarySchema,
+})
+export type ReassignPractitionerResponse = z.infer<typeof reassignPractitionerResponseSchema>
 
 /** One line of the medico-legal trail: who moved it where, and when. */
 export const visitStatusHistoryEntrySchema = z.object({

@@ -46,9 +46,10 @@ import { PaymentService } from './payment.service';
  * names one invoice or one visit the caller already reached through their own work, and
  * stays on the wider `invoice.read` (admin, receptionist, pharmacist, management).
  *
- * R12 narrows the pharmacist's grip on both further: a lab order's own bill is excluded
- * from whatever `invoice.read`/`invoice.list` would otherwise show them — see
- * InvoiceService.detail/list/byVisit for where that is actually enforced.
+ * R12 narrows the pharmacist's grip on both further: whatever `invoice.read`/`invoice.list`
+ * would otherwise show them is narrowed to bills that are THEIRS — a `prescription_item`
+ * line, the one condition `originOf` ever reads as 'pharmacy' — never reception's OPD bill
+ * and never the lab's, see InvoiceService.detail/list/byVisit for where that is enforced.
  */
 @Controller('invoices')
 export class InvoiceController {

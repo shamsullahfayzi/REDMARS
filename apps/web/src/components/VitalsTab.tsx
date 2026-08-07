@@ -133,7 +133,7 @@ export function VitalsTab({ visit }: { visit: VisitSummary }) {
                       <p className="text-xs text-destructive">{errors[field]}</p>
                     )}
                   </div>
-                )
+              )
               })}
             </div>
 
@@ -141,8 +141,7 @@ export function VitalsTab({ visit }: { visit: VisitSummary }) {
               <Button type="submit" disabled={!isDirty || record.isPending}>
                 {record.isPending ? t('vitals.saving') : t('vitals.record')}
               </Button>
-              {/* Derived, never stored — and only shown once both numbers exist, because a
-                  BMI from a guessed height is a number that looks like a measurement. */}
+        
               {bmi != null && (
                 <p className="text-sm text-muted-foreground">
                   {t('vitals.bmi')}{' '}

@@ -4,9 +4,11 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Injectable,
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * Last line of defence for every error that reaches the transport layer.
@@ -16,10 +18,19 @@ import type { Request, Response } from 'express';
  * patient data in its message, and a stack trace hands an attacker a map of the
  * internals. So anything that is not an HttpException we deliberately threw is
  * reported as a plain 500; the detail goes to the server log only.
+ *
+ * Task 7.8 — every 5xx ALSO lands in `error_log` (see the docblock on that model),
+ * so "the server log" means a screen in the app, not a terminal someone has to SSH
+ * into at 2am. `@Injectable()` and registered via APP_FILTER (app.module.ts) rather
+ * than `new AllExceptionsFilter()` in main.ts, specifically so Nest's DI hands it a
+ * real PrismaService instead of it having none at all.
  */
+@Injectable()
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
+
+  constructor(private readonly prisma: PrismaService) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -55,6 +66,26 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // as the latter says something the check does not mean.
     if (status >= 500) {
       this.logger.error(line, detail);
+      // Fire-and-forget on purpose: a caller waiting on a 500 must not wait longer
+      // because the error-logging write is itself slow or the DB is the thing that
+      // just fell over. Failure here is swallowed to a console line — this table
+      // is a convenience for whoever is on call, never a second point of failure.
+      void this.prisma.errorLog
+        .create({
+          data: {
+            facilityId: request.auth?.facilityId ?? null,
+            userId: request.auth?.userId ?? null,
+            method: request.method,
+            path: request.url,
+            statusCode: status,
+            message: exception instanceof Error ? exception.message : String(exception),
+            stack: detail ?? null,
+            ipAddress: request.ip ?? null,
+          },
+        })
+        .catch((writeError: unknown) => {
+          this.logger.error('Failed to write error_log row', writeError);
+        });
     } else {
       this.logger.warn(line);
     }

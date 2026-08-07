@@ -1,0 +1,11 @@
+# Internal static file server for the built SPA — task 7.13. Plain HTTP on the
+# docker network; the front-door Caddy (../Caddyfile, :443) terminates TLS and
+# reverse-proxies here. `try_files {path} /index.html` is the SPA fallback —
+# a client-side route like /reports has no matching file on disk and must
+# still resolve to index.html so react-router can take over.
+:80 {
+	root * /srv
+	file_server
+	try_files {path} /index.html
+	log
+}

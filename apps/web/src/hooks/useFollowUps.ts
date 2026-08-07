@@ -1,6 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
-import { followUpListResponseSchema, type FollowUpQuery } from '@redmars/shared'
-import { apiGet } from '@/lib/api'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+  followUpListResponseSchema,
+  followUpSchema,
+  type FollowUpQuery,
+  type RecordFollowUpResponseRequest,
+} from '@redmars/shared'
+import { apiGet, apiPost } from '@/lib/api'
+import { queryClient } from '@/lib/queryClient'
 
 /**
  * Task 4.15 — who was told to come back, and by when.
@@ -21,5 +27,24 @@ export function useFollowUps(filters: Partial<FollowUpQuery>) {
   return useQuery({
     queryKey: ['followUps', query],
     queryFn: () => apiGet(`/follow-ups${query ? `?${query}` : ''}`, followUpListResponseSchema),
+  })
+}
+
+/**
+ * `follow_up.respond` — the call center's (or admin's) answer for one follow-up. Invalidates
+ * every `followUps` query rather than patching the one row in place: the list is keyed by
+ * whichever from/to/practitioner filter is on screen, and refetching is one round trip on an
+ * action that already waited for a phone call.
+ */
+export function useRespondFollowUp() {
+  return useMutation({
+    mutationFn: ({
+      prescriptionId,
+      ...input
+    }: RecordFollowUpResponseRequest & { prescriptionId: string }) =>
+      apiPost(`/follow-ups/${prescriptionId}/respond`, input, followUpSchema),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['followUps'] })
+    },
   })
 }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { CollectionsListResponse, VisitBill } from '@redmars/shared';
+import type { CollectionsListQuery, CollectionsListResponse, VisitBill } from '@redmars/shared';
+import { facilityDayBoundsFor } from '../../common/facility-time';
 import { PrismaService } from '../../prisma/prisma.service';
 import { fullName, money, originOf } from '../invoice/invoice.service';
 
@@ -24,12 +25,25 @@ export class CollectionsService {
   async list(
     facilityId: string,
     permissions: ReadonlyMap<string, string | null>,
+    query: CollectionsListQuery,
   ): Promise<CollectionsListResponse> {
+    // Optional narrowing only — absent `from`/`to` means every open bill, oldest debt
+    // included. See the schema comment in packages/shared/src/collections.ts for why this
+    // list gets no default date window the way Reports and Invoices do.
+    const createdAt: Prisma.DateTimeFilter | undefined =
+      query.from || query.to
+        ? {
+            gte: query.from ? facilityDayBoundsFor(query.from).start : undefined,
+            lte: query.to ? facilityDayBoundsFor(query.to).end : undefined,
+          }
+        : undefined;
+
     const rows = await this.prisma.db.invoice.findMany({
       where: {
         facilityId,
         status: { in: ['issued', 'partially_paid'] },
         items: { some: { refType: { in: ['lab_order_item', 'prescription_item'] } } },
+        ...(createdAt ? { createdAt } : {}),
       },
       orderBy: { createdAt: 'desc' },
       select: {
@@ -76,6 +90,23 @@ export class CollectionsService {
       .filter((bill) => bill.origin === 'lab' || bill.origin === 'pharmacy')
       .filter((bill) => !excludeLab || bill.origin !== 'lab');
 
-    return { bills };
+    const needle = query.q?.trim().toLowerCase();
+    const matched = needle
+      ? bills.filter(
+          (bill) =>
+            bill.invoiceNo.toLowerCase().includes(needle) ||
+            bill.patientName.toLowerCase().includes(needle) ||
+            bill.patientMrn.toLowerCase().includes(needle),
+        )
+      : bills;
+
+    // Paginated AFTER the origin/permission/search filtering above, not in the Prisma query —
+    // true origin (and R12's lab exclusion) can only be known once each bill's items are
+    // resolved, so `total` here is the real matching count, not a pre-filter estimate.
+    const total = matched.length;
+    const start = (query.page - 1) * query.limit;
+    const page = matched.slice(start, start + query.limit);
+
+    return { bills: page, total, page: query.page, limit: query.limit };
   }
 }

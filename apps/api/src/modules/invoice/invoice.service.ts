@@ -58,10 +58,15 @@ export class InvoiceService {
   ): Promise<InvoiceListResponse> {
     const where: Prisma.InvoiceWhereInput = { facilityId };
 
-    // R12 — a pharmacist's register excludes lab bills. Filtered in the WHERE, not after the
-    // page comes back, so `total` and the page size stay honest for the rows they can see.
+    // R12 — a pharmacist's register is their own till and nothing else: a bill needs a
+    // prescription_item line to appear at all, which — per `originOf`'s own precedence —
+    // is the exact and only condition under which an invoice reads as 'pharmacy'. Not "not
+    // lab": that left reception's OPD bill visible too, which R12 never intended (same
+    // confidentiality shape as R6 — a role built around one till sees that till, not
+    // "everything except the one till named in the rule"). Filtered in the WHERE, not after
+    // the page comes back, so `total` and the page size stay honest for the rows they can see.
     if (permissions.get('invoice.list') === 'R12') {
-      where.items = { none: { refType: 'lab_order_item' } };
+      where.items = { some: { refType: 'prescription_item' } };
     }
 
     if (query.patientId) where.patientId = query.patientId;
@@ -214,9 +219,11 @@ export class InvoiceService {
     if (!invoice) throw new NotFoundException('Invoice not found');
 
     const origin = originOf(invoice.items.map((item) => item.refType));
-    // R12 — a pharmacist's invoice.read excludes a lab bill.
-    if (permissions.get('invoice.read') === 'R12' && origin === 'lab') {
-      throw new ForbiddenException("A lab order's own bill is not this permission's to read.");
+    // R12 — a pharmacist's invoice.read is their own till only. Positive check (must BE
+    // pharmacy), not negative (must not be lab) — a reception (OPD) bill is exactly as much
+    // not theirs to read as a lab one, and the old `=== 'lab'` check let it through.
+    if (permissions.get('invoice.read') === 'R12' && origin !== 'pharmacy') {
+      throw new ForbiddenException("This bill is not this permission's to read.");
     }
 
     const creator = invoice.createdBy
@@ -337,11 +344,12 @@ export class InvoiceService {
     });
     if (!visit) throw new NotFoundException('Visit not found');
 
-    // R12 — same exclusion as the register: a pharmacist's view of a visit's bills omits
-    // its lab one, so the running total below is theirs to see, not the whole visit's.
+    // R12 — same scope as the register: a pharmacist's view of a visit's bills is their own
+    // pharmacy line only, never reception's or the lab's, so the running total below is
+    // theirs alone, not the whole visit's.
     const where: Prisma.InvoiceWhereInput = { facilityId, visitId };
     if (permissions.get('invoice.read') === 'R12') {
-      where.items = { none: { refType: 'lab_order_item' } };
+      where.items = { some: { refType: 'prescription_item' } };
     }
 
     const rows = await this.prisma.db.invoice.findMany({

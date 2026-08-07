@@ -17,8 +17,8 @@
     // outlives its build output is a cache that lies.
     "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
   },
-  // prisma/ excluded because seed.ts is a developer tool: it runs through
-  // ts-node with its own tsconfig.seed.json and has no business in a production
-  // image. It was also what dragged rootDir upward.
-  "exclude": ["node_modules", "test", "dist", "prisma", "**/*spec.ts"]
+  // prisma/ and scripts/ excluded because seed.ts and load-test.ts are developer
+  // tools: they run through ts-node with their own tsconfig.seed.json and have no
+  // business in a production image. prisma/ was also what dragged rootDir upward.
+  "exclude": ["node_modules", "test", "dist", "prisma", "scripts", "**/*spec.ts"]
 }

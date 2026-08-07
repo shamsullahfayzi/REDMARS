@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import {
   createDrugRequestSchema,
   type CreateDrugRequest,
@@ -10,6 +11,7 @@ import {
   type UpdateDrugRequest,
 } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { money } from '../invoice/invoice.service';
 import { parseCsv } from './csv';
 
 const DRUG_SELECT = {
@@ -25,6 +27,7 @@ const DRUG_SELECT = {
   defaultDuration: true,
   isControlled: true,
   isActive: true,
+  sellPrice: true,
 } as const;
 
 type DrugRow = {
@@ -40,6 +43,7 @@ type DrugRow = {
   defaultDuration: string | null;
   isControlled: boolean;
   isActive: boolean;
+  sellPrice: Prisma.Decimal | null;
 };
 
 function toSummary(d: DrugRow): DrugSummary {
@@ -56,6 +60,7 @@ function toSummary(d: DrugRow): DrugSummary {
     defaultDuration: d.defaultDuration,
     isControlled: d.isControlled,
     isActive: d.isActive,
+    sellPrice: d.sellPrice ? money(d.sellPrice) : null,
   };
 }
 
@@ -79,6 +84,9 @@ const HEADER_ALIASES: Record<string, keyof CreateDrugRequest> = {
   iscontrolled: 'isControlled',
   is_controlled: 'isControlled',
   controlled: 'isControlled',
+  sellprice: 'sellPrice',
+  sell_price: 'sellPrice',
+  price: 'sellPrice',
 };
 
 const TRUE_VALUES = new Set(['true', '1', 'yes', 'y']);
@@ -202,6 +210,7 @@ export class DrugService {
         defaultFreq: cell('defaultFreq'),
         defaultDuration: cell('defaultDuration'),
         isControlled: TRUE_VALUES.has(cell('isControlled').toLowerCase()),
+        sellPrice: cell('sellPrice'),
       });
 
       if (!parsed.success) {
@@ -265,5 +274,6 @@ function toFields(input: CreateDrugRequest | UpdateDrugRequest) {
     defaultFreq: input.defaultFreq ?? null,
     defaultDuration: input.defaultDuration ?? null,
     isControlled: input.isControlled,
+    sellPrice: input.sellPrice ? new Prisma.Decimal(input.sellPrice) : null,
   };
 }

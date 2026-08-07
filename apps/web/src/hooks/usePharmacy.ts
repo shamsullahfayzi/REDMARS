@@ -1,5 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
+  type BillPrescriptionRequest,
+  confirmHandoverResponseSchema,
   dispenseResponseSchema,
   pharmacyPrescriptionSchema,
   pharmacyPrescriptionSearchResponseSchema,
@@ -57,18 +59,43 @@ export function usePharmacySearch(q: string) {
 }
 
 /**
- * Dispense a prescription and raise the pharmacy bill (task 6.10). No request body — the
- * drugs and prices are the server's. On success the queue drops the sheet and the register
- * gains the new bill, so both caches are invalidated; the resolved value is the bill to pay.
+ * Task 6.10, step one — bill a prescription at whatever the pharmacist typed for each line
+ * (`PharmacyDrugLine.suggestedUnitPrice` is only ever a pre-fill from the formulary; the
+ * amount that actually lands on the invoice is this request's own `unitPrice`, per item).
+ * The sheet STAYS on the queue — billing alone does not hand anything over — but the new
+ * bill needs to show up wherever unpaid invoices are read from, which is why this
+ * invalidates the same caches `useConfirmHandover` and every other billing mutation in this
+ * app does: the register, and Collections, where reception will find it next.
  */
-export function useDispense() {
+export function useBillPrescription() {
+  return useMutation({
+    mutationFn: ({
+      prescriptionId,
+      body,
+    }: {
+      prescriptionId: string
+      body: BillPrescriptionRequest
+    }) => apiPost(`/pharmacy/prescriptions/${prescriptionId}/bill`, body, dispenseResponseSchema),
+    onSuccess: (_data, { prescriptionId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['pharmacy', 'prescription', prescriptionId] })
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      void queryClient.invalidateQueries({ queryKey: ['collections'] })
+    },
+  })
+}
+
+/**
+ * Task 6.10, step two — the actual handover, once the bill above is fully paid (reception
+ * collects it; see PharmacyPage.tsx). This is the action that finally takes the sheet off
+ * the queue, so — unlike billing — it invalidates the queue itself.
+ */
+export function useConfirmHandover() {
   return useMutation({
     mutationFn: (prescriptionId: string) =>
-      apiPost(`/pharmacy/prescriptions/${prescriptionId}/dispense`, {}, dispenseResponseSchema),
+      apiPost(`/pharmacy/prescriptions/${prescriptionId}/handover`, {}, confirmHandoverResponseSchema),
     onSuccess: (_data, prescriptionId) => {
       void queryClient.invalidateQueries({ queryKey: ['pharmacy', 'queue'] })
       void queryClient.invalidateQueries({ queryKey: ['pharmacy', 'prescription', prescriptionId] })
-      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
     },
   })
 }

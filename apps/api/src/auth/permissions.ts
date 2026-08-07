@@ -56,6 +56,12 @@ export const ROLES = [
     name: 'CEO / Management',
     description: 'Read-only reports and audit. No patient-level clinical access.',
   },
+  {
+    code: 'call_center',
+    name: 'Call center',
+    description:
+      'Confirms upcoming follow-ups by phone. Sees only the recall list — never the clinical record (R13).',
+  },
 ] as const satisfies ReadonlyArray<{ code: string; name: string; description: string }>;
 
 export type RoleCode = (typeof ROLES)[number]['code'];
@@ -238,7 +244,13 @@ export const PERMISSION_MATRIX = {
     doctor: YES,
     management: YES,
   },
-  'visit.change_status': { receptionist: YES, nurse: YES, doctor: YES },
+  /**
+   * Clinical judgment, not desk work: hold / in-progress / complete is the nurse or doctor
+   * saying where the patient actually is in care. The receptionist checks people in
+   * (`visit.create`), can cancel a bad registration and reassign its practitioner, but does
+   * not move a visit through its clinical states.
+   */
+  'visit.change_status': { nurse: YES, doctor: YES },
   /**
    * Writing what the patient came in with (task 4.4).
    *
@@ -247,13 +259,19 @@ export const PERMISSION_MATRIX = {
    * then writes what is actually wrong, in the words the record needs, and that is a
    * different act by a different person on a visit that already exists.
    *
-   * Not folded into `visit.change_status`: moving a patient along and documenting them are
-   * not the same authority, and the receptionist holds the first. Not folded into
-   * `clinical_note.write` either — that is the psychiatric note, denied even to admin
-   * (R2), and a chief complaint is not that sensitive.
+   * Not folded into `visit.change_status` either way: documenting a visit is a distinct
+   * authority from moving it through clinical states. Not folded into `clinical_note.write`
+   * either — that is the psychiatric note, denied even to admin (R2), and a chief complaint
+   * is not that sensitive.
    */
   'visit.record_complaint': { nurse: YES, doctor: YES },
   'visit.cancel': { admin: YES, receptionist: 'R5' },
+  /**
+   * The desk fixing who a visit belongs to (before the doctor has actually started), not
+   * the desk deciding a doctor's caseload. Same R5 guard as cancel and for the same
+   * reason: once the visit has moved past arrived/planned, reassigning it is an admin call.
+   */
+  'visit.reassign_practitioner': { admin: YES, receptionist: 'R5' },
   /** entered_in_error. */
   'visit.void': { admin: YES },
   /**
@@ -335,8 +353,20 @@ export const PERMISSION_MATRIX = {
    * MANAGEMENT DOES NOT. Every other list they hold is counts and money; this is named
    * patients with phone numbers and the name of the psychiatrist who saw them, and there is
    * no operational question that needs the names to answer it.
+   *
+   * CALL CENTER HOLDS IT TOO (R13) — the whole reason that role exists. The list's own
+   * shape is already narrow enough for them: a name, a phone number and a date, nothing
+   * clinical, so no new field had to be hidden to make this safe.
    */
-  'follow_up.read': { admin: 'R2', receptionist: YES, doctor: YES },
+  'follow_up.read': { admin: 'R2', receptionist: YES, doctor: YES, call_center: YES },
+  /**
+   * Logging what a phone call found out — coming, not coming, or a note. R13: call
+   * center's whole job. Admin holds it too, to correct a mis-keyed entry; nobody else —
+   * a doctor SEES the answer (it travels on the `follow_up.read` row), but does not RECORD
+   * it, the same separation `visit.change_status` vs `visit.cancel` already draws
+   * elsewhere between doing a thing and being told about it.
+   */
+  'follow_up.respond': { admin: YES, call_center: YES },
 
   // ---- 7. Laboratory -------------------------------------------------------
   'lab_order.create': { doctor: YES },
@@ -402,6 +432,8 @@ export const PERMISSION_MATRIX = {
   /** Counts, no names. */
   'report.clinical_aggregate': { admin: YES, doctor: YES, management: YES },
   'audit_log.read': { admin: YES, management: YES },
+  /** 7.8 — the 2am-call screen. Same holders as audit_log.read: oversight, not clinical. */
+  'error_log.read': { admin: YES, management: YES },
   /** R11 — the real defence against someone walking off with the patient list. */
   'data.export': { admin: 'R11' },
 } as const satisfies Record<string, Grants>;

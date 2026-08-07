@@ -4,7 +4,12 @@ import { hash } from '@node-rs/argon2';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import type { FollowUpListResponse, LoginResponse, PrescriptionResponse } from '@redmars/shared';
+import type {
+  FollowUp,
+  FollowUpListResponse,
+  LoginResponse,
+  PrescriptionResponse,
+} from '@redmars/shared';
 import { AppModule } from './../src/app.module';
 
 /**
@@ -104,13 +109,13 @@ describe('Follow-up recall list (e2e)', () => {
     ).id;
   }
 
-  /** A prescription written straight into the database, for list fixtures. */
+  /** A prescription written straight into the database, for list fixtures. Returns its id. */
   async function stageFollowUp(
     visitId: string,
     followUpDate: string,
     prescriber = practitionerId,
-  ): Promise<void> {
-    await prisma.prescription.create({
+  ): Promise<string> {
+    const prescription = await prisma.prescription.create({
       data: {
         visitId,
         practitionerId: prescriber,
@@ -129,6 +134,7 @@ describe('Follow-up recall list (e2e)', () => {
         },
       },
     });
+    return prescription.id;
   }
 
   const savePrescription = (visitId: string, body: unknown, as = 'doctor') =>
@@ -140,9 +146,18 @@ describe('Follow-up recall list (e2e)', () => {
   const listFollowUps = (query = '', as = 'doctor') =>
     request(server).get(`/follow-ups${query}`).set('Authorization', `Bearer ${tokens[as]}`);
 
+  const respondFollowUp = (prescriptionId: string, body: unknown, as = 'call_center') =>
+    request(server)
+      .post(`/follow-ups/${prescriptionId}/respond`)
+      .set('Authorization', `Bearer ${tokens[as]}`)
+      .send(body);
+
   async function cleanup(): Promise<void> {
     const facilityFilter = { facility: { code: { startsWith: PREFIX } } };
     await prisma.auditLog.deleteMany({ where: facilityFilter });
+    await prisma.followUpResponse.deleteMany({
+      where: { prescription: { visit: facilityFilter } },
+    });
     await prisma.prescriptionItem.deleteMany({
       where: { prescription: { visit: facilityFilter } },
     });
@@ -181,6 +196,7 @@ describe('Follow-up recall list (e2e)', () => {
     await seedActor('nurse', 'nurse');
     await seedActor('pharmacist', 'pharmacist');
     await seedActor('management', 'management');
+    await seedActor('call_center', 'call_center');
 
     opdId = (
       await prisma.department.create({
@@ -480,5 +496,147 @@ describe('Follow-up recall list (e2e)', () => {
 
     const list = (await listFollowUps().expect(200)).body as FollowUpListResponse;
     expect(list.followUps.map((entry) => entry.patientId)).not.toContain(theirs);
+  });
+
+  // --- follow_up.respond — the call center's answer -------------------------------------
+
+  describe('follow_up.respond', () => {
+    it('has no response until someone calls', async () => {
+      const patientId = await stagePatient();
+      const prescriptionId = await stageFollowUp(await stageVisit(patientId), day(2));
+
+      const list = (await listFollowUps(`?from=${day(0)}&to=${day(5)}`).expect(200))
+        .body as FollowUpListResponse;
+      expect(list.followUps.find((e) => e.prescriptionId === prescriptionId)?.response).toBeNull();
+    });
+
+    it('call center logs an answer, and the list shows it back — this is how a doctor sees the change', async () => {
+      const patientId = await stagePatient();
+      const prescriptionId = await stageFollowUp(await stageVisit(patientId), day(2));
+
+      const posted = (
+        await respondFollowUp(prescriptionId, { status: 'coming' }).expect(200)
+      ).body as FollowUp;
+      expect(posted.response?.status).toBe('coming');
+      expect(posted.response?.note).toBeNull();
+      expect(posted.response?.recordedByName).toBe('E2E FU call_center');
+
+      // A doctor reading the same list sees the same answer.
+      const list = (await listFollowUps(`?from=${day(0)}&to=${day(5)}`, 'doctor').expect(200))
+        .body as FollowUpListResponse;
+      expect(list.followUps.find((e) => e.prescriptionId === prescriptionId)?.response?.status).toBe(
+        'coming',
+      );
+    });
+
+    it('note is optional on every status, including custom', async () => {
+      const prescriptionId = await stageFollowUp(await stageVisit(await stagePatient()), day(2));
+
+      const noNote = (
+        await respondFollowUp(prescriptionId, { status: 'custom' }).expect(200)
+      ).body as FollowUp;
+      expect(noNote.response?.status).toBe('custom');
+      expect(noNote.response?.note).toBeNull();
+
+      const withNote = (
+        await respondFollowUp(prescriptionId, {
+          status: 'not_coming',
+          note: 'Says the roads are closed this week',
+        }).expect(200)
+      ).body as FollowUp;
+      expect(withNote.response?.note).toBe('Says the roads are closed this week');
+    });
+
+    it('a second call replaces the current answer without deleting the first', async () => {
+      const prescriptionId = await stageFollowUp(await stageVisit(await stagePatient()), day(2));
+
+      await respondFollowUp(prescriptionId, { status: 'not_coming' }).expect(200);
+      const second = (
+        await respondFollowUp(prescriptionId, { status: 'coming' }).expect(200)
+      ).body as FollowUp;
+      expect(second.response?.status).toBe('coming');
+
+      // Both rows still exist — append-only (R4), never overwritten.
+      const rows = await prisma.followUpResponse.findMany({ where: { prescriptionId } });
+      expect(rows).toHaveLength(2);
+    });
+
+    it('rescheduling the follow-up does not retroactively reattribute an old answer', async () => {
+      const visitId = await stageVisit(await stagePatient());
+      const prescriptionId = await stageFollowUp(visitId, day(2));
+      await respondFollowUp(prescriptionId, { status: 'coming' }).expect(200);
+
+      // The doctor moves the date out a week.
+      await prisma.prescription.update({
+        where: { id: prescriptionId },
+        data: { followUpDate: new Date(`${day(9)}T00:00:00.000Z`) },
+      });
+
+      const list = (await listFollowUps(`?from=${day(0)}&to=${day(10)}`, 'doctor').expect(200))
+        .body as FollowUpListResponse;
+      const row = list.followUps.find((e) => e.prescriptionId === prescriptionId);
+      expect(row?.followUpDate).toBe(day(9));
+      // The old answer was for day(2), not day(9) — it must not silently apply here.
+      expect(row?.response).toBeNull();
+    });
+
+    it('admin may respond too — a correction path', async () => {
+      const prescriptionId = await stageFollowUp(await stageVisit(await stagePatient()), day(2));
+      await respondFollowUp(prescriptionId, { status: 'coming' }, 'admin').expect(200);
+    });
+
+    it('a doctor and a receptionist can read the answer but not record one', async () => {
+      const prescriptionId = await stageFollowUp(await stageVisit(await stagePatient()), day(2));
+      await respondFollowUp(prescriptionId, { status: 'coming' }, 'doctor').expect(403);
+      await respondFollowUp(prescriptionId, { status: 'coming' }, 'receptionist').expect(403);
+    });
+
+    it('404s a prescription that does not exist, or belongs to another facility', async () => {
+      await respondFollowUp('00000000-0000-4000-8000-000000000000', { status: 'coming' }).expect(
+        404,
+      );
+
+      const theirs = await prisma.patient.create({
+        data: {
+          facilityId: otherFacilityId,
+          mrn: `${PREFIX}MRNOTHER`,
+          firstName: 'Other',
+          gender: 'female',
+          estimatedAgeYears: 30,
+          ageRecordedAt: new Date(),
+        },
+      });
+      const theirVisit = await prisma.visit.create({
+        data: {
+          facilityId: otherFacilityId,
+          patientId: theirs.id,
+          departmentId: opdId,
+          visitNo: `${PREFIX}VOTHER2`,
+          type: 'opd_consult',
+          status: 'in_progress',
+        },
+      });
+      const theirPrescription = await prisma.prescription.create({
+        data: {
+          visitId: theirVisit.id,
+          practitionerId,
+          followUpDate: new Date(`${day(2)}T00:00:00.000Z`),
+        },
+      });
+      await respondFollowUp(theirPrescription.id, { status: 'coming' }).expect(404);
+    });
+
+    it('400s a prescription with no follow-up date — nothing to answer', async () => {
+      const visitId = await stageVisit(await stagePatient());
+      const prescription = await prisma.prescription.create({
+        data: { visitId, practitionerId, followUpDate: null },
+      });
+      await respondFollowUp(prescription.id, { status: 'coming' }).expect(400);
+    });
+
+    it('refuses a status that is not one of the three', async () => {
+      const prescriptionId = await stageFollowUp(await stageVisit(await stagePatient()), day(2));
+      await respondFollowUp(prescriptionId, { status: 'maybe' }).expect(400);
+    });
   });
 });

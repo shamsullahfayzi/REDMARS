@@ -5,3 +5,8 @@ allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
   prisma: true
+  # Native binding fetch for oxlint's import resolution — same trust level as
+  # the three above (a postinstall that downloads a prebuilt binary, no
+  # arbitrary script). Needed for `pnpm install --frozen-lockfile` to succeed
+  # non-interactively (task 7.13's Docker build runs exactly that).
+  unrs-resolver: true

@@ -14,8 +14,14 @@
 | `lab_tech` | Lab technician | Lab queue, samples, results. |
 | `pharmacist` | Pharmacist | Dispensing, pharmacy till. Sees drugs + allergies **only**. |
 | `management` | CEO / Management | Read-only reports and audit. No patient-level clinical access. |
+| `call_center` | Call center | Confirms upcoming follow-ups by phone. Sees only the recall list — never the clinical record (R13). |
 
 **Legend:** ✅ allowed · ⚠️ allowed with condition (see Rules) · ❌ denied
+
+**`call_center` is absent from every table below except §6a.** It holds exactly two
+permissions in the whole matrix (`follow_up.read`, `follow_up.respond`) — adding an
+all-❌ eighth column to ten tables of unrelated sections would say nothing a reader
+cannot already infer from "absence is denial," the rule this whole document runs on.
 
 ---
 
@@ -69,8 +75,9 @@
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | `visit.create` | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | `visit.read_queue` | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| `visit.change_status` | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| `visit.change_status` | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | `visit.cancel` | ✅ | ⚠️ R5 | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `visit.reassign_practitioner` | ✅ | ⚠️ R5 | ❌ | ❌ | ❌ | ❌ | ❌ |
 | `visit.void` (entered_in_error) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | `appointment.create` | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | `appointment.cancel` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -99,6 +106,17 @@
 | `prescription.read` | ⚠️ R2 | ❌ | ⚠️ R7 | ✅ | ❌ | ✅ R6 | ❌ |
 | `prescription.print` | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ |
 | `prescription.cancel` | ❌ | ❌ | ❌ | ⚠️ R5 | ❌ | ❌ | ❌ |
+
+## 6a. Follow-up (recall list)
+
+> Not the appointment book (§4's `appointment.*`) — who was TOLD to come back, not who
+> booked a slot. See task 4.15 / `packages/shared/src/followUp.ts` for why the two are
+> kept separate.
+
+| Action | Admin | Recep | Nurse | Doctor | Lab | Pharm | Mgmt | Call Ctr |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| `follow_up.read` | ⚠️ R2 | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ R13 |
+| `follow_up.respond` (log coming/not-coming/a note after a call) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ R13 |
 
 ## 7. Laboratory
 
@@ -146,6 +164,7 @@
 | `report.financial` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | `report.clinical_aggregate` (counts, no names) | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
 | `audit_log.read` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| `error_log.read` (task 7.8 — every 5xx, with its stack trace) | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | `data.export` | ⚠️ R11 | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ---
@@ -165,7 +184,7 @@ That rule would have made doctors prescribe blind. A patient's history — what 
 Corrections mark `entered_in_error` and write a new record. `lab.amend_result` creates an amendment, never an overwrite — the original stays visible.
 
 **R5 — Time-boxed reversals.**
-`visit.cancel`, `prescription.cancel`, `payment.refund`, `pharmacy.return_medicine`: allowed same-day, before the next step has occurred (can't cancel a dispensed prescription; can't refund a completed lab). Outside the window → admin only. All logged with a mandatory reason.
+`visit.cancel`, `visit.reassign_practitioner`, `prescription.cancel`, `payment.refund`, `pharmacy.return_medicine`: allowed same-day, before the next step has occurred (can't cancel a dispensed prescription; can't refund a completed lab; can't reassign a visit the doctor has already started). Outside the window → admin only. All logged with a mandatory reason.
 
 **R6 — Pharmacist sees drugs and allergies. Nothing else.**
 The drug list and the allergy list — because dispensing without allergies is dangerous. **Never** the diagnosis, never the clinical note. A pharmacist does not need to know a patient is schizophrenic to hand them a box of tablets.
@@ -185,8 +204,11 @@ Receptionist and pharmacist may discount up to **10%** (configurable). Anything 
 **R11 — Bulk export requires a reason and is heavily audited.**
 Admin only. This is the real defence against someone walking off with the patient list — not blocking doctors from their own patients' histories.
 
-**R12 — A pharmacist's `invoice.read`/`invoice.list` excludes lab-origin bills.**
-The pharmacist grant on both is otherwise unconditional (their own till's bills, in full) — this rule subtracts one origin from it rather than adding a condition to check. A lab order's own bill is `lab_charge.read`/`lab_charge.collect`, and the pharmacist holds neither. The reasoning is the same as R6: a pharmacist has no operational reason to see what the lab is owed, and giving them a second, unrelated till's money to browse is exposure with no job behind it.
+**R12 — A pharmacist's `invoice.read`/`invoice.list` is scoped to pharmacy-origin bills only.**
+Positive scope, not a subtraction: a bill must carry a `prescription_item` line — the one condition `originOf` ever reads as 'pharmacy' — to be visible at all. Originally written as "excludes lab-origin bills," which left reception's own OPD bill visible too; that was a gap, not the intent — the reasoning is the same as R6, a pharmacist has no operational reason to see what reception or the lab is owed, and giving them a second, unrelated till's money to browse is exposure with no job behind it. A lab order's own bill is `lab_charge.read`/`lab_charge.collect`, and the pharmacist holds neither.
+
+**R13 — Call center sees the recall list and nothing else.**
+`follow_up.read` already carries only a name, a phone number and a date — no diagnosis, no note, no prescription, the same list a receptionist already works. `follow_up.respond` is the one write this role holds: coming / not coming / a free-text note, timestamped and attributed, never editable after the fact (a correction is a new row, not an overwrite — R4). Same shape as R6/R7/R8: a role built around one task gets exactly the data that task needs, never the record it sits next to.
 
 ---
 

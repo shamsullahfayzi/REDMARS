@@ -21,8 +21,12 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:seed": "prisma db seed",
     "db:seed:drugs": "ts-node -P tsconfig.seed.json prisma/seed-drugs.ts",
+    "db:seed:drugs-medipro": "ts-node -P tsconfig.seed.json prisma/seed-drugs-medipro.ts",
     "db:seed:icd": "ts-node -P tsconfig.seed.json prisma/seed-icd.ts",
-    "db:seed:interactions": "ts-node -P tsconfig.seed.json prisma/seed-drug-interactions.ts"
+    "db:seed:interactions": "ts-node -P tsconfig.seed.json prisma/seed-drug-interactions.ts",
+    "db:seed:services-medipro": "ts-node -P tsconfig.seed.json prisma/seed-services-medipro.ts",
+    "db:seed:lab-tests": "ts-node -P tsconfig.seed.json prisma/seed-lab-tests.ts",
+    "load-test": "ts-node -P tsconfig.seed.json scripts/load-test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

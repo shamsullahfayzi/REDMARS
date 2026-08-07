@@ -9,11 +9,11 @@ import { z } from 'zod'
  */
 
 /**
- * The seven roles, mirrored from apps/api/src/auth/permissions.ts, which is the
+ * The eight roles, mirrored from apps/api/src/auth/permissions.ts, which is the
  * source of truth. Duplicated here so the browser can render the assignable-role
  * list and type the create form; the server still validates every code against
- * the roles actually in the database. Keep the two lists in step — there are
- * exactly seven and the schema pins them, so drift is unlikely but not impossible.
+ * the roles actually in the database. Keep the two lists in step — the schema
+ * pins them, so drift is unlikely but not impossible.
  */
 export const ROLE_CODES = [
   'admin',
@@ -23,6 +23,7 @@ export const ROLE_CODES = [
   'lab_tech',
   'pharmacist',
   'management',
+  'call_center',
 ] as const
 
 export type RoleCode = (typeof ROLE_CODES)[number]

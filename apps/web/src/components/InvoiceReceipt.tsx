@@ -29,7 +29,7 @@ import { amountInWords } from '@/lib/amountInWords'
  * moment the receipt names — the arrival time on a fresh check-in, the invoice's own
  * creation time on a reprint (a reprint is not a second arrival).
  */
-export function InvoiceReceipt({
+export function   InvoiceReceipt({
   facility,
   patient,
   visit,

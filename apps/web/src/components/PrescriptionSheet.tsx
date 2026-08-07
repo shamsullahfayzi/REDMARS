@@ -65,18 +65,23 @@ export function PrescriptionSheet({
   const latestVitals = vitals.data?.readings[0] ?? null
   const rx = prescription.data?.prescription ?? null
   const list = diagnoses.data?.diagnoses ?? []
+  const margins = settings.margins[settings.paperSize]
 
   return (
     <div className="rx-sheet hidden print:block" lang={i18n.language} dir={i18n.dir()}>
       {/*
         The letterhead gap, as an @page margin rather than a spacer element.
 
-        Farhat prints onto pre-printed stationery, so the top of every page has to stay
-        clear — and "every page" is the whole reason this is not a div with a height. A
-        spacer pushes the first page down and lets page two print its table across the
-        hospital's letterhead.
+        Farhat prints onto pre-printed stationery, so the top AND bottom of every page have
+        to stay clear — and "every page" is the whole reason this is not a div with a
+        height. A spacer pushes only the first page's content and lets page two print its
+        table across the hospital's letterhead.
+
+        The margin pair is keyed by `settings.paperSize`, not a flat number, because the
+        doctor can pick A4 or A5 per print (ConsultActions) and each physical pad has its
+        own letterhead artwork at its own height.
       */}
-      <style>{`@page { size: ${settings.paperSize}; margin: ${settings.topMarginMm}mm 14mm 14mm 14mm; }`}</style>
+      <style>{`@page { size: ${settings.paperSize}; margin: ${margins.topMarginMm}mm 14mm ${margins.bottomMarginMm}mm 14mm; }`}</style>
 
       <Header context={context} consultant={rx?.practitionerName ?? visit.practitionerName} />
 

@@ -73,12 +73,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
   // Task 4.15 — the recall list, matching `follow_up.read`. THE RECEPTIONIST IS HERE and
   // that is the point of the feature: the desk is who rings a patient who did not come
   // back. Management is not — every other list they hold is counts and money, and this is
-  // named patients with phone numbers.
+  // named patients with phone numbers. call_center is here too (R13) — its whole job is
+  // this one screen; see the response controls that render only for that role, in
+  // FollowUpsPage.tsx itself.
   {
     key: 'followUps',
     to: '/follow-ups',
     group: 'clinical',
-    roles: ['admin', 'receptionist', 'doctor'],
+    roles: ['admin', 'receptionist', 'doctor', 'call_center'],
   },
   { key: 'icd', to: '/icd', group: 'clinical', roles: ['admin', 'doctor'] },
   {
@@ -138,7 +140,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   { key: 'labPanels', to: '/lab-panels', group: 'administration', roles: ['admin'], module: 'lab' },
   { key: 'drugs', to: '/drugs', group: 'administration', roles: ['admin', 'pharmacist'] },
-  { key: 'reports', to: '/reports', group: 'administration', roles: ['admin', 'management'] },
+  // Task 6c — every role that holds ANY of the report permissions, not just admin/management:
+  // reception's `report.operational` is R8 (her own desk), a doctor's `report.clinical_aggregate`
+  // is their own patients. The page itself renders only the tab(s) the caller's role can open.
+  {
+    key: 'reports',
+    to: '/reports',
+    group: 'administration',
+    roles: ['admin', 'receptionist', 'doctor', 'management'],
+  },
 ]
 
 /**
@@ -163,17 +173,22 @@ export function navItemsForRoles(
 /**
  * Task 6b.10 — where a role lands instead of the dashboard, keyed by the ONE nav item
  * that role's actual work queue is. Only for someone holding exactly one of these roles:
- * a receptionist who is also a nurse, or an admin, has no single queue to default to —
- * picking one for them would be a guess, and the dashboard's full menu already serves
- * that case. Admin and management are deliberately absent — neither has an operational
- * queue, only configuration and oversight, which the dashboard already is.
+ * a receptionist who is also a nurse has no single queue to default to — picking one for
+ * them would be a guess, and the dashboard's full menu already serves that case.
+ *
+ * Admin is here on request (task 6c follow-up): the numbers on Reports ARE an admin's
+ * operational queue in a way configuration screens are not — it's the page they actually
+ * open first. Management is deliberately still absent: a multi-role admin/management combo
+ * has no single queue to default to either, and the dashboard already serves that case.
  */
 const ROLE_LANDING: Record<string, string> = {
+  admin: 'reports',
   receptionist: 'reception',
   nurse: 'queue',
   doctor: 'consultations',
   lab_tech: 'lab',
   pharmacist: 'pharmacy',
+  call_center: 'followUps',
 }
 
 /**

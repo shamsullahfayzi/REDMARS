@@ -233,6 +233,69 @@ describe('Drug formulary (e2e)', () => {
     expect(row.defaultDuration).toBe('1 month');
   });
 
+  /**
+   * The done-when for the pharmacy-bill-always-zero fix: `sellPrice` is what
+   * `dispense.service.ts` prices a prescription's items from, and there was previously no
+   * way — for admin OR pharmacist — to ever set it. A pharmacist creating/editing a drug is
+   * the same `drug.manage` grant already exercised above ("a pharmacist may also manage
+   * drugs"), so this is that same door, now with a price on it.
+   */
+  it('sets a sell price on create, as a pharmacist — the input that was missing', async () => {
+    const created = await request(server)
+      .post('/drugs')
+      .set('Authorization', `Bearer ${pharmacistToken}`)
+      .send({ code: `${PREFIX}PRICED`, genericName: 'Amoxicillin', sellPrice: '45.50' })
+      .expect(201);
+    expect((created.body as DrugSummary).sellPrice).toBe('45.50');
+
+    const row = await prisma.drug.findFirstOrThrow({ where: { code: `${PREFIX}PRICED` } });
+    expect(row.sellPrice?.toFixed(2)).toBe('45.50');
+  });
+
+  it('a blank sell price is free-issue, not an error — and stays editable either way', async () => {
+    const created = await request(server)
+      .post('/drugs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ code: `${PREFIX}FREE`, genericName: 'Saline' })
+      .expect(201);
+    expect((created.body as DrugSummary).sellPrice).toBeNull();
+
+    const priced = await request(server)
+      .patch(`/drugs/${(created.body as DrugSummary).id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ genericName: 'Saline', sellPrice: '5' })
+      .expect(200);
+    expect((priced.body as DrugSummary).sellPrice).toBe('5.00');
+
+    // Omitted on a later edit clears it, same as every other optional field (2.6's own test
+    // above makes the identical assertion for defaultRoute).
+    const cleared = await request(server)
+      .patch(`/drugs/${(created.body as DrugSummary).id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ genericName: 'Saline' })
+      .expect(200);
+    expect((cleared.body as DrugSummary).sellPrice).toBeNull();
+  });
+
+  it('rejects a sell price that is not a valid amount', () =>
+    request(server)
+      .post('/drugs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ code: `${PREFIX}BADPRICE`, genericName: 'Paracetamol', sellPrice: 'free' })
+      .expect(400));
+
+  it('CSV import carries the sell price', async () => {
+    const csv = ['code,genericName,sellPrice', `${PREFIX}IMPPRICE,Ibuprofen,12.75`].join('\n');
+    await request(server)
+      .post('/drugs/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ csv })
+      .expect(200);
+
+    const row = await prisma.drug.findFirstOrThrow({ where: { code: `${PREFIX}IMPPRICE` } });
+    expect(row.sellPrice?.toFixed(2)).toBe('12.75');
+  });
+
   it('rejects a bad body (missing generic name) with 400', () =>
     request(server)
       .post('/drugs')

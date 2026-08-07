@@ -6,8 +6,14 @@ services:
     container_name: redmars-postgres
     restart: unless-stopped
     ports:
+      # Loopback-only (7.3): Postgres has no business being reachable from
+      # other machines on the hospital LAN, only from this server (the API,
+      # and an admin at the console via Adminer). On Linux, `docker` writes
+      # its own iptables rules and a host firewall like ufw does NOT see or
+      # block them by default — binding to 127.0.0.1 here is the actual
+      # control, not a host firewall rule that Docker would silently bypass.
       # host:container — host is POSTGRES_PORT (5433) to dodge a local Postgres on 5432
-      - '${POSTGRES_PORT:-5433}:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5433}:5432'
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -25,7 +31,10 @@ services:
     container_name: redmars-adminer
     restart: unless-stopped
     ports:
-      - '${ADMINER_PORT:-8080}:8080'
+      # Loopback-only (7.3) — a full DB admin UI must never be reachable from
+      # arbitrary LAN devices. Reach it via SSH tunnel or the server's own
+      # browser, not the hospital network.
+      - '127.0.0.1:${ADMINER_PORT:-8080}:8080'
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,16 +61,56 @@ services:
     volumes:
       - ./backups:/backups
       - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+      - ./scripts/restore.sh:/usr/local/bin/restore.sh:ro
     # Invoked via `sh` rather than relying on the exec bit — bind mounts from
     # Windows hosts do not carry file modes.
     command:
       - /bin/sh
       - -c
       - |
-        echo "${BACKUP_SCHEDULE:-0 2 * * *} sh /usr/local/bin/backup.sh >> /backups/backup.log 2>&1" > /etc/crontabs/root
+        # Non-root (7.3): crond itself needs to start as root to write
+        # another user's crontab file and chown the bind mount once, then
+        # drops to the same `postgres` uid (70) this same image already runs
+        # its own server process as — pg_dump needs no more privilege than
+        # that user has (it's a network client, not a filesystem operation
+        # on the data directory).
+        chown postgres:postgres /backups
+        echo "${BACKUP_SCHEDULE:-0 2 * * *} sh /usr/local/bin/backup.sh >> /backups/backup.log 2>&1" > /etc/crontabs/postgres
         echo "backup sidecar ready; schedule: ${BACKUP_SCHEDULE:-0 2 * * *} ($(date))"
-        exec crond -f -l 8
+        exec su-exec postgres crond -f -l 8
+
+  # HTTPS on the LAN (7.2) — self-signed static cert (./scripts/gen-lan-cert.sh),
+  # fronting the host-run api/web dev servers. See ../Caddyfile for the
+  # routing rationale and why not Caddy's own `tls internal` issuer.
+  caddy:
+    image: caddy:2-alpine
+    container_name: redmars-caddy
+    restart: unless-stopped
+    # Non-root (7.3): the image's own entrypoint runs as root by default —
+    # only so it can bind :443, a privileged port. Granting the one specific
+    # capability that requires instead of full root, same principle as
+    # postgres's own image already dropping its server process to a
+    # `postgres` user internally.
+    user: '65534:65534' # alpine's built-in "nobody" — no dedicated caddy user in this image
+    cap_add:
+      - NET_BIND_SERVICE
+    ports:
+      - '${CADDY_HTTPS_PORT:-443}:443'
+      - '${CADDY_API_PORT:-8443}:8443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    extra_hosts:
+      # Docker Desktop (Win/Mac) already resolves this; explicit for when this
+      # same compose file runs on a Linux server (7.13) where it does not.
+      - 'host.docker.internal:host-gateway'
 
 volumes:
   redmars_pgdata:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
     driver: local
