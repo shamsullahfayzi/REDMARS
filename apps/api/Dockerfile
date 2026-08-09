@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # REDMARS API — task 7.13. Multi-stage: the final image ships COMPILED JS
 # (dist/) plus the operational Prisma scripts, never the app's own TypeScript
 # source (src/, test/) — "no clean git clone of your commented TS on the
@@ -11,18 +12,24 @@
 # docker-compose.yml does this automatically (context: ., dockerfile: apps/api/Dockerfile).
 
 FROM node:22-alpine AS build
-# corepack enable alone tries to read root package.json's `devEngines.packageManager`
-# (a caret range, "^11.13.0") as if it were the `packageManager` field corepack
-# actually understands (an exact pin) and rejects it — pin explicitly instead.
+# Without root package.json's `packageManager` field, newer corepack falls back to
+# fetching the LATEST pnpm from the registry on every invocation (COREPACK_DEFAULT_TO_LATEST)
+# instead of the version `prepare --activate` just pinned below — silent network dependency
+# on every single `pnpm` call. Disable that fallback outright; `packageManager` pins the
+# version corepack actually uses either way (devEngines is a separate, informational field).
+ENV COREPACK_DEFAULT_TO_LATEST=0
 RUN corepack enable && corepack prepare pnpm@11.13.0 --activate
 WORKDIR /app
 
 # Manifests first so `pnpm install` layer-caches across source-only changes.
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY packages/shared/package.json packages/shared/package.json
-RUN pnpm install --frozen-lockfile
+# Cache mount: a retried install (see .npmrc's fetch-timeout comment) reuses
+# already-fetched packages from the store instead of redownloading everything.
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 COPY packages/shared packages/shared
 COPY apps/api apps/api

@@ -4,8 +4,8 @@ Task 7.13 landed: `apps/api` and `apps/web` build into real Docker images
 (`apps/api/Dockerfile`, `apps/web/Dockerfile`) — the whole stack, DB included,
 is one `docker compose` command.
 
-Everything from step 1 onward assumes a Linux shell on the hospital's own LAN,
-no public internet exposure needed. `docs/server-hardening.md` and
+Step 0 gets a Linux shell + Docker + the code onto the box; everything after
+that assumes it's already there. `docs/server-hardening.md` and
 `docs/https-lan.md` cover the *why* behind several steps here; this is the
 *what, in order*.
 
@@ -15,7 +15,15 @@ brings up all 6 containers healthy, migrate+seed run correctly inside the
 `phase-7-13-containerize.md` (project memory) if you hit something this doc
 doesn't cover.
 
-## 0. Farhat's server is Windows — get a real Linux shell first, via WSL2
+## 0. Full server bootstrap — WSL2, Docker, Node, the code
+
+Everything in this section runs once, in order, on a genuinely fresh Windows
+server. If something here half-worked before (e.g. Docker installed "another
+way"), see **0.2's cleanup note** before installing again — a half-present
+Docker install is a common cause of the next install silently doing the wrong
+thing.
+
+### 0.1 Get a real Linux shell — WSL2, not Docker Desktop
 
 **Not Docker Desktop.** Docker Desktop *also* runs on WSL2 under the hood, but
 it adds a GUI, a tray icon, and (for larger orgs) a commercial license the
@@ -41,35 +49,85 @@ wsl --install -d Ubuntu
 # (creates a Linux username/password — this is separate from Windows' own).
 ```
 
-Inside that Ubuntu shell, install Docker Engine the normal Linux way (NOT
-Docker Desktop, and NOT the `docker.io` apt package, which is older):
+Confirm the version and update the base image before installing anything else:
 ```sh
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-# log out of the Ubuntu shell and back in for the group change to apply
-docker compose version   # confirms the plugin is present
+lsb_release -a          # confirm which Ubuntu release you actually got
+sudo apt update && sudo apt -y upgrade
+sudo apt -y install ca-certificates curl gnupg git openssl
 ```
 
-Keep the repo clone INSIDE the WSL2 filesystem (`/home/<user>/redmars` or
-`/opt/redmars`, not `/mnt/c/...`) — cloning onto the Windows-mounted drive
-works but is slower for Docker builds and puts the checkout somewhere Windows
-Explorer can browse to directly via `\\wsl$\`. Everything from here on runs
-inside this Ubuntu shell.
+Everything from here on runs inside this Ubuntu shell, not PowerShell.
 
-## 1. Prerequisites on the server
+### 0.2 Install Docker Engine (official apt repo — the debuggable method)
 
-- Docker + Docker Compose plugin (`docker compose version` works) — the only
-  thing that needs installing beyond WSL2/Ubuntu itself (step 0)
-- `openssl` (already on Ubuntu by default — used by `gen-lan-cert.sh`)
-- `git`, or another way to get the repo onto the box (scp/rsync a tarball works too
-  — nothing about this step requires GitHub reachability)
-- **Enough free disk.** The image builds pull ~1GB+ of layers each; confirm
-  headroom before starting (`df -h`) — a build that dies mid-way from a full
-  disk can leave Docker itself in a bad state, not just a failed build. WSL2's
-  virtual disk grows dynamically but doesn't shrink back on its own — if this
-  server is disk-constrained, that's worth knowing going in.
+If a previous attempt used the `get.docker.com` convenience script (or
+anything else) and it "didn't work," **remove whatever's there first** —
+running a second install on top of a half-finished first one is a common
+cause of confusing failures (wrong `docker` binary on `PATH`, a systemd unit
+pointing at a package that no longer matches, etc.):
+```sh
+# Safe to run even if nothing is installed — every line no-ops on "not found."
+sudo systemctl stop docker docker.socket 2>/dev/null
+sudo apt -y remove docker docker-engine docker.io docker-ce docker-ce-cli \
+  containerd containerd.io docker-buildx-plugin docker-compose-plugin runc
+sudo rm -rf /var/lib/docker /var/lib/containerd
+```
+This does NOT touch `/opt/redmars` or anything under the repo checkout — only
+Docker's own binaries/state.
 
-## 2. Get the code onto the server
+Now install fresh, straight from Docker's official apt repository (the same
+thing `get.docker.com` automates, but each step is visible so a failure points
+at exactly what broke — GPG key fetch, repo add, or the apt install itself):
+```sh
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+  sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+sudo apt -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+sudo usermod -aG docker $USER
+# log out of the Ubuntu shell and back in (or `newgrp docker`) for the group change to apply
+docker compose version   # confirms the plugin is present
+docker run hello-world   # confirms the daemon actually works end to end
+```
+
+**If `curl -fsSL https://download.docker.com/...` itself times out or can't
+resolve** — that's the hospital network blocking `download.docker.com`
+specifically (firewall/proxy), not a WSL2 problem. Fallback: Ubuntu's own
+`docker.io` package, older but works entirely from Ubuntu's default mirrors:
+```sh
+sudo apt -y install docker.io docker-compose-v2
+sudo usermod -aG docker $USER
+```
+
+### 0.3 Install Node + pnpm on the host (for the `pnpm deploy:*` shortcuts)
+
+The app itself runs entirely inside containers — the host doesn't need Node
+to *run* REDMARS. It needs Node only to type `pnpm deploy:up` instead of the
+longer raw `docker compose -f ... up -d --build --wait` (`package.json`'s
+`scripts` block is what `pnpm deploy:*` resolves). Skip this whole section and
+use the raw `docker compose` commands (given inline at each step below) if
+you'd rather not install Node on the server at all.
+
+```sh
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+# close and reopen the shell (or: source ~/.bashrc) so `nvm` is on PATH
+nvm install 22
+nvm use 22
+node -v          # v22.x
+corepack enable
+corepack prepare pnpm@11.13.0 --activate   # matches the version pinned in package.json
+pnpm -v           # 11.13.0
+```
+
+### 0.4 Get the code onto the server
 
 ```sh
 git clone <your-remote> /opt/redmars
@@ -85,7 +143,27 @@ produces — `apps/api/Dockerfile`'s runtime stage copies `dist/`, never
 git checkout itself, which is fine on hospital-owned hardware for a pilot, not
 for handing the box to someone outside that trust boundary.
 
-## 3. Environment files
+Keep the clone INSIDE the WSL2 filesystem (`/home/<user>/redmars` or
+`/opt/redmars`, not `/mnt/c/...`) — cloning onto the Windows-mounted drive
+works but is slower for Docker builds and puts the checkout somewhere Windows
+Explorer can browse to directly via `\\wsl$\`.
+
+**Re-running this on a box that already has an older clone** (e.g. picking up
+this session's Docker/corepack fixes): `cd /opt/redmars && git pull`, then
+skip to step 3 (Build and start everything) — no need to re-clone or redo 0.1–0.4.
+
+### 0.5 Confirm disk headroom before the first build
+
+```sh
+df -h
+```
+The image builds pull ~1GB+ of layers each; a build that dies mid-way from a
+full disk can leave Docker itself in a bad state, not just a failed build.
+WSL2's virtual disk grows dynamically but doesn't shrink back on its own — if
+this server is disk-constrained, that's worth knowing before step 3, not
+after a confusing failure during it.
+
+## 1. Environment files
 
 Two `.env` files, both gitignored:
 
@@ -105,7 +183,7 @@ containerized API gets its DB credentials FROM, see "What changed" below):
 - `BACKUP_SCHEDULE`, `BACKUP_RETENTION_DAYS`, `TZ=Asia/Kabul` — defaults are sane
 - `VITE_API_URL` — set to `https://<server-lan-ip-or-hostname>:8443`. This is a
   BUILD-time value baked into the web bundle (Vite), so get it right before
-  step 6 — changing it after means rebuilding the `web` image, not just
+  step 3 — changing it after means rebuilding the `web` image, not just
   restarting a container.
 
 **`apps/api/.env`**: fill in —
@@ -118,7 +196,7 @@ containerized API gets its DB credentials FROM, see "What changed" below):
   service overrides it anyway (see below); this value only matters if you ever
   run the API as a host process instead.
 
-## 4. LAN TLS certificate
+## 2. LAN TLS certificate
 
 ```sh
 scripts/gen-lan-cert.sh redmars.local <server-lan-ip>
@@ -126,14 +204,16 @@ scripts/gen-lan-cert.sh redmars.local <server-lan-ip>
 Use the SAME hostname/IP here as `VITE_API_URL` above. This writes
 `certs/redmars.crt` / `certs/redmars.key` — gitignored, install-specific.
 
-## 5. Build and start everything
+## 3. Build and start everything
 
 ```sh
 pnpm deploy:up
 ```
-That's the whole thing — one command, checked in as `docker compose -f
-docker-compose.yml -f docker-compose.prod.yml up -d --build --wait`
-(`package.json`). It:
+Skipped 0.3 (no Node on this box)? Run the same thing directly instead:
+```sh
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --wait
+```
+Either way, this is the whole thing — one command. It:
 - builds `redmars-api` and `redmars-web` from their Dockerfiles
 - starts Postgres, Adminer, the backup sidecar, `api`, `web`, and Caddy (now
   pointed at the `api`/`web` containers by service name — `Caddyfile.prod`,
@@ -156,10 +236,34 @@ for what each covers and what it doesn't, namely prices.)
 To stop everything: `pnpm deploy:down`. To rebuild after a code change:
 `pnpm deploy:up` again — compose only rebuilds what changed.
 
-## 6. If this box already has test data on it: clean it before real use
+**If the build fails during `pnpm install --frozen-lockfile` with something
+like `[23] The operation was aborted due to timeout` / `TimeoutError`** — this
+is NOT a bandwidth problem (seen even on a fast link). It's WSL2's network
+stack dropping longer-lived TCP connections to the npm registry (MTU/DNS
+flakiness under the hood). Two fixes already checked in for this:
+- root `.npmrc` raises pnpm's fetch timeout/retries and caps concurrency
+- both Dockerfiles use a BuildKit cache mount (`--mount=type=cache`) for the
+  pnpm store, so a retry doesn't redownload packages already fetched
+
+Just re-run `pnpm deploy:up` — it'll resume from cache and usually gets
+through on the second or third attempt. If it keeps failing, restart WSL2 from
+Windows PowerShell (`wsl --shutdown`, reopen Ubuntu) before retrying — this
+resets its network stack and clears most MTU-related hangs.
+
+**If the build fails with `Corepack is about to download
+https://registry.npmjs.org/pnpm/-/pnpm-<some-other-version>.tgz` followed by
+`ETIMEDOUT`/`ENETUNREACH`** — this is a DIFFERENT bug from the one above, and
+`.npmrc` doesn't help it (corepack's own download path ignores `.npmrc`).
+Already fixed in this repo: root `package.json` now pins `"packageManager":
+"pnpm@11.13.0"` and both Dockerfiles set `COREPACK_DEFAULT_TO_LATEST=0` — so
+corepack uses the version already prepared in the image instead of trying to
+fetch whatever's newest on the registry. If you still see this, `git pull` to
+confirm you actually have that fix (`grep packageManager package.json`).
+
+## 4. If this box already has test data on it: clean it before real use
 
 Skip this on a genuinely fresh install — a brand-new database has nothing to
-clean, step 5's seed already leaves it in the right state. This step is for
+clean, step 3's seed already leaves it in the right state. This step is for
 turning an EXISTING install that was used for testing (dev accounts, load-test
 patients, stray manually-created departments, etc.) into a real starting
 point, without losing the catalog work (the migrated drug/service/lab-test
@@ -195,14 +299,14 @@ server, which nobody running these tools has direct access to. If Farhat's
 server has its own separate install with its own test data, someone with
 hands on that box needs to run the three commands above there too.
 
-## 7. Trust the certificate on every test device
+## 5. Trust the certificate on every test device
 
 Every browser that opens the app will show "Not secure" until it trusts
 `certs/redmars.crt` — one-time, per device, covered fully in
 `docs/https-lan.md`. Copy that file (it's public, not a secret) to each test
 device and follow the OS-specific steps there.
 
-## 8. Verify
+## 6. Verify
 
 ```sh
 curl -k https://localhost:8443/health     # API — {"status":"ok",...}
@@ -210,8 +314,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
 All six services should show healthy/running. Then from an actual LAN client
 (not the server itself), with the cert trusted: `https://<server-lan-ip>`
-should load the app, and logging in as `admin` with the password from step 5
-(fresh install) or step 6 (reset existing install) should work. If step 7
+should load the app, and logging in as `admin` with the password from step 3
+(fresh install) or step 4 (reset existing install) should work. If step 5
 hasn't been done on that device yet, expect a browser warning but a working
 app underneath it — known, documented gap, not a broken install.
 
