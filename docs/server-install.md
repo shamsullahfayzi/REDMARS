@@ -163,6 +163,47 @@ WSL2's virtual disk grows dynamically but doesn't shrink back on its own — if
 this server is disk-constrained, that's worth knowing before step 3, not
 after a confusing failure during it.
 
+### 0.6 Make WSL2 reachable from the LAN — the step that's easy to miss
+
+Everything so far runs correctly but is only reachable FROM THE SERVER ITSELF
+unless this is done. WSL2's default networking mode (NAT) only forwards ports
+to the Windows host it's running on — not to other machines on the hospital
+LAN. Symptom: `curl -k https://localhost:8443/health` works on the server,
+containers show healthy, but a client PC browsing to the server's LAN IP gets
+nothing. **Do NOT "fix" this by pointing `VITE_API_URL`/the cert at
+`localhost`** — that value is baked into the browser bundle at build time and
+sent to every CLIENT; `localhost` from a client's own browser means that
+client's machine, not the server, so that would make every client fail, not
+just some.
+
+**Preferred: mirrored networking** (needs WSL ≥2.0.0 / Windows 11 22H2+ —
+check with `wsl --version` in PowerShell). Create/edit
+`%UserProfile%\.wslconfig` on the WINDOWS side:
+```
+[wsl2]
+networkingMode=mirrored
+```
+Then `wsl --shutdown` from PowerShell and reopen the Ubuntu app. WSL2 now
+shares the Windows host's network directly — no further config, ports Docker
+opens (443/8443) are immediately reachable at the server's real LAN IP.
+
+**Fallback if mirrored mode isn't available (older WSL2, NAT mode only):**
+```powershell
+# find WSL2's current internal IP, from PowerShell:
+wsl hostname -I
+```
+```powershell
+# Run as Administrator, replace <WSL_IP> with the address above:
+netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=443 connectaddress=<WSL_IP> connectport=443
+netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=8443 connectaddress=<WSL_IP> connectport=8443
+netsh advfirewall firewall add rule name="REDMARS HTTPS" dir=in action=allow protocol=TCP localport=443
+netsh advfirewall firewall add rule name="REDMARS API" dir=in action=allow protocol=TCP localport=8443
+```
+**Catch:** in NAT mode, WSL2's internal IP can change on reboot, silently
+breaking this proxy (LAN clients stop reaching the app, server-local checks
+still pass). Mirrored networking has no such issue — use it whenever the WSL
+version on the box supports it, treat portproxy as a fallback only.
+
 ## 1. Environment files
 
 Two `.env` files, both gitignored:
@@ -318,6 +359,10 @@ should load the app, and logging in as `admin` with the password from step 3
 (fresh install) or step 4 (reset existing install) should work. If step 5
 hasn't been done on that device yet, expect a browser warning but a working
 app underneath it — known, documented gap, not a broken install.
+
+**If `curl` on the server works but the LAN client gets nothing at all**
+(not even a cert warning — connection just fails/times out): that's step 0.6
+(WSL2 not forwarding ports to the LAN), not a Docker or app problem.
 
 ## What changed vs before 7.13 (for anyone who used the old host-run flow)
 
