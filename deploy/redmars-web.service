@@ -1,4 +1,5 @@
-# REDMARS Web — systemd unit (see docs/server-install.md step 8).
+# REDMARS Web — systemd unit, fallback host-run path (see docs/install-lan-wsl2.md's
+# "What changed vs before 7.13" section — containers are the recommended path now).
 #
 # Runs Vite's OWN dev server with --host, exactly what Caddyfile already expects
 # (`reverse_proxy host.docker.internal:5173`) — no Caddyfile change needed. This is

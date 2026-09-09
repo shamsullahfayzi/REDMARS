@@ -1,4 +1,5 @@
-# REDMARS API — systemd unit (see docs/server-install.md step 8).
+# REDMARS API — systemd unit, fallback host-run path (see docs/install-lan-wsl2.md's
+# "What changed vs before 7.13" section — containers are the recommended path now).
 #
 # Runs the BUILT app (`pnpm build` first, from the repo root) rather than
 # ts-node/watch — lower memory, no recompile-on-change surprise on a server
