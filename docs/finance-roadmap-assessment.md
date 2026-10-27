@@ -1,6 +1,37 @@
 # Finance roadmap assessment
 
-Initial review: 2026-09-26. Latest update: 2026-10-13.
+Initial review: 2026-09-26. Latest update: 2026-10-27.
+
+## Production-readiness review — 2026-10-27
+
+Phase 6 inspected the current implementation and reran the seven existing finance
+suites plus three cutover checks in a separate disposable database. See
+[Phase 6 evidence and acceptance dependencies](production-readiness-phase-6.md).
+The original layer tables below remain a historical baseline, not a current gap list.
+
+**Opening receivables are a confirmed production blocker.** The user confirmed on
+2026-10-27 that unpaid patient/panel invoices must carry forward. General opening
+CSV journals can populate AR controls but cannot allocate them to individual
+invoices. The trial balance can balance while the AR comparison differs, and
+period close correctly refuses that state. A receipt on a pre-cutover invoice
+remains a failed pending event; synchronization stops before later events.
+Do not treat a general opening journal as a complete receivable migration.
+
+The accountant/financial approver and cutover date remain **pending**, as confirmed
+by the user. No real balances or configuration were imported or approved. A
+controlled legacy-AR migration/receipt workflow is still required before accepting
+the production cutover. Clinical-pilot status has been requested under the Layer 1
+prerequisite; the user confirmed its status is **not yet confirmed**. This
+verification does not establish pilot completion or authorize bypassing the gate.
+
+HR now exists, superseding the older payroll notes below. Finance payroll remains
+the single salary engine, with manual attendance adjustments. The HR-to-payroll
+employee link is still an integration gate, as documented in the HR assessment.
+No second payroll system or automatic HR integration was introduced.
+
+Generic reporting, Excel export and configurable layouts exist. Official report
+formats, hospital-specific mappings, actual printing, and accountant acceptance
+remain unverified. These are not established by synthetic regression tests.
 
 ## Current implementation update
 
