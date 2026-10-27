@@ -2,9 +2,7 @@
 # REDMARS API — task 7.13. Multi-stage: the final image ships COMPILED JS
 # (dist/) plus the operational Prisma scripts, never the app's own TypeScript
 # source (src/, test/) — "no clean git clone of your commented TS on the
-# hospital PC." prisma/*.ts (seed scripts) DO ship as source and run via
-# ts-node: they're bootstrap/ops data, not the application's business logic,
-# and ts-node has to be present anyway to run migrate+seed on container start.
+# hospital PC." Operational Prisma scripts ship for explicit maintenance.
 #
 # Build from the REPO ROOT (needed for the pnpm workspace — @redmars/shared
 # and the lockfile live above apps/api):
@@ -82,11 +80,6 @@ COPY --from=build /app/apps/api/src/modules/drug/csv.ts apps/api/src/modules/dru
 WORKDIR /app/apps/api
 EXPOSE 3000
 
-# migrate deploy (never `migrate dev` — this only applies migrations already
-# committed to the repo, no prompts, no generating new ones) then the base
-# seed. Both are idempotent/upsert-based by design (see seed.ts, seed-*.ts
-# docblocks) — safe to run on every container start, and it means required
-# base data (departments/roles/permissions/admin) is never a manual step
-# someone forgot. The Medi-Pro migration seeds (drugs/services/lab-tests)
-# are NOT run here — those are a deliberate one-time act, not boot plumbing.
-CMD ["sh", "-c", "prisma migrate deploy && prisma db seed && node dist/main.js"]
+# Apply committed schema changes, then start the API. Hospital configuration is
+# a separate authorized operation. Never seed development hospital data at boot.
+CMD ["sh", "-c", "prisma migrate deploy && node dist/main.js"]

@@ -443,6 +443,13 @@ async function seedRbac() {
 }
 
 async function main() {
+  // This legacy seed includes development hospital details and departments.
+  // Production master data must come from the separately approved Axon file.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'The development hospital seed is disabled in production. Apply migrations only; hospital configuration requires the approved Axon configuration file.',
+    );
+  }
   const facility = await seedFacility();
   await seedDepartments(facility.id);
   await seedModules(facility.id);
