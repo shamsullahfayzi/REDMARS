@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -11,6 +12,7 @@ import type { Request } from 'express';
 import type { AuthContext } from '../../auth/auth-context';
 import type { AccessTokenPayload } from '../../auth/auth.service';
 import { IS_PUBLIC_KEY } from '../../auth/decorators/public.decorator';
+import { ALLOW_PASSWORD_CHANGE_KEY } from '../../auth/decorators/allow-password-change.decorator';
 import type { RoleCode } from '../../auth/permissions';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -72,6 +74,8 @@ export class JwtAuthGuard implements CanActivate {
         facilityId: true,
         username: true,
         isActive: true,
+        mustChangePassword: true,
+        credentialVersion: true,
         deletedAt: true,
         userRoles: {
           select: {
@@ -114,6 +118,21 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
+    if ((payload.credentialVersion ?? 0) !== user.credentialVersion) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+    if (
+      user.mustChangePassword &&
+      !this.reflector.getAllAndOverride<boolean>(ALLOW_PASSWORD_CHANGE_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ])
+    ) {
+      throw new ForbiddenException({
+        code: 'password_change_required',
+        message: 'Change your temporary password before using the system.',
+      });
+    }
     request.auth = buildAuthContext(user);
     return true;
   }

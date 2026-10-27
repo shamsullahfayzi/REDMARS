@@ -38,6 +38,7 @@ export const authUserSchema = z.object({
   username: z.string(),
   fullName: z.string(),
   facilityId: z.uuid(),
+  mustChangePassword: z.boolean().default(false),
 })
 
 export type AuthUser = z.infer<typeof authUserSchema>
@@ -153,3 +154,22 @@ export const logoutResponseSchema = z.object({
 })
 
 export type LogoutResponse = z.infer<typeof logoutResponseSchema>
+
+/** Published development defaults must never become permanent hospital credentials. */
+export function isKnownDemoPassword(value: string): boolean {
+  return /^(redmars[-_]?dev|axon[-_]?demo.*|password(?:123|1234|12345|123456)?[!@#]?)$/i.test(value)
+}
+
+export const changePasswordRequestSchema = z.object({
+  currentPassword: z.string().min(1).max(256),
+  newPassword: z.string().min(12, 'Use at least 12 characters').max(256)
+    .refine((value) => !isKnownDemoPassword(value), 'Do not use a demo password'),
+}).refine((value) => value.currentPassword !== value.newPassword, {
+  message: 'Choose a different password', path: ['newPassword'],
+})
+export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>
+
+export const resetUserPasswordRequestSchema = z.object({
+  password: z.string().min(10).max(256)
+    .refine((value) => !isKnownDemoPassword(value), 'Do not use a demo password'),
+})

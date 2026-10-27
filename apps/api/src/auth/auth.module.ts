@@ -8,6 +8,7 @@ import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { FacilityModuleModule } from '../modules/facility-module/facility-module.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { RateLimitService } from '../common/rate-limit.service';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AuthService } from './auth.service';
   controllers: [AuthController],
   providers: [
     AuthService,
+    RateLimitService,
 
     // Global, not per-controller. Opt-in protection means an endpoint added in
     // a hurry is unprotected until someone remembers, and the one nobody

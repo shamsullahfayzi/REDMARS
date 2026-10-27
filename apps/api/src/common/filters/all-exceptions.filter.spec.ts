@@ -2,8 +2,13 @@ import { ArgumentsHost, Logger } from '@nestjs/common';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 import { PrismaService } from '../../prisma/prisma.service';
 
-describe('CRM error privacy', () => {
-  it('does not store search terms or a driver error containing contact values', () => {
+describe('Sensitive error privacy', () => {
+  it.each([
+    '/crm/contacts',
+    '/auth/change-password',
+    '/users/target/reset-password',
+    '/employees/target/account/reset-password',
+  ])('does not store submitted values or driver arguments for %s', (path) => {
     const create = jest
       .fn<Promise<unknown>, [{ data: { path: string; stack: unknown } }]>()
       .mockResolvedValue({});
@@ -14,8 +19,8 @@ describe('CRM error privacy', () => {
       switchToHttp: () => ({
         getRequest: () => ({
           method: 'GET',
-          path: '/crm/contacts',
-          url: '/crm/contacts?q=SensitiveName',
+          path,
+          url: `${path}?q=SensitiveName`,
           auth: { facilityId: 'f', userId: 'u' },
         }),
         getResponse: () => response,
@@ -25,7 +30,7 @@ describe('CRM error privacy', () => {
     expect(JSON.stringify(create.mock.calls)).not.toMatch(/SensitiveName|93700123456/);
     expect(JSON.stringify(log.mock.calls)).not.toMatch(/SensitiveName|93700123456/);
     const written = create.mock.calls[0][0];
-    expect(written.data.path).toBe('/crm/contacts');
+    expect(written.data.path).toBe(path);
     expect(written.data.stack).toBeNull();
     log.mockRestore();
   });

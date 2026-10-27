@@ -228,6 +228,30 @@ describe('Employee account onboarding (e2e)', () => {
       .send({ username: `${PREFIX}doctor`, password: DOCTOR_PASSWORD })
       .expect(200);
     expect((login.body as LoginResponse).accessToken.length).toBeGreaterThan(0);
+    expect((login.body as LoginResponse).user.mustChangePassword).toBe(true);
+    await request(server)
+      .get('/patients')
+      .set('Authorization', `Bearer ${(login.body as LoginResponse).accessToken}`)
+      .expect(403);
+  });
+
+  it('HR reset requires a first-login change and revokes the doctor session', async () => {
+    const login = await request(server)
+      .post('/auth/login')
+      .send({ username: `${PREFIX}doctor`, password: DOCTOR_PASSWORD })
+      .expect(200);
+    await request(server)
+      .post(`/employees/${employeeId}/account/reset-password`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ password: DOCTOR_PASSWORD })
+      .expect(201);
+    await request(server)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${(login.body as LoginResponse).accessToken}`)
+      .expect(401);
+    const updated = await prisma.appUser.findUniqueOrThrow({ where: { id: doctorUserId } });
+    expect(updated.mustChangePassword).toBe(true);
+    expect(updated.credentialVersion).toBe(1);
   });
 
   it('revokes access on exit and refuses to reactivate the exited account', async () => {

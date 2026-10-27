@@ -214,6 +214,9 @@ describe('Practitioner master data (e2e)', () => {
       where: { id: practitioner.id },
     });
     expect(linked.userId).toBe(body.userId);
+    expect(
+      (await prisma.appUser.findUniqueOrThrow({ where: { id: body.userId } })).mustChangePassword,
+    ).toBe(true);
     expect((await login(`${PREFIX}new_doctor`, NEW_DOCTOR_PASSWORD)).length).toBeGreaterThan(0);
   });
 

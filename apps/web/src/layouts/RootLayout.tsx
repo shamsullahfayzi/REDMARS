@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Outlet } from 'react-router'
+import { Link, Outlet } from 'react-router'
 import { Menu } from 'lucide-react'
 import { useAuth } from '@/auth/authContext'
 import { LanguageToggle } from '@/components/LanguageToggle'
@@ -50,6 +50,9 @@ export function RootLayout() {
             )}
             <LanguageToggle />
             <ThemeToggle />
+            <Link to="/change-password" className="text-sm underline underline-offset-4">
+              {t('auth.password.title', 'Change password')}
+            </Link>
             <Button variant="outline" size="sm" onClick={logout}>
               {t('auth.logout')}
             </Button>

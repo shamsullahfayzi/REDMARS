@@ -1,5 +1,13 @@
 import { randomBytes, createHash } from 'node:crypto';
-import { Injectable, Logger, OnModuleInit, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { hash, verify } from '@node-rs/argon2';
@@ -10,11 +18,13 @@ import type {
   MeResponse,
   RefreshResponse,
   SessionEndedReason,
+  ChangePasswordRequest,
 } from '@redmars/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { FacilityModuleService } from '../modules/facility-module/facility-module.service';
 import type { Env } from '../config/env.validation';
 import type { AuthContext } from './auth-context';
+import { RateLimitService } from '../common/rate-limit.service';
 
 /**
  * A 401 whose body carries WHY the session ended, so the web app can show the
@@ -37,6 +47,7 @@ export interface AccessTokenPayload {
   sub: string;
   facilityId: string;
   username: string;
+  credentialVersion?: number;
 }
 
 @Injectable()
@@ -59,6 +70,7 @@ export class AuthService implements OnModuleInit {
     // the two no-unsafe-assignment errors AND the `!` we used to paper over them.
     private readonly config: ConfigService<Env, true>,
     private readonly modules: FacilityModuleService,
+    private readonly rateLimit: RateLimitService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -107,7 +119,12 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException('Invalid username or password');
     }
 
-    const accessToken = this.issueAccessToken(user.id, user.facilityId, user.username);
+    const accessToken = this.issueAccessToken(
+      user.id,
+      user.facilityId,
+      user.username,
+      user.credentialVersion,
+    );
     const { token: refreshToken, hash: refreshTokenHash } = this.issueRefreshToken();
 
     const refreshTtlDays = this.config.get('JWT_REFRESH_TTL_DAYS', { infer: true });
@@ -123,6 +140,19 @@ export class AuthService implements OnModuleInit {
     // Atomic because a half-applied login — old sessions killed but the new one
     // not persisted — would lock the user out of the account they just signed into.
     await this.prisma.db.$transaction(async (tx) => {
+      // A reset may have committed while argon2 was running. Never create a new
+      // refresh session using credentials which have already been replaced.
+      const current = await tx.appUser.findFirst({
+        where: {
+          id: user.id,
+          passwordHash: user.passwordHash,
+          credentialVersion: user.credentialVersion,
+          isActive: true,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (!current) throw new UnauthorizedException('Invalid username or password');
       await tx.session.updateMany({
         where: { userId: user.id, revokedAt: null },
         data: { revokedAt: new Date(), revokedReason: 'superseded' },
@@ -159,6 +189,7 @@ export class AuthService implements OnModuleInit {
         username: user.username,
         fullName: user.fullName,
         facilityId: user.facilityId,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
@@ -180,7 +211,14 @@ export class AuthService implements OnModuleInit {
         revokedReason: true,
         expiresAt: true,
         user: {
-          select: { id: true, facilityId: true, username: true, isActive: true, deletedAt: true },
+          select: {
+            id: true,
+            facilityId: true,
+            username: true,
+            isActive: true,
+            deletedAt: true,
+            credentialVersion: true,
+          },
         },
       },
     });
@@ -206,6 +244,7 @@ export class AuthService implements OnModuleInit {
       session.user.id,
       session.user.facilityId,
       session.user.username,
+      session.user.credentialVersion,
     );
     return {
       accessToken,
@@ -254,7 +293,13 @@ export class AuthService implements OnModuleInit {
   async me(auth: AuthContext): Promise<MeResponse> {
     const user = await this.prisma.db.appUser.findUnique({
       where: { id: auth.userId },
-      select: { id: true, username: true, fullName: true, facilityId: true },
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        facilityId: true,
+        mustChangePassword: true,
+      },
     });
 
     if (!user) {
@@ -276,8 +321,13 @@ export class AuthService implements OnModuleInit {
    * prescribing rights and a role-carrying token keeps prescribing until it
    * expires. Where the permission check reads from is 1.3's decision.
    */
-  private issueAccessToken(userId: string, facilityId: string, username: string): string {
-    const payload: AccessTokenPayload = { sub: userId, facilityId, username };
+  private issueAccessToken(
+    userId: string,
+    facilityId: string,
+    username: string,
+    credentialVersion: number,
+  ): string {
+    const payload: AccessTokenPayload = { sub: userId, facilityId, username, credentialVersion };
     return this.jwt.sign(payload);
   }
 
@@ -299,6 +349,41 @@ export class AuthService implements OnModuleInit {
   private issueRefreshToken(): { token: string; hash: string } {
     const token = randomBytes(32).toString('base64url');
     return { token, hash: hashRefreshToken(token) };
+  }
+
+  async changePassword(auth: AuthContext, input: ChangePasswordRequest): Promise<void> {
+    const limit = await this.rateLimit.consume(auth.facilityId, auth.userId, 'password-change', 5);
+    if (!limit.allowed)
+      throw new HttpException(
+        { message: 'Too many attempts. Try again later.', retryAfter: limit.retryAfter },
+        429,
+      );
+    const user = await this.prisma.db.appUser.findFirst({
+      where: { id: auth.userId, facilityId: auth.facilityId, isActive: true, deletedAt: null },
+    });
+    if (!user || !(await verify(user.passwordHash, input.currentPassword))) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+    const passwordHash = await hash(input.newPassword);
+    await this.prisma.db.$transaction(async (tx) => {
+      const changed = await tx.appUser.updateMany({
+        where: {
+          id: user.id,
+          facilityId: auth.facilityId,
+          isActive: true,
+          deletedAt: null,
+          passwordHash: user.passwordHash,
+          credentialVersion: user.credentialVersion,
+        },
+        data: { passwordHash, mustChangePassword: false, credentialVersion: { increment: 1 } },
+      });
+      if (changed.count !== 1)
+        throw new ConflictException('Account changed. Sign in again before retrying.');
+      await tx.session.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date(), revokedReason: 'logout' },
+      });
+    });
   }
 }
 

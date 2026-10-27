@@ -869,6 +869,8 @@ model AppUser {
   username                    String
   email                       String?
   passwordHash                String                   @map("password_hash")
+  mustChangePassword          Boolean                  @default(false) @map("must_change_password")
+  credentialVersion           Int                      @default(0) @map("credential_version")
   fullName                    String                   @map("full_name")
   isActive                    Boolean                  @default(true) @map("is_active")
   lastLoginAt                 DateTime?                @map("last_login_at")

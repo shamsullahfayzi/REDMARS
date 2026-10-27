@@ -11,7 +11,7 @@ import { useAuth } from './authContext'
  * 401s. The control is the token, not the redirect.
  */
 export function ProtectedRoute() {
-  const { status } = useAuth()
+  const { status, user } = useAuth()
   const location = useLocation()
 
   // While /auth/me is in flight we know neither yes nor no. Redirecting now would
@@ -26,5 +26,8 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
+  if (user?.mustChangePassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
+  }
   return <Outlet />
 }

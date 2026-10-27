@@ -302,6 +302,7 @@ async function seedAdminUser(facilityId: string) {
         fullName: 'System Administrator',
         // Only the argon2id hash is ever stored.
         passwordHash: await hash(password),
+        mustChangePassword: true,
       },
     });
 

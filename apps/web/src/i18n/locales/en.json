@@ -176,7 +176,7 @@
       "title": "Create a user",
       "fullName": "Full name",
       "roles": "Roles",
-      "passwordHint": "At least 8 characters. The user cannot change it yet.",
+      "passwordHint": "Temporary password: at least 8 characters. The user must change it at first sign-in.",
       "submit": "Create user",
       "submitting": "Creating…",
       "invalid": "Please check the form.",

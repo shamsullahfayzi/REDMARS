@@ -5,6 +5,8 @@ import {
   ROLE_CODES,
   createPractitionerAccountRequestSchema,
   createUserRequestSchema,
+  resetUserPasswordRequestSchema,
+  logoutResponseSchema,
   type RoleCode,
   type UserSummary,
 } from '@redmars/shared'
@@ -22,7 +24,7 @@ import {
   usePractitioners,
 } from '@/hooks/usePractitioners'
 import { useCreateUser, useSetUserActive, useUsers } from '@/hooks/useUsers'
-import { ApiError, serverMessage } from '@/lib/api'
+import { apiPost, ApiError, serverMessage } from '@/lib/api'
 
 const CLINICAL_ROLES = new Set<RoleCode>(['doctor', 'nurse', 'lab_tech', 'pharmacist'])
 const DIRECT_ACCOUNT_ROLES = ROLE_CODES.filter((code) => !CLINICAL_ROLES.has(code))
@@ -47,6 +49,25 @@ export function UsersPage() {
   const [password, setPassword] = useState('')
   const [roles, setRoles] = useState<RoleCode[]>([])
   const [formError, setFormError] = useState<string | null>(null)
+  const [resetTarget, setResetTarget] = useState<UserSummary | null>(null)
+  const [temporaryPassword, setTemporaryPassword] = useState('')
+  const [resetBusy, setResetBusy] = useState(false)
+  const [resetError, setResetError] = useState<string | null>(null)
+  const [resetMessage, setResetMessage] = useState<string | null>(null)
+
+  async function resetPassword(event: FormEvent) {
+    event.preventDefault()
+    if (!resetTarget) return
+    const parsed = resetUserPasswordRequestSchema.safeParse({ password: temporaryPassword })
+    if (!parsed.success) { setResetError(parsed.error.issues[0]?.message ?? 'Invalid temporary password'); return }
+    setResetBusy(true); setResetError(null)
+    try {
+      await apiPost(`/users/${resetTarget.id}/reset-password`, parsed.data, logoutResponseSchema)
+      setResetTarget(null); setTemporaryPassword('')
+      setResetMessage(t('auth.password.resetDone', 'Temporary password issued. Existing sessions are revoked; the user must change it at sign-in.'))
+    } catch (err) { setResetError(serverMessage(err) ?? t('auth.password.failed', 'Could not change password.')) }
+    finally { setResetBusy(false) }
+  }
 
   function toggleRole(code: RoleCode) {
     setRoles((current) =>
@@ -97,6 +118,21 @@ export function UsersPage() {
       <PageHeader title={t('nav.users')} />
 
       <DoctorAccountsCard users={usersQuery.data?.users ?? []} />
+
+      {resetMessage && <p role="status">{resetMessage}</p>}
+      {resetTarget && <Card className="max-w-xl"><CardHeader><CardTitle>
+        {t('auth.password.reset', 'Issue temporary password')} — {resetTarget.fullName} ({resetTarget.username})
+      </CardTitle></CardHeader><CardContent>
+        <form onSubmit={(event) => { void resetPassword(event) }} className="space-y-3">
+          <Label htmlFor="temporary-password">{t('auth.password.temporary', 'Temporary password (at least 10 characters)')}</Label>
+          <Input id="temporary-password" type="password" autoComplete="new-password" required minLength={10} maxLength={256}
+            value={temporaryPassword} onChange={(e) => setTemporaryPassword(e.target.value)} />
+          {resetError && <p role="alert" className="text-destructive">{resetError}</p>}
+          <div className="flex gap-2"><Button disabled={resetBusy} type="submit">{t('auth.password.reset', 'Issue temporary password')}</Button>
+            <Button type="button" variant="outline" disabled={resetBusy} onClick={() => { setResetTarget(null); setTemporaryPassword(''); setResetError(null) }}>
+              {t('common.cancel', 'Cancel')}</Button></div>
+        </form>
+      </CardContent></Card>}
 
       {/* Create */}
       <Card className="max-w-xl">
@@ -194,6 +230,10 @@ export function UsersPage() {
                         </Badge>
                       </td>
                       <td className="p-3 text-end">
+                        <Button variant="outline" size="sm" className="me-2" disabled={isSelf || resetBusy}
+                          onClick={() => { setResetTarget(u); setTemporaryPassword(''); setResetError(null); setResetMessage(null) }}>
+                          {t('auth.password.reset', 'Issue temporary password')}
+                        </Button>
                         <Button
                           variant={u.isActive ? 'destructive' : 'outline'}
                           size="sm"

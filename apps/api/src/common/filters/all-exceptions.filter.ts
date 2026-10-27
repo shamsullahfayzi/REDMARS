@@ -59,15 +59,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // No path is special-cased. A rule that needs a list of URLs to stay quiet
     // is a rule that will be wrong about the next URL.
     const crmRequest = request.path === '/crm' || request.path.startsWith('/crm/');
+    const credentialRequest =
+      request.path.startsWith('/auth/') ||
+      request.path.startsWith('/users') ||
+      request.path.includes('/account');
+    const sensitiveRequest = crmRequest || credentialRequest;
     // CRM searches contain names and phones; Prisma errors may include submitted
     // contact values. Log the route and error type, never those payloads.
-    const path = crmRequest ? request.path : request.url;
-    const safeMessage = crmRequest
-      ? `CRM request failed (${exception instanceof Error ? exception.name : 'UnknownError'})`
+    const path = sensitiveRequest ? request.path : request.url;
+    const safeMessage = sensitiveRequest
+      ? `Sensitive request failed (${exception instanceof Error ? exception.name : 'UnknownError'})`
       : exception instanceof Error
         ? exception.message
         : String(exception);
-    const detail = crmRequest
+    const detail = sensitiveRequest
       ? undefined
       : exception instanceof Error
         ? exception.stack

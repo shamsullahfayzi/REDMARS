@@ -11,6 +11,7 @@ import {
 import type { Request } from 'express';
 import {
   loginRequestSchema,
+  changePasswordRequestSchema,
   logoutRequestSchema,
   refreshRequestSchema,
   type LoginResponse,
@@ -20,6 +21,7 @@ import {
 } from '@redmars/shared';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
+import { AllowPasswordChange } from './decorators/allow-password-change.decorator';
 import { RequirePermission } from './decorators/require-permission.decorator';
 
 @Controller('auth')
@@ -75,6 +77,7 @@ export class AuthController {
    * gates every other endpoint on its own permission.
    */
   @RequirePermission('auth.me')
+  @AllowPasswordChange()
   @Get('me')
   me(@Req() req: Request): Promise<MeResponse> {
     const auth = req.auth;
@@ -85,6 +88,23 @@ export class AuthController {
       throw new UnauthorizedException('Invalid or expired token');
     }
     return this.auth.me(auth);
+  }
+
+  @AllowPasswordChange()
+  @RequirePermission('auth.me')
+  @Post('change-password')
+  @HttpCode(200)
+  async changePassword(@Body() body: unknown, @Req() req: Request): Promise<LogoutResponse> {
+    if (!req.auth) throw new UnauthorizedException('Invalid or expired token');
+    const parsed = changePasswordRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid password change',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    await this.auth.changePassword(req.auth, parsed.data);
+    return { success: true };
   }
 
   /**

@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Req,
@@ -13,6 +14,7 @@ import {
 import type { Request } from 'express';
 import {
   createUserRequestSchema,
+  resetUserPasswordRequestSchema,
   setUserActiveRequestSchema,
   type UserListResponse,
   type UserSummary,
@@ -85,5 +87,22 @@ export class UsersController {
       throw new UnauthorizedException('Invalid or expired token');
     }
     return auth;
+  }
+
+  @RequirePermission('user.reset_password')
+  @Post(':id/reset-password')
+  @HttpCode(200)
+  resetPassword(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ) {
+    const parsed = resetUserPasswordRequestSchema.safeParse(body);
+    if (!parsed.success)
+      throw new BadRequestException(
+        'Invalid temporary password: use 10–256 characters and avoid demo passwords.',
+      );
+    const auth = this.auth(req);
+    return this.users.resetPassword(auth.facilityId, auth.userId, id, parsed.data.password);
   }
 }

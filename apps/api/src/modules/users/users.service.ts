@@ -12,6 +12,7 @@ import type {
   UserSummary,
 } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { issueTemporaryPassword, rejectDemoPassword } from '../../auth/temporary-password';
 
 /**
  * The shape every user response is built from. One place, so the list and the
@@ -68,6 +69,7 @@ export class UsersService {
   }
 
   async create(facilityId: string, input: CreateUserRequest): Promise<UserSummary> {
+    rejectDemoPassword(input.password);
     const clinicalRoles = input.roleCodes.filter((code) =>
       ['doctor', 'nurse', 'lab_tech', 'pharmacist'].includes(code),
     );
@@ -113,6 +115,7 @@ export class UsersService {
           fullName: input.fullName,
           email: input.email,
           passwordHash,
+          mustChangePassword: true,
         },
       });
       for (const role of roles) {
@@ -183,5 +186,15 @@ export class UsersService {
       select: USER_SUMMARY_SELECT,
     });
     return toSummary(full);
+  }
+
+  async resetPassword(
+    facilityId: string,
+    callerUserId: string,
+    targetUserId: string,
+    password: string,
+  ) {
+    await issueTemporaryPassword(this.prisma, facilityId, callerUserId, targetUserId, password);
+    return { success: true as const };
   }
 }

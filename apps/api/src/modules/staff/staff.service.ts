@@ -9,6 +9,7 @@ import { hash } from '@node-rs/argon2';
 import { Prisma } from '@prisma/client';
 import type { AuthContext } from '../../auth/auth-context';
 import { PrismaService } from '../../prisma/prisma.service';
+import { issueTemporaryPassword, rejectDemoPassword } from '../../auth/temporary-password';
 import { NumberSequenceService } from '../../services/number-sequence.service';
 import type {
   CreateEmployee,
@@ -605,6 +606,7 @@ export class StaffService {
       throw new ConflictException('This employee number already belongs to a linked practitioner.');
     }
 
+    rejectDemoPassword(input.password);
     const passwordHash = await hash(input.password);
     return this.prisma.db.$transaction(async (tx) => {
       const current = await tx.employee.findFirst({
@@ -639,6 +641,7 @@ export class StaffService {
           email: input.email,
           fullName: fullName(employee),
           passwordHash,
+          mustChangePassword: true,
         },
       });
       await tx.userRole.createMany({
@@ -726,14 +729,13 @@ export class StaffService {
   async resetPassword(auth: AuthContext, employeeId: string, password: string) {
     const employee = await this.scopedEmployee(auth, employeeId);
     if (!employee.userId) throw new NotFoundException('Employee has no user account.');
-    await this.prisma.db.appUser.update({
-      where: { id: employee.userId },
-      data: { passwordHash: await hash(password) },
-    });
-    await this.prisma.db.session.updateMany({
-      where: { userId: employee.userId, revokedAt: null },
-      data: { revokedAt: new Date(), revokedReason: 'superseded' },
-    });
+    await issueTemporaryPassword(
+      this.prisma,
+      auth.facilityId,
+      auth.userId,
+      employee.userId,
+      password,
+    );
     return { ok: true };
   }
 

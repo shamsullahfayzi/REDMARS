@@ -15,6 +15,7 @@ import type {
   SetPractitionerDepartmentsRequest,
 } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { rejectDemoPassword } from '../../auth/temporary-password';
 
 const PRACTITIONER_SELECT = {
   id: true,
@@ -147,6 +148,7 @@ export class PractitionerService {
     }
     const doctorRole = await this.prisma.db.role.findUnique({ where: { code: 'doctor' } });
     if (!doctorRole) throw new BadRequestException('Doctor role is not configured.');
+    rejectDemoPassword(input.password);
     const passwordHash = await hash(input.password);
 
     const userId = await this.prisma.db.$transaction(async (tx) => {
@@ -157,6 +159,7 @@ export class PractitionerService {
           email: input.email,
           fullName: [practitioner.firstName, practitioner.lastName].filter(Boolean).join(' '),
           passwordHash,
+          mustChangePassword: true,
         },
       });
       await tx.userRole.create({ data: { userId: user.id, roleId: doctorRole.id } });

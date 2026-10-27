@@ -3,6 +3,7 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { RootLayout } from '@/layouts/RootLayout'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
+import { ChangePasswordPage } from '@/pages/ChangePasswordPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { AppointmentsPage } from '@/pages/AppointmentsPage'
 import { CollectionsPage } from '@/pages/CollectionsPage'
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
+      { path: '/change-password', element: <ChangePasswordPage /> },
       {
         path: '/',
         element: <RootLayout />,
