@@ -14,7 +14,7 @@ const NUMERIC = /^\d{1,8}(\.\d{1,4})?$/
 /**
  * How often the lab worklist re-reads itself. Ten seconds, matching the visit queue — the
  * thing being watched is a patient paying at the desk and walking to the bench, and five
- * seconds buys no useful freshness for twice the requests on Farhat's network.
+ * seconds buys no useful freshness for twice the requests on Axon's network.
  */
 export const LAB_QUEUE_POLL_MS = 10_000
 

@@ -8,7 +8,7 @@ import { parseCsv } from '../src/modules/drug/csv';
  * Seeds the drug formulary (task 2.5) for a facility from a checked-in CSV.
  *
  * IMPORTANT — this is a CURATED STARTER FORMULARY, not the verbatim official MoPH
- * Essential Medicines List. It leans towards the psychiatric drugs Farhat's Dr. H
+ * Essential Medicines List. It leans towards the psychiatric drugs Axon's Dr. H
  * prescribes, plus common general essentials, so a fresh install is usable on day
  * one. A pharmacist MUST review it against the current MoPH EML before real use —
  * generic names, strengths and especially the isControlled flags are the things to
@@ -31,7 +31,7 @@ const prisma = new PrismaClient();
 const TRUE_VALUES = new Set(['true', '1', 'yes', 'y']);
 
 async function main() {
-  const facilityCode = process.env.SEED_FACILITY_CODE ?? 'FARHAT';
+  const facilityCode = process.env.SEED_FACILITY_CODE ?? 'AXON';
   const facility = await prisma.facility.findUnique({ where: { code: facilityCode } });
   if (!facility) {
     throw new Error(

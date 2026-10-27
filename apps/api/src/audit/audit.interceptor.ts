@@ -1,7 +1,7 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import { Observable, Subscription, tap } from 'rxjs';
+import { Observable, Subscription, mergeMap } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { AUDIT_READ_KEY } from './decorators/audit-read.decorator';
 import { requestContext, type RequestContext } from './request-context';
@@ -12,7 +12,7 @@ import { requestContext, type RequestContext } from './request-context';
  * WHAT THIS DOES NOT DO (writes): it does not write a single AuditLog row for a
  * mutation. An interceptor sits at the HTTP boundary and never learns which rows a
  * handler changed, nor their value before the write. Those rows come from the
- * Prisma audit middleware in prisma.service.ts. What this DOES for writes is name
+ * transactional audit client. What this DOES for writes is name
  * the actor: it runs after the guards (Nest order: guards → interceptors), so
  * request.auth is set, and opens an AsyncLocalStorage scope carrying that identity
  * for the whole downstream request. The write reads the actor back out of it.
@@ -67,20 +67,20 @@ export class AuditInterceptor implements NestInterceptor {
     //
     // AsyncLocalStorage propagates across every await beneath this subscribe, which
     // is how a Prisma call three service-layers deep still sees the same actor, and
-    // how recordRead below finds the store from inside the tap.
+    // how recordRead below finds the store inside the response stream.
     return new Observable((subscriber) => {
       let subscription: Subscription | undefined;
       requestContext.run(store, () => {
-        // The read row is written only on SUCCESS (tap's next), never on error: R1
+        // The read row is written only on SUCCESS, never on error: R1
         // audits reads of records, and a handler that threw returned no record. The
-        // write is fire-and-forget — recordRead swallows its own failures — because
-        // R1 forbids a read being blocked, and awaiting the log would do exactly
-        // that. entityId comes from the returned record's id, falling back to the
-        // route param, then null (a list read has no single id).
+        // recordRead swallows storage failures so the record is still available.
+        // Await completion so successful responses do not leave an untracked task
+        // that can be lost at shutdown. Lists have no single entity id.
         const stream = auditReadEntity
           ? next.handle().pipe(
-              tap((response) => {
-                void this.prisma.recordRead(auditReadEntity, extractEntityId(response, request));
+              mergeMap(async (response: unknown) => {
+                await this.prisma.recordRead(auditReadEntity, extractEntityId(response, request));
+                return response;
               }),
             )
           : next.handle();

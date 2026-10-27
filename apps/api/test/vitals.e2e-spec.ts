@@ -1,3 +1,4 @@
+import { fixtureDepartment } from './scoped-fixtures';
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -11,7 +12,7 @@ import { AppModule } from './../src/app.module';
 /**
  * Task 4.3 — vitals.
  *
- * Optional by design: Farhat has no nurse taking observations, and a psychiatric
+ * Optional by design: Axon has no nurse taking observations, and a psychiatric
  * follow-up where nothing physical is measured is a complete consultation. So the only
  * rule about presence is that a reading holds at least one measurement.
  *
@@ -92,7 +93,7 @@ describe('Vitals (e2e)', () => {
       data: {
         facilityId: inFacility,
         patientId: patient.id,
-        departmentId: opdId,
+        departmentId: await fixtureDepartment(prisma, inFacility, opdId),
         visitNo: `${PREFIX}V${counter}`,
         type: 'opd_consult',
         status: options.status ?? 'in_progress',
@@ -318,7 +319,7 @@ describe('Vitals (e2e)', () => {
 
   // --- Who ---------------------------------------------------------------------
 
-  it('the nurse may record them — the matrix grants it whether or not Farhat has one', async () => {
+  it('the nurse may record them — the matrix grants it whether or not Axon has one', async () => {
     const visitId = await stageVisit();
     await post(visitId, { pulse: 74 }, 'nurse').expect(201);
   });

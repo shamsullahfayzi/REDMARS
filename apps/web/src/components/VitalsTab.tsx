@@ -21,7 +21,7 @@ import { serverMessage } from '@/lib/api'
 /**
  * Task 4.3 — vitals, and the first tab to plug into task 4.2's keys.
  *
- * OPTIONAL, and the screen says so rather than implying it. Farhat has no nurse taking
+ * OPTIONAL, and the screen says so rather than implying it. Axon has no nurse taking
  * observations; the doctor records what they measured and leaves the rest blank, and a
  * psychiatric follow-up where nothing physical was measured is a complete consultation.
  *

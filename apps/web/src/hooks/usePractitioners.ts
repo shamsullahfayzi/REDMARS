@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  practitionerAccountResultSchema,
   practitionerListResponseSchema,
   practitionerSummarySchema,
+  type CreatePractitionerAccountRequest,
   type CreatePractitionerRequest,
   type PractitionerListResponse,
 } from '@redmars/shared'
@@ -45,5 +47,29 @@ export function useSetPractitionerDepartments() {
         practitionerSummarySchema,
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: PRACTITIONERS_KEY }),
+  })
+}
+
+export function useCreatePractitionerAccount() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { id: string; input: CreatePractitionerAccountRequest }) =>
+      apiPost(`/practitioners/${vars.id}/account`, vars.input, practitionerAccountResultSchema),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: PRACTITIONERS_KEY })
+      void queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+  })
+}
+
+export function useGrantPractitionerDoctorRole() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiPost(`/practitioners/${id}/doctor-role`, {}, practitionerAccountResultSchema),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: PRACTITIONERS_KEY })
+      void queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
   })
 }

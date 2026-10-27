@@ -279,7 +279,7 @@ Look for a line from the `api` container around `admin user: 'admin' created`.
 **Now seed the full catalog** — the base seed above only creates the
 facility, departments, roles, and the admin account. Departments/services/
 lab-tests/drugs are real Medi-Pro migrated data, not test fixtures — run
-these once (idempotent, safe to re-run) so Farhat's install has every
+these once (idempotent, safe to re-run) so Axon's install has every
 department, medicine, service, and lab test from day one:
 ```sh
 docker compose exec api pnpm db:seed:icd
@@ -357,8 +357,8 @@ immediately; there is no second way to retrieve it.
 
 **Note for anyone reading this after an earlier session already ran this
 reset**: it was run once already, on 2026-08-07, against the dev/staging
-database this repo was built against — not necessarily the actual Farhat
-server, which nobody running these tools has direct access to. If Farhat's
+database this repo was built against — not necessarily the actual Axon
+server, which nobody running these tools has direct access to. If Axon's
 server has its own separate install with its own test data, someone with
 hands on that box needs to run the three commands above there too.
 
@@ -411,7 +411,7 @@ app underneath it — known, documented gap, not a broken install.
 
 - **7.5** — printer QA. Deprioritized — a known, simple fix once there's a
   real printer to test against.
-- **7.6** — legacy Medi-Pro patient-ID migration. Skipped, confirmed: Farhat
+- **7.6** — legacy Medi-Pro patient-ID migration. Skipped, confirmed: Axon
   does not want old patient IDs migrated. Departments/drugs/services/lab-tests
   were migrated instead (see `medipro-data-migration.md`).
 - **A host firewall** (`ufw`) — documented and ready to run in

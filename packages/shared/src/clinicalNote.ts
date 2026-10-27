@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 /**
- * Task 4.13 — the psychiatric note. For Farhat this is the most important clinical
+ * Task 4.13 — the psychiatric note. For Axon this is the most important clinical
  * artefact in the building, and the schema says so: `ClinicalNote.content` is Json
  * precisely because a mental state examination is shaped nothing like a surgical note.
  *
@@ -25,7 +25,7 @@ import { z } from 'zod'
  *  - The chief complaint. Task 4.4 owns it, on the visit, in the patient's own words. A
  *    second copy inside the note is two records of one thing that will disagree by the
  *    third edit.
- *  - `soap`. The Prisma comment lists it and Farhat is a psychiatric hospital; a generic
+ *  - `soap`. The Prisma comment lists it and Axon is a psychiatric hospital; a generic
  *    SOAP note is what hospital #2 needs, and `noteType` is a String column, so it costs
  *    a contract change and no migration when that day comes.
  *  - A stored "overall risk". See `highestRiskLevel` — it is derived, and two sources of

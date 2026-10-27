@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight } from 'lucide-react'
+import { Link } from 'react-router'
 import {
   createPractitionerRequestSchema,
   createSpecialityRequestSchema,
@@ -10,7 +11,7 @@ import {
 } from '@redmars/shared'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,6 +43,21 @@ export function PractitionersPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t('nav.practitioners')} description={t('practitioners.subtitle')} />
+
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
+          <div>
+            <h2 className="font-medium text-foreground">{t('practitioners.onboarding.title')}</h2>
+            <p className="text-sm text-muted-foreground">{t('practitioners.onboarding.help')}</p>
+          </div>
+          <Link
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            to="/hr?tab=employees"
+          >
+            {t('practitioners.onboarding.openHr')}
+          </Link>
+        </CardContent>
+      </Card>
 
       <SpecialitiesSection />
 

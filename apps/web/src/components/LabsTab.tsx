@@ -1,3 +1,4 @@
+import { moneyDecimal } from '@redmars/shared'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Printer, Trash2 } from 'lucide-react'
@@ -34,7 +35,7 @@ import { cn } from '@/lib/utils'
  * lab order IS — a bill. The tests picked here become priced lines the patient settles at
  * reception before a sample is taken, so the running total is on screen the moment a test is
  * added, and the tab says plainly that nothing is paid yet. A doctor who cannot see the cost
- * cannot tell the patient it, and at Farhat that conversation happens in this room.
+ * cannot tell the patient it, and at Axon that conversation happens in this room.
  *
  * Only what can be ordered is offered: the picker lists active catalog tests, and a test
  * already on the order is not shown again — ordering CBC twice is not a quantity the lab
@@ -58,7 +59,7 @@ interface Row {
 
 /** Sum of the selected lines, to two places. A null price counts as nothing. */
 function sumPrices(rows: Row[]): string {
-  const total = rows.reduce((acc, row) => acc + (row.price ? Number(row.price) : 0), 0)
+  const total = rows.reduce((acc, row) => acc.add(row.price ?? '0'), moneyDecimal('0'))
   return total.toFixed(2)
 }
 

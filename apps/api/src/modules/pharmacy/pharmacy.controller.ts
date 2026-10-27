@@ -34,7 +34,7 @@ import { PharmacyService } from './pharmacy.service';
 /**
  * Task 6.8 — the pharmacy queue.
  *
- * No @RequiresModule: pharmacy is OPD core (Farhat dispenses), not a toggled module. The
+ * No @RequiresModule: pharmacy is OPD core (Axon dispenses), not a toggled module. The
  * gate is `pharmacy.read_queue` — the pharmacist, and an admin. @AuditRead names the read:
  * the queue is a list of named patients with their drugs, and looking at it is a clinical
  * read like opening a chart.

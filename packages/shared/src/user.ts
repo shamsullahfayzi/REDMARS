@@ -16,6 +16,10 @@ import { z } from 'zod'
  * pins them, so drift is unlikely but not impossible.
  */
 export const ROLE_CODES = [
+  'auditor',
+  'payroll_officer',
+  'accountant',
+  'finance_manager',
   'admin',
   'receptionist',
   'nurse',

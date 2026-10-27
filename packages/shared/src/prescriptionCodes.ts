@@ -53,7 +53,7 @@ export const ROUTE_VALUES = ROUTE_CODES.map((entry) => entry.code) as [RouteCode
 /**
  * Frequencies, in the AMERICAN abbreviations — BID, TID, QID.
  *
- * NOT a style preference. A photograph of Farhat's current prescription sheet, taken on
+ * NOT a style preference. A photograph of Axon's current prescription sheet, taken on
  * 2026-07-22, has "BID" printed on it. This list was first written British (BD/TDS/QDS) on
  * the assumption that Afghan medical training follows that convention; the hospital's own
  * paper says otherwise, and the hospital's own paper wins over an assumption about it.
@@ -65,7 +65,7 @@ export const ROUTE_VALUES = ROUTE_CODES.map((entry) => entry.code) as [RouteCode
  * migrated. It would not be free after the pilot — the codes are stored values, and a
  * stored "BD" would fail the contract that no longer contains it.
  *
- * Farhat also writes "OD night" and "OD morning" as single frequencies. Those are ON and OM
+ * Axon also writes "OD night" and "OD morning" as single frequencies. Those are ON and OM
  * here: one field holding one answer, rather than a frequency with a time of day glued onto
  * the end of it that nothing downstream can read.
  */
@@ -97,7 +97,7 @@ export const FREQUENCY_VALUES = FREQUENCY_CODES.map((entry) => entry.code) as [
  * Duration suggestions — NOT a closed set.
  *
  * "Until review" and "Ongoing" are on the list because long-term psychiatric medication is
- * the normal case at Farhat, and a duration list that stopped at "3 months" would push the
+ * the normal case at Axon, and a duration list that stopped at "3 months" would push the
  * commonest answer into free text.
  */
 export const DURATION_PRESETS = [

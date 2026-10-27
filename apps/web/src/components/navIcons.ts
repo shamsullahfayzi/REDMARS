@@ -1,11 +1,14 @@
 import {
   Banknote,
+  BriefcaseBusiness,
+  Headset,
   BarChart3,
   BookText,
   ConciergeBell,
   Building2,
   CalendarClock,
   CalendarDays,
+  ClipboardCheck,
   Clock,
   FlaskConical,
   Layers,
@@ -28,8 +31,12 @@ import {
 
 /** One icon per nav key. Shared by the sidebar and the dashboard so they never drift. */
 export const NAV_ICONS: Record<string, LucideIcon> = {
+  hr: BriefcaseBusiness,
+  crm: Headset,
+  finance: Banknote,
   dashboard: LayoutDashboard,
   reception: ConciergeBell,
+  receptionOps: ClipboardCheck,
   queue: Clock,
   appointments: CalendarDays,
   patients: UserRound,

@@ -1,3 +1,4 @@
+import { moneyDecimal } from '@redmars/shared'
 import { Fragment, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Activity, Clock, Download, PieChart, Printer, Stethoscope, TrendingUp } from 'lucide-react'
@@ -535,9 +536,18 @@ function RevenueView({ from, to, departmentId }: { from: string; to: string; dep
 
   const trend = useMemo(() => {
     if (!data) return []
+    const peak = data.byDay.reduce((largest, row) => {
+      const amount = moneyDecimal(row.total).abs()
+      return amount.gt(largest) ? amount : largest
+    }, moneyDecimal('0'))
     return [...data.byDay]
       .sort((a, b) => a.date.localeCompare(b.date))
-      .map((d) => ({ label: formatDay(d.date, false), value: Number(d.total), displayValue: d.total }))
+      .map((d) => ({
+        label: formatDay(d.date, false),
+        // Only dimensionless chart geometry becomes a number; labels keep exact currency.
+        value: moneyDecimal(d.total).div(peak.isZero() ? '1' : peak).toNumber(),
+        displayValue: d.total,
+      }))
   }, [data])
 
   return (
@@ -565,7 +575,7 @@ function RevenueView({ from, to, departmentId }: { from: string; to: string; dep
                 <DonutChart
                   slices={data.byDepartment.map((d) => ({
                     label: d.type ? t(`departments.types.${d.type}`) : t('reports.revenue.otherDepartment'),
-                    value: Number(d.total),
+                    value: moneyDecimal(d.total).div(moneyDecimal(data.grandTotal).abs().gt('0') ? moneyDecimal(data.grandTotal).abs() : '1').toNumber(),
                     displayValue: d.total,
                   }))}
                   total={data.grandTotal}
@@ -578,7 +588,7 @@ function RevenueView({ from, to, departmentId }: { from: string; to: string; dep
                 <DonutChart
                   slices={data.byMethod.map((m) => ({
                     label: t(`payments.methodLabel.${m.method}`, { defaultValue: m.method }),
-                    value: Number(m.total),
+                    value: moneyDecimal(m.total).div(moneyDecimal(data.grandTotal).abs().gt('0') ? moneyDecimal(data.grandTotal).abs() : '1').toNumber(),
                     displayValue: m.total,
                   }))}
                   total={data.grandTotal}

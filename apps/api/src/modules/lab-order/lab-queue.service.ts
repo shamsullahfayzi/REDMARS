@@ -16,7 +16,7 @@ import {
  * the queue in the order patients waited rather than the order a screen happened to load.
  *
  * WHY TODAY BY DEFAULT. The queue bounds to the facility's own day for the same reason the
- * visit queue does — a lab that works same-day (Farhat does) wants the morning's work, not a
+ * visit queue does — a lab that works same-day (Axon does) wants the morning's work, not a
  * running total since opening. A date filter looks back when something was missed. The
  * trade-off is real: a sample uncollected overnight drops off tomorrow's default view, and a
  * later slice may need a "still outstanding" lane — but bounding by day is the proven shape,

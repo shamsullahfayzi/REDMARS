@@ -32,6 +32,10 @@ export interface NavItem {
 // Roles that can see everything role-gated open to all — kept here so "visible to
 // everyone" (like the dashboard) is spelled once.
 const ALL_ROLES = [
+  'auditor',
+  'payroll_officer',
+  'accountant',
+  'finance_manager',
   'admin',
   'receptionist',
   'nurse',
@@ -42,10 +46,14 @@ const ALL_ROLES = [
 ] as const
 
 export const NAV_ITEMS: readonly NavItem[] = [
+  { key: 'hr', to: '/hr', group: 'administration', roles: ALL_ROLES, module: 'hr' },
+  { key: 'crm', to: '/crm', group: 'main', roles: ['admin', 'call_center'], module: 'crm' },
+  { key: 'finance', to: '/finance', group: 'administration', roles: ['admin', 'accountant', 'finance_manager', 'management', 'payroll_officer', 'auditor'], module: 'finance' },
   { key: 'dashboard', to: '/', group: 'main', roles: ALL_ROLES },
   // The desk's home screen (task 3.6). Receptionist only, matching `visit.create` —
   // the one route that registers, queues, bills and takes cash in a single save.
   { key: 'reception', to: '/reception', group: 'clinical', roles: ['receptionist'] },
+  { key: 'receptionOps', to: '/reception/operations', group: 'clinical', roles: ['admin', 'receptionist', 'nurse', 'doctor'] },
   {
     key: 'queue',
     to: '/queue',
@@ -97,7 +105,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   // billing module's later apparatus.
   //
   // Task 6b.9 removed the receptionist: browsing every bill the facility ever raised is
-  // how the front desk would back into the hospital's revenue, and Farhat's owner and
+  // how the front desk would back into the hospital's revenue, and Axon's owner and
   // management were explicit that is not the desk's to see. Collections (below) is the
   // desk's actual daily tool — an outstanding-bills worklist, not a revenue ledger.
   {
@@ -176,13 +184,12 @@ export function navItemsForRoles(
  * a receptionist who is also a nurse has no single queue to default to — picking one for
  * them would be a guess, and the dashboard's full menu already serves that case.
  *
- * Admin is here on request (task 6c follow-up): the numbers on Reports ARE an admin's
- * operational queue in a way configuration screens are not — it's the page they actually
- * open first. Management is deliberately still absent: a multi-role admin/management combo
- * has no single queue to default to either, and the dashboard already serves that case.
+ * Administrators and management now keep the dashboard landing because the home screen is
+ * their role-aware overview. Operational roles still go directly to the queue where their
+ * day starts.
  */
 const ROLE_LANDING: Record<string, string> = {
-  admin: 'reports',
+  auditor: 'finance',
   receptionist: 'reception',
   nurse: 'queue',
   doctor: 'consultations',

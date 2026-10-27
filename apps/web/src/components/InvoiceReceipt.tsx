@@ -8,7 +8,7 @@ import type {
 import { amountInWords } from '@/lib/amountInWords'
 
 /**
- * The out-patient bill (task 3.6, reshaped to Farhat's Medi-Pro layout), now printable from
+ * The out-patient bill (task 3.6, reshaped to Axon's Medi-Pro layout), now printable from
  * anywhere that holds an invoice — the check-in slip AND the invoice reprint (task 6.1).
  *
  * Modelled on the paper the hospital has handed out for years: a centred letterhead, a

@@ -6,7 +6,7 @@ import { VISIT_CREATE_TYPES } from './visit.js'
  * Task 3.6 — the reception desk. One screen, one save.
  *
  * A patient arrives, is registered (or found), is put in a queue, is billed, and pays.
- * At Farhat that is one conversation at one window, so it is one request: patient +
+ * At Axon that is one conversation at one window, so it is one request: patient +
  * visit + invoice + payment, committed together or not at all. Four screens would mean
  * four chances to be interrupted, and the states in between are all wrong — a visit with
  * no bill, a bill with no visit, cash in the drawer the system has never heard of.
@@ -100,7 +100,7 @@ export const checkInRequestSchema = z
     discount: moneySchema.default('0'),
     discountReason: optionalText(200),
 
-    // Farhat's desk settles in full at the window, so the method is all the server needs
+    // Axon's desk settles in full at the window, so the method is all the server needs
     // — it computes the amount from the catalog itself. Sending the amount would invite
     // a bill and a payment that disagree.
     paymentMethod: paymentMethodSchema,
@@ -115,7 +115,7 @@ export const checkInRequestSchema = z
   })
   // Checked here as well as on the server: a discount with no reason is how cash leaves
   // a till, and the form should say so before the request is made.
-  .refine((v) => v.discount === '0' || Number(v.discount) === 0 || Boolean(v.discountReason), {
+  .refine((v) => !/[1-9]/.test(v.discount) || Boolean(v.discountReason), {
     message: 'Give a reason for the discount.',
     path: ['discountReason'],
   })

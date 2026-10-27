@@ -16,7 +16,7 @@ export interface PatientFormValues {
   prefix: string
   gender: 'male' | 'female' | 'other' | 'unknown'
   // Age as three separate boxes — years, months, days — filled in as far as it is known.
-  // Farhat asked for this after running a real day: an infant is "1 year 2 months", not a
+  // Axon asked for this after running a real day: an infant is "1 year 2 months", not a
   // single number behind a unit toggle. The wire has always carried all three columns.
   ageYears: string
   ageMonths: string

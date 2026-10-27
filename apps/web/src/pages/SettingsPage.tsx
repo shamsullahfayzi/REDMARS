@@ -10,7 +10,7 @@ import { useDiscountCeiling, useSetDiscountCeiling } from '@/hooks/useDiscountCe
 
 /**
  * Task 6b.1 — admin-only facility settings. One field today: the R10 discount ceiling,
- * which used to be a hardcoded 10% and is now something Farhat's owner sets himself.
+ * which used to be a hardcoded 10% and is now something Axon's owner sets himself.
  *
  * The ceiling still has a floor under it: a receptionist without
  * `discount.approve_over_threshold` cannot exceed whatever number is set here, but an

@@ -192,59 +192,62 @@ export class DispenseService {
     userId: string,
     prescriptionId: string,
   ): Promise<ConfirmHandoverResponse> {
-    const prescription = await this.prisma.db.prescription.findFirst({
-      where: { id: prescriptionId, visit: { facilityId } },
-      select: {
-        id: true,
-        status: true,
-        dispensedAt: true,
-        items: { select: { id: true } },
-      },
-    });
-    if (!prescription) throw new NotFoundException('Prescription not found');
-    if (prescription.status !== 'active' || prescription.dispensedAt !== null) {
-      throw new BadRequestException({
-        message: 'This prescription has already been handed over.',
-        code: 'already_dispensed',
+    return this.prisma.db.$transaction(async (tx) => {
+      const prescription = await tx.prescription.findFirst({
+        where: { id: prescriptionId, visit: { facilityId } },
+        select: {
+          id: true,
+          status: true,
+          dispensedAt: true,
+          items: { select: { id: true } },
+        },
       });
-    }
+      if (!prescription) throw new NotFoundException('Prescription not found');
+      if (prescription.status !== 'active' || prescription.dispensedAt !== null) {
+        throw new BadRequestException({
+          message: 'This prescription has already been handed over.',
+          code: 'already_dispensed',
+        });
+      }
 
-    const itemIds = prescription.items.map((item) => item.id);
-    const billedItem = await this.prisma.db.invoiceItem.findFirst({
-      where: { refType: 'prescription_item', refId: { in: itemIds } },
-      select: { invoice: { select: { total: true, paidAmount: true, status: true } } },
-    });
-    if (!billedItem) {
-      throw new BadRequestException({
-        message: 'This prescription has not been billed yet.',
-        code: 'not_billed',
+      const itemIds = prescription.items.map((item) => item.id);
+      const billedItem = await tx.invoiceItem.findFirst({
+        where: { refType: 'prescription_item', refId: { in: itemIds } },
+        select: { invoice: { select: { total: true, paidAmount: true, status: true } } },
       });
-    }
-    const fullyPaid =
-      billedItem.invoice.status === 'paid' ||
-      billedItem.invoice.paidAmount.greaterThanOrEqualTo(billedItem.invoice.total);
-    if (!fullyPaid) {
-      throw new ForbiddenException({
-        message: 'The bill for this prescription is not fully paid yet.',
-        code: 'not_paid',
-      });
-    }
+      if (!billedItem) {
+        throw new BadRequestException({
+          message: 'This prescription has not been billed yet.',
+          code: 'not_billed',
+        });
+      }
+      const fullyPaid =
+        billedItem.invoice.status !== 'cancelled' &&
+        billedItem.invoice.status !== 'draft' &&
+        billedItem.invoice.paidAmount.greaterThanOrEqualTo(billedItem.invoice.total);
+      if (!fullyPaid) {
+        throw new ForbiddenException({
+          message: 'The bill for this prescription is not fully paid yet.',
+          code: 'not_paid',
+        });
+      }
 
-    // Guarded mark-dispensed: only if it is still active and un-dispensed, so two benches
-    // cannot both complete the same handover.
-    const now = new Date();
-    const marked = await this.prisma.db.prescription.updateMany({
-      where: { id: prescriptionId, status: 'active', dispensedAt: null },
-      data: { status: 'completed', dispensedAt: now, dispensedBy: userId },
-    });
-    if (marked.count === 0) {
-      throw new ConflictException({
-        message: 'This prescription was just handed over at another bench. Reload.',
-        code: 'already_dispensed',
+      // Guarded mark-dispensed: only if it is still active and un-dispensed, so two benches
+      // cannot both complete the same handover.
+      const now = new Date();
+      const marked = await tx.prescription.updateMany({
+        where: { id: prescriptionId, status: 'active', dispensedAt: null },
+        data: { status: 'completed', dispensedAt: now, dispensedBy: userId },
       });
-    }
+      if (marked.count === 0) {
+        throw new ConflictException({
+          message: 'This prescription was just handed over at another bench. Reload.',
+          code: 'already_dispensed',
+        });
+      }
 
-    return { prescriptionId, status: 'completed', dispensedAt: now.toISOString() };
+      return { prescriptionId, status: 'completed', dispensedAt: now.toISOString() };
+    });
   }
 
   /**
@@ -307,7 +310,7 @@ export class DispenseService {
           status: true,
           currency: true,
           payments: {
-            where: { isReversed: false },
+            where: { isReversed: false, amount: { gt: 0 } },
             select: { id: true, amount: true, method: true },
           },
         },

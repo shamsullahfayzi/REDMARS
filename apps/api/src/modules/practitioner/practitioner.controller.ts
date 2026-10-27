@@ -14,9 +14,11 @@ import {
 import type { Request } from 'express';
 import {
   createPractitionerRequestSchema,
+  createPractitionerAccountRequestSchema,
   setActiveRequestSchema,
   setPractitionerDepartmentsRequestSchema,
   type PractitionerListResponse,
+  type PractitionerAccountResult,
   type PractitionerSummary,
 } from '@redmars/shared';
 import type { AuthContext } from '../../auth/auth-context';
@@ -49,6 +51,34 @@ export class PractitionerController {
       });
     }
     return this.practitioners.create(this.auth(req).facilityId, parsed.data);
+  }
+
+  @RequirePermission('user.create')
+  @Post(':id/account')
+  @HttpCode(201)
+  createAccount(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ): Promise<PractitionerAccountResult> {
+    const parsed = createPractitionerAccountRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: 'invalid_practitioner_account',
+        message: 'Check the username, email and temporary password.',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    return this.practitioners.createAccount(this.auth(req).facilityId, id, parsed.data);
+  }
+
+  @RequirePermission('user.create')
+  @Post(':id/doctor-role')
+  grantDoctorRole(
+    @Req() req: Request,
+    @Param('id') id: string,
+  ): Promise<PractitionerAccountResult> {
+    return this.practitioners.grantDoctorRole(this.auth(req).facilityId, id);
   }
 
   @RequirePermission('practitioner.manage')

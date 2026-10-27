@@ -119,7 +119,7 @@ module in `apps/api/src/app.module.ts`. Wire the page into `apps/web/src/router.
   re-runnable (skip/upsert on an existing code). Don't let one bad row abort the lot.
 - Search: index the columns you search on; start simple (`contains`), refine later.
 
-### 2.5 Seed MoPH Essential Medicines + Farhat's psych drugs — *the drugs Dr. H prescribes exist*
+### 2.5 Seed MoPH Essential Medicines + Axon's psych drugs — *the drugs Dr. H prescribes exist*
 - Pure data task. Put it in a seed script (or reuse 2.4's import). Keep the source
   list in the repo so it's reproducible.
 

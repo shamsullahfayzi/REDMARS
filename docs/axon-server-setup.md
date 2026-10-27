@@ -1,4 +1,4 @@
-# Setting up the REDMARS server at Farhat Hospital
+# Setting up the REDMARS server at Axon Hospital
 
 This is the site-specific guide: which machine, what network settings, and
 what to check before and after the software install so every PC on the

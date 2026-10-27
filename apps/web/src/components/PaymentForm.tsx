@@ -1,3 +1,4 @@
+import { moneyDecimal, parseMoneyInput } from '@redmars/shared'
 import { type FormEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PAYMENT_TENDERS, type PaymentTender, type RecordPaymentResponse } from '@redmars/shared'
@@ -38,9 +39,9 @@ export function PaymentForm({
     setAmount(outstanding)
   }, [outstanding])
 
-  const owed = Number(outstanding)
-  const value = Number(amount)
-  const valid = amount.trim() !== '' && value > 0 && value <= owed
+  const owed = moneyDecimal(outstanding)
+  const value = parseMoneyInput(amount)
+  const valid = value !== null && value.gt('0') && value.lte(owed)
 
   function submit(event: FormEvent) {
     event.preventDefault()

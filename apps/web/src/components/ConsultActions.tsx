@@ -243,7 +243,7 @@ export function ConsultActions({
         <KeyAction hint="F2" label={t('consult.hotkeys.saveContinue')} icon={Save} onRun={save} disabled={busy} />
         {/*
           Task: the doctor's own choice of OUTPUT PAPER, made right where they print — not a
-          facility setting they'd have to leave this screen to change. Farhat stocks
+          facility setting they'd have to leave this screen to change. Axon stocks
           pre-printed A4 letterhead for the normal case and a smaller A5 pad elsewhere; each
           has its own header/footer artwork already on it, so PrescriptionSheet blanks a
           different top/bottom margin per size (packages/shared/printSettings.ts) rather than

@@ -20,7 +20,7 @@ import { TillService } from './till.service';
  * counts their OWN drawer at closing — gated on `payment.receive`, the same grant that let
  * them take the money — and may never ask for another till. The oversight view, every till
  * at once, is `report.financial` (admin, management), the money-reports grant. Neither is
- * @RequiresModule: taking OPD and pharmacy cash is core, and Farhat runs both tills.
+ * @RequiresModule: taking OPD and pharmacy cash is core, and Axon runs both tills.
  */
 @Controller('reports/till')
 export class TillController {

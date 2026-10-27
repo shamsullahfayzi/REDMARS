@@ -1,15 +1,31 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ROLE_CODES, createUserRequestSchema, type RoleCode } from '@redmars/shared'
+import { Link } from 'react-router'
+import {
+  ROLE_CODES,
+  createPractitionerAccountRequestSchema,
+  createUserRequestSchema,
+  type RoleCode,
+  type UserSummary,
+} from '@redmars/shared'
 import { useAuth } from '@/auth/authContext'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import {
+  useCreatePractitionerAccount,
+  useGrantPractitionerDoctorRole,
+  usePractitioners,
+} from '@/hooks/usePractitioners'
 import { useCreateUser, useSetUserActive, useUsers } from '@/hooks/useUsers'
-import { ApiError } from '@/lib/api'
+import { ApiError, serverMessage } from '@/lib/api'
+
+const CLINICAL_ROLES = new Set<RoleCode>(['doctor', 'nurse', 'lab_tech', 'pharmacist'])
+const DIRECT_ACCOUNT_ROLES = ROLE_CODES.filter((code) => !CLINICAL_ROLES.has(code))
 
 /**
  * Admin-only staff management (task 1.7). The nav only shows this to an admin, but
@@ -67,9 +83,10 @@ export function UsersPage() {
       onError: (err) => {
         // 409 is the one specific case worth naming — the username is taken.
         setFormError(
-          err instanceof ApiError && err.status === 409
-            ? t('users.create.duplicate')
-            : t('users.create.failed'),
+          serverMessage(err) ??
+            (err instanceof ApiError && err.status === 409
+              ? t('users.create.duplicate')
+              : t('users.create.failed')),
         )
       },
     })
@@ -78,6 +95,8 @@ export function UsersPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t('nav.users')} />
+
+      <DoctorAccountsCard users={usersQuery.data?.users ?? []} />
 
       {/* Create */}
       <Card className="max-w-xl">
@@ -114,7 +133,7 @@ export function UsersPage() {
                 {t('users.create.roles')}
               </legend>
               <div className="flex flex-wrap gap-3">
-                {ROLE_CODES.map((code) => (
+                {DIRECT_ACCOUNT_ROLES.map((code) => (
                   <label key={code} className="flex items-center gap-1.5 text-sm text-foreground">
                     <input
                       type="checkbox"
@@ -193,5 +212,151 @@ export function UsersPage() {
         )}
       </section>
     </div>
+  )
+}
+
+function DoctorAccountsCard({ users }: { users: UserSummary[] }) {
+  const { t } = useTranslation()
+  const practitionersQuery = usePractitioners()
+  const createAccount = useCreatePractitionerAccount()
+  const grantRole = useGrantPractitionerDoctorRole()
+  const [practitionerId, setPractitionerId] = useState('')
+  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const practitioners = practitionersQuery.data?.practitioners.filter((p) => p.isActive) ?? []
+  const usersById = new Map(users.map((user) => [user.id, user]))
+  const unlinked = practitioners.filter((p) => !p.userId)
+  const missingDoctorRole = practitioners.filter(
+    (p) => p.userId && !usersById.get(p.userId)?.roles.includes('doctor'),
+  )
+  const doctorUsers = users.filter((user) => user.roles.includes('doctor'))
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    setError(null)
+    setMessage(null)
+    const parsed = createPractitionerAccountRequestSchema.safeParse({
+      username,
+      email: email || undefined,
+      password,
+    })
+    if (!practitionerId || !parsed.success) {
+      setError(parsed.success ? t('users.doctors.choose') : parsed.error.issues[0]?.message)
+      return
+    }
+    createAccount.mutate(
+      { id: practitionerId, input: parsed.data },
+      {
+        onSuccess: () => {
+          setPractitionerId('')
+          setUsername('')
+          setEmail('')
+          setPassword('')
+          setMessage(t('users.doctors.created'))
+        },
+        onError: (failure) => setError(serverMessage(failure) ?? t('users.doctors.failed')),
+      },
+    )
+  }
+
+  return (
+    <Card className="max-w-3xl border-primary/30 bg-primary/5">
+      <CardHeader>
+        <CardTitle>{t('users.doctors.title')}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <p className="text-sm text-muted-foreground">{t('users.doctors.help')}</p>
+
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium">{t('users.doctors.existing')}</h3>
+          {doctorUsers.length ? (
+            <div className="flex flex-wrap gap-2">
+              {doctorUsers.map((user) => (
+                <Badge key={user.id} variant={user.isActive ? 'active' : 'muted'}>
+                  {user.fullName} ({user.username})
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t('users.doctors.none')}</p>
+          )}
+        </div>
+
+        {missingDoctorRole.length > 0 && (
+          <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-950">
+            <h3 className="text-sm font-medium">{t('users.doctors.missingRole')}</h3>
+            {missingDoctorRole.map((practitioner) => {
+              const user = practitioner.userId ? usersById.get(practitioner.userId) : undefined
+              return (
+                <div key={practitioner.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm">
+                    {practitioner.firstName} {practitioner.lastName} · {user?.username}
+                  </span>
+                  <Button
+                    size="sm"
+                    disabled={grantRole.isPending}
+                    onClick={() =>
+                      grantRole.mutate(practitioner.id, {
+                        onSuccess: () => setMessage(t('users.doctors.granted')),
+                        onError: (failure) =>
+                          setError(serverMessage(failure) ?? t('users.doctors.failed')),
+                      })
+                    }
+                  >
+                    {t('users.doctors.grant')}
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {unlinked.length > 0 && (
+          <form className="space-y-3 border-t border-border pt-4" onSubmit={submit}>
+            <h3 className="font-medium">{t('users.doctors.create')}</h3>
+            <Select value={practitionerId} onChange={(event) => setPractitionerId(event.target.value)}>
+              <option value="">{t('users.doctors.select')}</option>
+              {unlinked.map((practitioner) => (
+                <option key={practitioner.id} value={practitioner.id}>
+                  {practitioner.firstName} {practitioner.lastName} ({practitioner.code})
+                </option>
+              ))}
+            </Select>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder={t('auth.login.username')}
+                autoComplete="off"
+              />
+              <Input
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder={t('users.doctors.email')}
+                type="email"
+              />
+            </div>
+            <Input
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder={t('users.doctors.password')}
+              type="password"
+              autoComplete="new-password"
+            />
+            <Button disabled={createAccount.isPending}>{t('users.doctors.createButton')}</Button>
+          </form>
+        )}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {message && <p className="text-sm text-emerald-700">{message}</p>}
+        <Link className={buttonVariants({ variant: 'outline', size: 'sm' })} to="/hr?tab=employees">
+          {t('users.create.openHr')}
+        </Link>
+      </CardContent>
+    </Card>
   )
 }

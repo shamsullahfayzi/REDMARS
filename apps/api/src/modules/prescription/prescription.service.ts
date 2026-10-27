@@ -22,13 +22,14 @@ import {
   isVisitOpen,
 } from '@redmars/shared';
 import { facilityDateString } from '../../common/facility-time';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
 import { VisitService } from '../visit/visit.service';
 
 const prescriptionSelect = {
   id: true,
   visitId: true,
   status: true,
+  version: true,
   advice: true,
   interactionAckReason: true,
   followUpDate: true,
@@ -58,6 +59,7 @@ type PrescriptionRow = {
   id: string;
   visitId: string;
   status: string;
+  version: number;
   advice: string | null;
   interactionAckReason: string | null;
   followUpDate: Date | null;
@@ -113,189 +115,234 @@ export class PrescriptionService {
     visitId: string,
     input: SavePrescriptionRequest,
   ): Promise<PrescriptionResponse> {
-    const visit = await this.requireVisit(facilityId, visitId);
-    if (!isVisitOpen(visit.status)) {
-      throw new BadRequestException({
-        message: 'This visit is closed. A prescription can only be written during the visit.',
-        code: 'visit_closed',
-      });
-    }
-
-    const existing = await this.prisma.db.prescription.findFirst({
-      where: { visitId },
-      select: { id: true, items: { select: { id: true } } },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    // An empty list means "no prescription for this visit", not "an empty prescription".
-    // A doctor who removes the last row and saves gets what they asked for.
-    if (input.items.length === 0) {
-      if (existing) {
-        for (const item of existing.items) {
-          await this.prisma.db.prescriptionItem.delete({ where: { id: item.id } });
-        }
-        await this.prisma.db.prescription.delete({ where: { id: existing.id } });
-      }
-      return { prescription: null };
-    }
-
-    // Names are snapshotted from the formulary here and never taken from the browser:
-    // a 2026 prescription must still print what was actually prescribed if the drug is
-    // renamed in 2028, and a client-supplied name would be a client-supplied medicine.
-    const drugIds = [...new Set(input.items.map((item) => item.drugId))];
-    const drugs = await this.prisma.db.drug.findMany({
-      where: { id: { in: drugIds }, facilityId },
-      select: { id: true, genericName: true, brandName: true, strength: true, isActive: true },
-    });
-    const byId = new Map(drugs.map((drug) => [drug.id, drug]));
-    for (const drugId of drugIds) {
-      const drug = byId.get(drugId);
-      if (!drug) {
-        throw new BadRequestException({ message: 'Unknown drug', code: 'unknown_drug' });
-      }
-      // A withdrawn drug stays on the prescriptions that already carry it; it does not get
-      // to join a new one.
-      if (!drug.isActive) {
+    return this.prisma.db.$transaction(async (tx) => {
+      const visit = await this.requireVisit(facilityId, visitId, tx);
+      if (!isVisitOpen(visit.status)) {
         throw new BadRequestException({
-          message: `${drug.genericName} is no longer in the formulary.`,
-          code: 'inactive_drug',
+          message: 'This visit is closed. A prescription can only be written during the visit.',
+          code: 'visit_closed',
         });
       }
-    }
 
-    // Task 4.8 — the hard block. Computed BEFORE anything is written, and it refuses the
-    // whole save rather than the offending lines: a partial prescription is a worse
-    // outcome than none, because the doctor would be looking at a sheet that is missing a
-    // drug they believe they prescribed.
-    const conflicts = await this.allergyConflicts(visit.patientId, input.items, byId);
-    const unresolved = conflicts.filter((conflict) => !conflict.overridden);
-    if (unresolved.length > 0) {
-      throw new ConflictException({
-        code: 'allergy_conflict',
-        message: 'This patient is recorded as allergic to a drug on this prescription.',
-        // Listed explicitly rather than by spreading minus a key: `overridden` is internal
-        // bookkeeping and must not leak into a response the browser parses.
-        conflicts: unresolved.map((conflict) => ({
-          drugId: conflict.drugId,
-          drugName: conflict.drugName,
-          allergyId: conflict.allergyId,
-          substance: conflict.substance,
-          severity: conflict.severity,
-          reaction: conflict.reaction,
-          matchedOn: conflict.matchedOn,
-        })),
+      const existing = await tx.prescription.findFirst({
+        where: { visitId },
+        select: {
+          id: true,
+          version: true,
+          status: true,
+          dispensedAt: true,
+          items: { select: { id: true } },
+        },
+        orderBy: { createdAt: 'asc' },
       });
-    }
-    const overriddenDrugIds = new Set(conflicts.map((conflict) => conflict.drugId));
 
-    // Task 4.9 — the SOFT warning, and the softness is in which severities it stops for.
-    // Task 2.11's contract already grades these ("contraindicated/major as danger,
-    // moderate as warning, minor as info"), so this enforces a line the data already
-    // draws rather than inventing one. Minor and moderate pairs are shown by the browser
-    // and never reach here as an obstacle.
-    if (!input.interactionAckReason) {
-      const serious = (await this.interactionsAmong(drugIds)).filter((warning) =>
-        interactionNeedsAck(warning.severity),
-      );
-      if (serious.length > 0) {
+      if (
+        input.expectedVersion !== undefined &&
+        input.expectedVersion !== (existing?.version ?? 0)
+      ) {
         throw new ConflictException({
-          code: 'interaction_warning',
-          message: 'These drugs interact. Say why the combination is intended.',
-          interactions: serious,
+          code: 'prescription_changed',
+          message: 'This prescription changed. Reload before saving.',
         });
       }
-    }
+      if (existing) {
+        const billed = await tx.invoiceItem.count({
+          where: {
+            refType: 'prescription_item',
+            refId: { in: existing.items.map((item) => item.id) },
+          },
+        });
+        if (existing.status !== 'active' || existing.dispensedAt || billed > 0) {
+          throw new ConflictException({
+            code: 'prescription_locked',
+            message: 'A billed or dispensed prescription cannot be rewritten.',
+          });
+        }
+      }
+      const suppliedIds = input.items.flatMap((item) => (item.id ? [item.id] : []));
+      if (
+        new Set(suppliedIds).size !== suppliedIds.length ||
+        suppliedIds.some((id) => !existing?.items.some((item) => item.id === id))
+      ) {
+        throw new NotFoundException('Prescription item not found or repeated');
+      }
 
-    const practitionerId = await this.practitionerIdOf(facilityId, userId);
-    // Prescription.practitionerId is NOT NULL, and rightly so — an unsigned drug order is
-    // not a thing. Saying this beats a foreign-key error.
-    if (!practitionerId) {
-      throw new BadRequestException({
-        message: 'Your account is not linked to a practitioner, so it cannot sign a prescription.',
-        code: 'no_practitioner',
+      // An empty list means "no prescription for this visit", not "an empty prescription".
+      // A doctor who removes the last row and saves gets what they asked for.
+      if (input.items.length === 0) {
+        if (existing) {
+          for (const item of existing.items) {
+            await tx.prescriptionItem.delete({ where: { id: item.id } });
+          }
+          await tx.prescription.delete({ where: { id: existing.id } });
+        }
+        return { prescription: null };
+      }
+
+      // Names are snapshotted from the formulary here and never taken from the browser:
+      // a 2026 prescription must still print what was actually prescribed if the drug is
+      // renamed in 2028, and a client-supplied name would be a client-supplied medicine.
+      const drugIds = [...new Set(input.items.map((item) => item.drugId))];
+      const drugs = await tx.drug.findMany({
+        where: { id: { in: drugIds }, facilityId },
+        select: { id: true, genericName: true, brandName: true, strength: true, isActive: true },
       });
-    }
+      const byId = new Map(drugs.map((drug) => [drug.id, drug]));
+      for (const drugId of drugIds) {
+        const drug = byId.get(drugId);
+        if (!drug) {
+          throw new BadRequestException({ message: 'Unknown drug', code: 'unknown_drug' });
+        }
+        // A withdrawn drug stays on the prescriptions that already carry it; it does not get
+        // to join a new one.
+        if (!drug.isActive) {
+          throw new BadRequestException({
+            message: `${drug.genericName} is no longer in the formulary.`,
+            code: 'inactive_drug',
+          });
+        }
+      }
 
-    const followUpDate = this.resolveFollowUpDate(input.followUpDate, visit.startedAt);
+      // Task 4.8 — the hard block. Computed BEFORE anything is written, and it refuses the
+      // whole save rather than the offending lines: a partial prescription is a worse
+      // outcome than none, because the doctor would be looking at a sheet that is missing a
+      // drug they believe they prescribed.
+      const conflicts = await this.allergyConflicts(visit.patientId, input.items, byId, tx);
+      const unresolved = conflicts.filter((conflict) => !conflict.overridden);
+      if (unresolved.length > 0) {
+        throw new ConflictException({
+          code: 'allergy_conflict',
+          message: 'This patient is recorded as allergic to a drug on this prescription.',
+          // Listed explicitly rather than by spreading minus a key: `overridden` is internal
+          // bookkeeping and must not leak into a response the browser parses.
+          conflicts: unresolved.map((conflict) => ({
+            drugId: conflict.drugId,
+            drugName: conflict.drugName,
+            allergyId: conflict.allergyId,
+            substance: conflict.substance,
+            severity: conflict.severity,
+            reaction: conflict.reaction,
+            matchedOn: conflict.matchedOn,
+          })),
+        });
+      }
+      const overriddenDrugIds = new Set(conflicts.map((conflict) => conflict.drugId));
 
-    // Task 6b.4 — every validation that can still refuse this save has run; from here the
-    // sheet is going to be written, so this is the point an `arrived` visit becomes
-    // `in_progress`.
-    await this.visits.autoStart(facilityId, userId, visitId);
+      // Task 4.9 — the SOFT warning, and the softness is in which severities it stops for.
+      // Task 2.11's contract already grades these ("contraindicated/major as danger,
+      // moderate as warning, minor as info"), so this enforces a line the data already
+      // draws rather than inventing one. Minor and moderate pairs are shown by the browser
+      // and never reach here as an obstacle.
+      if (!input.interactionAckReason) {
+        const serious = (await this.interactionsAmong(drugIds, tx)).filter((warning) =>
+          interactionNeedsAck(warning.severity),
+        );
+        if (serious.length > 0) {
+          throw new ConflictException({
+            code: 'interaction_warning',
+            message: 'These drugs interact. Say why the combination is intended.',
+            interactions: serious,
+          });
+        }
+      }
 
-    const prescriptionId =
-      existing?.id ??
-      (
-        await this.prisma.db.prescription.create({
+      const practitionerId = await this.practitionerIdOf(facilityId, userId, tx);
+      // Prescription.practitionerId is NOT NULL, and rightly so — an unsigned drug order is
+      // not a thing. Saying this beats a foreign-key error.
+      if (!practitionerId) {
+        throw new BadRequestException({
+          message:
+            'Your account is not linked to a practitioner, so it cannot sign a prescription.',
+          code: 'no_practitioner',
+        });
+      }
+
+      const followUpDate = this.resolveFollowUpDate(input.followUpDate, visit.startedAt);
+
+      // Task 6b.4 — every validation that can still refuse this save has run; from here the
+      // sheet is going to be written, so this is the point an `arrived` visit becomes
+      // `in_progress`.
+      await this.visits.autoStart(facilityId, userId, visitId, tx);
+
+      const prescriptionId =
+        existing?.id ??
+        (
+          await tx.prescription.create({
+            data: {
+              visitId,
+              practitionerId,
+              advice: input.advice,
+              interactionAckReason: input.interactionAckReason,
+              followUpDate,
+            },
+            select: { id: true },
+          })
+        ).id;
+
+      if (existing) {
+        await tx.prescription.update({
+          where: { id: prescriptionId },
           data: {
-            visitId,
-            practitionerId,
+            version: { increment: 1 },
             advice: input.advice,
             interactionAckReason: input.interactionAckReason,
             followUpDate,
           },
-          select: { id: true },
-        })
-      ).id;
-
-    if (existing) {
-      await this.prisma.db.prescription.update({
-        where: { id: prescriptionId },
-        data: {
-          advice: input.advice,
-          interactionAckReason: input.interactionAckReason,
-          followUpDate,
-        },
-      });
-    }
-
-    const keptIds = new Set<string>();
-    for (const [index, item] of input.items.entries()) {
-      const drug = byId.get(item.drugId)!;
-      const data = {
-        drugId: item.drugId,
-        drugNameAtTime: [drug.brandName ?? drug.genericName, drug.strength]
-          .filter(Boolean)
-          .join(' '),
-        dose: item.dose,
-        frequency: item.frequency,
-        duration: item.duration,
-        route: item.route,
-        quantity: item.quantity,
-        instructions: item.instructions,
-        // Kept only where there was actually something to override. A reason attached to a
-        // drug nobody was warned about is noise that makes the real ones harder to find —
-        // and on this column, the real ones are the whole point.
-        allergyOverrideReason: overriddenDrugIds.has(item.drugId)
-          ? item.allergyOverrideReason
-          : null,
-        // The order the doctor put them in, which is the order they will print in.
-        sequence: index,
-      };
-
-      if (item.id) {
-        const owned = existing?.items.some((row) => row.id === item.id) ?? false;
-        // An id from another prescription is a 404, not an edit landing on someone else's
-        // drug order.
-        if (!owned) throw new NotFoundException('Prescription item not found');
-        await this.prisma.db.prescriptionItem.update({ where: { id: item.id }, data });
-        keptIds.add(item.id);
-      } else {
-        const created = await this.prisma.db.prescriptionItem.create({
-          data: { ...data, prescriptionId },
-          select: { id: true },
         });
-        keptIds.add(created.id);
       }
-    }
 
-    for (const item of existing?.items ?? []) {
-      if (!keptIds.has(item.id)) {
-        await this.prisma.db.prescriptionItem.delete({ where: { id: item.id } });
+      const keptIds = new Set<string>();
+      for (const [index, item] of input.items.entries()) {
+        const drug = byId.get(item.drugId)!;
+        const data = {
+          drugId: item.drugId,
+          drugNameAtTime: [drug.brandName ?? drug.genericName, drug.strength]
+            .filter(Boolean)
+            .join(' '),
+          dose: item.dose,
+          frequency: item.frequency,
+          duration: item.duration,
+          route: item.route,
+          quantity: item.quantity,
+          instructions: item.instructions,
+          // Kept only where there was actually something to override. A reason attached to a
+          // drug nobody was warned about is noise that makes the real ones harder to find —
+          // and on this column, the real ones are the whole point.
+          allergyOverrideReason: overriddenDrugIds.has(item.drugId)
+            ? item.allergyOverrideReason
+            : null,
+          // The order the doctor put them in, which is the order they will print in.
+          sequence: index,
+        };
+
+        if (item.id) {
+          const owned = existing?.items.some((row) => row.id === item.id) ?? false;
+          // An id from another prescription is a 404, not an edit landing on someone else's
+          // drug order.
+          if (!owned) throw new NotFoundException('Prescription item not found');
+          await tx.prescriptionItem.update({ where: { id: item.id }, data });
+          keptIds.add(item.id);
+        } else {
+          const created = await tx.prescriptionItem.create({
+            data: { ...data, prescriptionId },
+            select: { id: true },
+          });
+          keptIds.add(created.id);
+        }
       }
-    }
 
-    return this.find(facilityId, visitId);
+      for (const item of existing?.items ?? []) {
+        if (!keptIds.has(item.id)) {
+          await tx.prescriptionItem.delete({ where: { id: item.id } });
+        }
+      }
+
+      const row = await tx.prescription.findUniqueOrThrow({
+        where: { id: prescriptionId },
+        select: prescriptionSelect,
+      });
+      return { prescription: this.toPrescription(row) };
+    });
   }
 
   /**
@@ -321,8 +368,9 @@ export class PrescriptionService {
     patientId: string,
     items: SavePrescriptionRequest['items'],
     drugs: Map<string, { genericName: string; brandName: string | null; strength: string | null }>,
+    tx: AuditedTx = this.prisma.db,
   ): Promise<Array<AllergyConflict & { overridden: boolean }>> {
-    const allergies = await this.prisma.db.allergy.findMany({
+    const allergies = await tx.allergy.findMany({
       where: { patientId, isActive: true },
       select: {
         id: true,
@@ -387,10 +435,13 @@ export class PrescriptionService {
    * is the control. The screen says so too, because a checker that looks complete breeds
    * exactly the false confidence it was built to prevent.
    */
-  private async interactionsAmong(drugIds: string[]): Promise<InteractionWarning[]> {
+  private async interactionsAmong(
+    drugIds: string[],
+    tx: AuditedTx = this.prisma.db,
+  ): Promise<InteractionWarning[]> {
     if (drugIds.length < 2) return [];
 
-    const rows = await this.prisma.db.drugInteraction.findMany({
+    const rows = await tx.drugInteraction.findMany({
       // Unordered pair: the seed may have stored it either way round, so both directions
       // are asked for. The @@unique([drugAId, drugBId]) does not normalise the order.
       where: {
@@ -424,7 +475,7 @@ export class PrescriptionService {
    * Task 4.11 — the patient's previous drugs, ready to drop into this visit's form.
    *
    * A PSYCHIATRIC OUTPATIENT CLINIC IS WHY THIS EXISTS. The same four drugs are re-issued
-   * month after month for years at Farhat, and retyping them is both the slowest part of
+   * month after month for years at Axon, and retyping them is both the slowest part of
    * the consultation and the part where a dose gets mistyped.
    *
    * IT RETURNS DATA, IT DOES NOT WRITE ANYTHING. Nothing here creates a prescription. The
@@ -556,8 +607,9 @@ export class PrescriptionService {
   private async requireVisit(
     facilityId: string,
     visitId: string,
+    tx: AuditedTx = this.prisma.db,
   ): Promise<{ status: VisitStatus; patientId: string; startedAt: Date }> {
-    const visit = await this.prisma.db.visit.findFirst({
+    const visit = await tx.visit.findFirst({
       where: { id: visitId, facilityId },
       select: { status: true, patientId: true, startedAt: true },
     });
@@ -566,8 +618,12 @@ export class PrescriptionService {
     return visit;
   }
 
-  private async practitionerIdOf(facilityId: string, userId: string): Promise<string | null> {
-    const practitioner = await this.prisma.db.practitioner.findFirst({
+  private async practitionerIdOf(
+    facilityId: string,
+    userId: string,
+    tx: AuditedTx = this.prisma.db,
+  ): Promise<string | null> {
+    const practitioner = await tx.practitioner.findFirst({
       where: { facilityId, userId },
       select: { id: true },
     });
@@ -579,6 +635,7 @@ export class PrescriptionService {
       id: row.id,
       visitId: row.visitId,
       status: row.status,
+      version: row.version,
       advice: row.advice,
       interactionAckReason: row.interactionAckReason,
       // The DAY, not an instant. @db.Date comes back as UTC midnight and the wire carries

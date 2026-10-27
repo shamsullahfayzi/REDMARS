@@ -37,3 +37,6 @@ coverage/
 
 # graphify knowledge-graph output (regenerable)
 graphify-out/
+
+# Disposable local database/runtime for regression tests
+.test-runtime/

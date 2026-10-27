@@ -154,7 +154,7 @@ export class ReceptionService {
             discount,
             discountReason: discount.greaterThan(ZERO) ? (input.discountReason ?? null) : null,
             total,
-            // Farhat settles at the window, so the bill is born paid. A facility that
+            // Axon settles at the window, so the bill is born paid. A facility that
             // lets a patient owe money would set `issued` here and reconcile later —
             // the column already allows it, this desk does not.
             paidAmount: total,

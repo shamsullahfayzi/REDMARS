@@ -41,25 +41,3 @@ export function conflictFromError(
   const parsed = openVisitConflictSchema.safeParse(error.body)
   return parsed.success ? { kind: 'openVisit', visits: parsed.data.visits } : null
 }
-
-// ---------------------------------------------------------------------------------
-// Money, in minor units
-// ---------------------------------------------------------------------------------
-
-/**
- * The running total is computed in whole AFN cents, never in floats.
- *
- * The server is the authority — it prices from the catalog and the browser never sends a
- * number — but a preview that says 2201.4999999998 is a preview nobody trusts, and the
- * desk reads this figure out loud to the patient. Integers to two places are exact.
- */
-export function toMinor(value: string): number {
-  const [whole, fraction = ''] = value.split('.')
-  return Number(whole) * 100 + Number(fraction.padEnd(2, '0').slice(0, 2))
-}
-
-export function fromMinor(minor: number): string {
-  const sign = minor < 0 ? '-' : ''
-  const abs = Math.abs(minor)
-  return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, '0')}`
-}

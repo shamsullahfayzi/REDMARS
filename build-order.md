@@ -7,7 +7,7 @@
 > **Roles (6):** `admin` · `receptionist` (= cashier) · `doctor` · `lab_tech` · `pharmacist` · `management`
 >
 > **Budget:** ~420 focused hours. At 8–10 h/day, 6 days/week → ~9 weeks.
-> **The line that matters:** after Phase 4, Farhat could actually use this. Everything after
+> **The line that matters:** after Phase 4, Axon could actually use this. Everything after
 > that is upside. If you fall behind, you cut from Phase 6 backwards — never from Phase 7.
 
 ---
@@ -63,7 +63,7 @@ Boring. Unskippable. Every later phase reads from these tables.
 | 2.2 | Specialities + practitioners CRUD, link practitioner ↔ user | Practitioner, Speciality, PractitionerDepartment | A doctor exists and is assigned to OPD *and* IPD |
 | 2.3 | Services + fees CRUD (consultation, card registration) | Service | Admin can set the OPD consultation fee |
 | 2.4 | **Drug formulary CRUD** + import from CSV | Drug | 200+ drugs loaded, searchable |
-| 2.5 | Seed formulary from **MoPH Essential Medicines List** + Farhat's actual psych drugs | Drug | The drugs Dr. H prescribes are all in there |
+| 2.5 | Seed formulary from **MoPH Essential Medicines List** + Axon's actual psych drugs | Drug | The drugs Dr. H prescribes are all in there |
 | 2.6 | Drug default route/frequency/duration on every row | Drug | Picking duloxetine autofills OD / oral / 1 month |
 | 2.7 | Lab test catalog + panels + prices | LabTest, LabPanel, LabPanelTest | "LFT" exists and expands to 5 tests |
 | 2.8 | Reference ranges per test (sex/age) | ReferenceRange | Hb 11 flags **L** for a man, normal for a woman |
@@ -149,7 +149,7 @@ The round-trip. Encodes the payment gate you found in the field.
 | 5.6 | Sample collection: mark collected, print sample label | LabOrderItem | Barcode/label on the tube |
 | 5.7 | **Result entry = printing.** One action produces the hard copy AND the record | LabResult | Lab tech types values, hits F4, printer runs |
 | 5.8 | Auto-flag abnormal via `ReferenceRange` | LabResult, ReferenceRange | H / L appear without anyone deciding |
-| 5.9 | Result verification step | LabResult | ❓ pending answer on whether Farhat has a supervisor |
+| 5.9 | Result verification step | LabResult | ❓ pending answer on whether Axon has a supervisor |
 | 5.10 | Result flows back to the doctor's screen on the same visit | LabResult, Visit | Doctor sees it without a phone call |
 | 5.11 | Result amendment (never overwrite — Rule R4) | LabResult | Corrections leave a visible trail |
 | 5.12 | Lab report print — bilingual, with reference ranges shown | LabResult | Patient gets the paper they expect |
@@ -172,7 +172,7 @@ The round-trip. Encodes the payment gate you found in the field.
 | 6.4 | **Discount with 10% ceiling + mandatory reason** (Rule R10) | InvoiceItem, AuditLog | Receptionist can't zero a bill |
 | 6.5 | Discount above ceiling → admin approval in-app | Invoice | Requires a second person |
 | 6.6 | Refunds + refund print (Rule R5) | Payment | Same-day, reason required, logged |
-| 6.7 | Panel / insurance billing | Panel, Invoice | ❓ only if Farhat actually has panels — **ask first, then build** |
+| 6.7 | Panel / insurance billing | Panel, Invoice | ❓ only if Axon actually has panels — **ask first, then build** |
 | 6.8 | Pharmacy queue: prescriptions awaiting dispense | Prescription | Pharmacist sees the doctor's orders |
 | 6.9 | Pharmacy sees **drugs + allergies only** (Rule R6) | Allergy | No diagnosis, no notes — verify this |
 | 6.10 | Dispense + pharmacy invoice + payment at the pharmacy till | Invoice, Payment | Patient pays for medicine at the pharmacy |
@@ -184,7 +184,7 @@ The round-trip. Encodes the payment gate you found in the field.
 
 ---
 
-## Phase 6b — Farhat's round-two fixes (~35 h)
+## Phase 6b — Axon's round-two fixes (~35 h)
 
 Feedback from Dr. H and management after using Phase 1–6 for real. Mostly corrections to
 things built too rigid the first time, plus two visibility gaps management flagged directly.
@@ -202,7 +202,7 @@ things built too rigid the first time, plus two visibility gaps management flagg
 | 6b.9 | Visibility hardening: pharmacist/lab_tech lose free-text patient search; reception loses the facility-wide invoice list and any revenue total | nav.ts, permissions.ts | Neither role can see money that isn't theirs to see |
 | 6b.10 | Role-specific home pages | router.tsx, HomePage | Each role lands on their actual queue, not a dashboard |
 
-> **6b.9 is management's request, not a nice-to-have.** Farhat's owner and management both
+> **6b.9 is management's request, not a nice-to-have.** Axon's owner and management both
 > said explicitly that a receptionist should not be able to see the hospital's revenue.
 > Don't relitigate it as an oversight.
 
@@ -251,7 +251,7 @@ replaces the one-line `7.4` from the original plan with the detail that line nev
 | 7.3 | ✅ Server hardening: firewall, non-root, no default passwords | — |
 | 7.4 | ~~Reports~~ — moved to **Phase 6c**, built before hardening, not after | Dr. H gets his numbers |
 | 7.5 | 🚧 Printer setup + print layout QA on the *actual* hospital printer — deprioritized, simple fix once there's real hardware | Paper looks right on real hardware |
-| 7.6 | ~~Legacy data migration~~ — **skipped, confirmed**: Farhat does not want old patient IDs migrated | Existing patients findable by old number |
+| 7.6 | ~~Legacy data migration~~ — **skipped, confirmed**: Axon does not want old patient IDs migrated | Existing patients findable by old number |
 | 7.7 | ✅ Load test: 40 concurrent patients, 6 users, Tuesday-morning conditions | Doesn't fall over |
 | 7.8 | ✅ Error tracking + a way to see logs without SSH | You can debug a 2 a.m. call |
 | 7.9 | **Staff training** — receptionist first, she's the bottleneck. Blocked on 7.13 | She registers a patient unaided |
@@ -291,9 +291,9 @@ Those four are the ones where the failure mode is a patient getting hurt or a ho
 
 Answer these — they change what you build:
 
-1. Does Farhat have panels/insurance? (kills or keeps 6.7 and the `Panel` table)
+1. Does Axon have panels/insurance? (kills or keeps 6.7 and the `Panel` table)
 2. Does anyone verify lab results, or does the tech sign them off? (5.9)
 3. Does anyone take vitals, or does the doctor? (4.3)
-4. What exact fields are on Farhat's current prescription printout? **Get a photocopy.** (4.10)
+4. What exact fields are on Axon's current prescription printout? **Get a photocopy.** (4.10)
 5. Can you get a Medi-Pro database export? (7.6 — if not, migration is manual and Phase 7 grows)
 6. Which modules does each hospital pay for, and what's the monthly fee per module? (seeds `FacilityModule` + `License`)

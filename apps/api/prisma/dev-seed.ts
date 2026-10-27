@@ -6,7 +6,7 @@ import { PrismaClient } from '@prisma/client';
  * role-based nav (task 1.6) as each role without waiting for the admin user-
  * management screens (task 1.7).
  *
- * NOT part of the production seed. Farhat's real staff are created by a named
+ * NOT part of the production seed. Axon's real staff are created by a named
  * admin through the audited 1.7 flow, never baked into a script — that is the
  * whole point of 1.7. This file exists so local verification does not need it yet,
  * and it refuses to run anywhere NODE_ENV says is production.

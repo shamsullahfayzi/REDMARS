@@ -7,7 +7,7 @@ import { z } from 'zod'
  *
  * Task 3.10 books slots: a patient is expected at a time, and the desk works the book each
  * morning. That only ever knows about the people who made an appointment. A psychiatric
- * outpatient at Farhat is told "come back in four weeks" and mostly does not book — so the
+ * outpatient at Axon is told "come back in four weeks" and mostly does not book — so the
  * question that matters clinically, "who was due in September and never came", cannot be
  * asked of the book at all. It can be asked of this.
  *

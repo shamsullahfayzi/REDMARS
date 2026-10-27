@@ -24,7 +24,7 @@ export interface Band {
  * generic fallback.
  */
 export async function bandFor(
-  prisma: PrismaService,
+  prisma: Pick<PrismaService, 'db'> | { db: Prisma.TransactionClient },
   testId: string,
   gender: Gender,
   ageYears: number | null,

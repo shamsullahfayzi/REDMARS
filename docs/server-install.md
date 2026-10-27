@@ -1,7 +1,7 @@
 # Installing REDMARS — pick your setup
 
-**Setting up the real Farhat hospital server?** Start at
-`docs/farhat-server-setup.md` instead — machine choice, static IP, firewall,
+**Setting up the real Axon hospital server?** Start at
+`docs/axon-server-setup.md` instead — machine choice, static IP, firewall,
 and reboot recovery, before any of the guides below.
 
 Otherwise, three separate, self-contained guides, 0 → running app. Pick one,

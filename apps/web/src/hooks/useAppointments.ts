@@ -5,7 +5,9 @@ import {
   type AppointmentListQuery,
   type CloseAppointmentRequest,
   type CreateAppointmentRequest,
+  type RescheduleAppointment,
 } from '@redmars/shared'
+import { z } from 'zod'
 import { apiGet, apiPatch, apiPost } from '@/lib/api'
 import { queryClient } from '@/lib/queryClient'
 
@@ -46,6 +48,19 @@ export function useCloseAppointment(id: string) {
   return useMutation({
     mutationFn: (input: CloseAppointmentRequest) =>
       apiPatch(`/appointments/${id}/close`, input, appointmentSummarySchema),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: APPOINTMENTS_KEY }),
+  })
+}
+
+const rescheduleResultSchema = z.object({
+  previous: appointmentSummarySchema,
+  replacement: appointmentSummarySchema,
+})
+
+export function useRescheduleAppointment(id: string) {
+  return useMutation({
+    mutationFn: (input: RescheduleAppointment) =>
+      apiPatch(`/appointments/${id}/reschedule`, input, rescheduleResultSchema),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: APPOINTMENTS_KEY }),
   })
 }

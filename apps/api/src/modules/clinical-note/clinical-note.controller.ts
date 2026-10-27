@@ -23,7 +23,7 @@ import { ClinicalNoteService } from './clinical-note.service';
  * `clinical_note.read` IS THE NARROWEST PERMISSION IN THE MATRIX and this is the route
  * that proves it. Admin holds R2 — read the clinical record, never write it — and R2 stops
  * here: an administrator can see a diagnosis, a prescription and a set of vitals, and
- * cannot see a mental state examination. That is not an oversight to tidy up later. Farhat
+ * cannot see a mental state examination. That is not an oversight to tidy up later. Axon
  * is a psychiatric hospital in a small community and this table holds the sentences that
  * do the damage if they leave the room. Doctor only, both directions.
  *

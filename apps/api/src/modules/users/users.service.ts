@@ -68,6 +68,16 @@ export class UsersService {
   }
 
   async create(facilityId: string, input: CreateUserRequest): Promise<UserSummary> {
+    const clinicalRoles = input.roleCodes.filter((code) =>
+      ['doctor', 'nurse', 'lab_tech', 'pharmacist'].includes(code),
+    );
+    if (clinicalRoles.length) {
+      throw new BadRequestException({
+        code: 'employee_account_required',
+        message:
+          'Create clinical user accounts from the employee record so identity and employment stay linked.',
+      });
+    }
     // Validate the role codes against the roles that actually exist, so a bad code
     // is a clean 400 here rather than a foreign-key explosion mid-transaction.
     const roles = await this.prisma.db.role.findMany({
@@ -141,9 +151,31 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    await this.prisma.db.appUser.update({
-      where: { id: targetUserId },
-      data: { isActive: input.isActive },
+    await this.prisma.db.$transaction(async (tx) => {
+      if (input.isActive) {
+        const employee = await tx.employee.findFirst({
+          where: { userId: targetUserId, facilityId },
+          select: { status: true, voidedAt: true },
+        });
+        if (
+          employee &&
+          (employee.voidedAt || employee.status === 'exited' || employee.status === 'suspended')
+        ) {
+          throw new BadRequestException(
+            'An exited or suspended employee cannot have an active login.',
+          );
+        }
+      }
+      await tx.appUser.update({
+        where: { id: targetUserId },
+        data: { isActive: input.isActive },
+      });
+      if (!input.isActive) {
+        await tx.session.updateMany({
+          where: { userId: targetUserId, revokedAt: null },
+          data: { revokedAt: new Date(), revokedReason: 'deactivated' },
+        });
+      }
     });
 
     const full = await this.prisma.db.appUser.findUniqueOrThrow({

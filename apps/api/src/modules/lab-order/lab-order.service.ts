@@ -11,7 +11,7 @@ import { VisitService } from '../visit/visit.service';
  * Phase 5, first slice — the doctor's lab order, hung off the visit like the prescription.
  *
  * ORDERING RAISES A BILL. The decision that shaped this: the tests a doctor orders here
- * become priced lines the reception collects against before the sample is taken (Farhat
+ * become priced lines the reception collects against before the sample is taken (Axon
  * pays at the window). So a save writes two things at once — the clinical order, and its
  * invoice — and it does so in one transaction, because an order the lab can see with no
  * bill to pay, or a bill for tests no lab knows about, is a worse state than the save

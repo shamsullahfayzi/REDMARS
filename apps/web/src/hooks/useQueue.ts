@@ -7,7 +7,7 @@ import { apiGet } from '@/lib/api'
  *
  * Ten seconds, the slow end of the build order's 5–10. The thing being watched is a
  * person walking from the reception desk to a waiting room, so five seconds buys no
- * useful freshness and doubles the requests — and Farhat's network is not something to
+ * useful freshness and doubles the requests — and Axon's network is not something to
  * spend for nothing.
  */
 export const QUEUE_POLL_MS = 10_000

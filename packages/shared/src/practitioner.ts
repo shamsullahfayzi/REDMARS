@@ -69,3 +69,22 @@ export const setPractitionerDepartmentsRequestSchema = z.object({
 export type SetPractitionerDepartmentsRequest = z.infer<
   typeof setPractitionerDepartmentsRequestSchema
 >
+
+/** Creates login credentials for an existing, already verified practitioner profile. */
+export const createPractitionerAccountRequestSchema = z.object({
+  username: z.string().trim().min(3, 'Username must be at least 3 characters').max(64),
+  email: z.email().optional(),
+  password: z.string().min(10, 'Password must be at least 10 characters').max(256),
+})
+export type CreatePractitionerAccountRequest = z.infer<
+  typeof createPractitionerAccountRequestSchema
+>
+
+export const practitionerAccountResultSchema = z.object({
+  practitionerId: z.uuid(),
+  userId: z.uuid(),
+  username: z.string(),
+  roles: z.array(z.string()),
+  created: z.boolean(),
+})
+export type PractitionerAccountResult = z.infer<typeof practitionerAccountResultSchema>

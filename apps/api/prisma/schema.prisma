@@ -157,6 +157,83 @@ enum ModuleKey {
   radiology
   billing
   reports
+  finance
+  crm
+  hr
+}
+
+enum HrSex {
+  male
+  female
+  other
+  undisclosed
+}
+
+enum EmploymentType {
+  permanent
+  fixed_term
+  part_time
+  temporary
+  volunteer
+}
+
+enum EmployeeStatus {
+  active
+  on_leave
+  suspended
+  exited
+}
+
+enum EmployeeDocumentType {
+  identity
+  contract
+  education
+  license
+  training
+  disciplinary
+  other
+}
+
+enum CredentialType {
+  professional_license
+  education
+  certification
+  training
+  work_permit
+  other
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  on_leave
+  holiday
+  rest_day
+}
+
+enum LeaveRequestStatus {
+  submitted
+  approved
+  rejected
+  cancelled
+}
+
+enum RosterStatus {
+  draft
+  confirmed
+  cancelled
+}
+
+/// Shared transient request counters. Keys are hashes of facility/user/scope;
+/// no patient data or credentials. Updated atomically outside business auditing.
+model RateLimitBucket {
+  key       String   @id
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  count     Int
+
+  @@index([expiresAt])
+  @@map("rate_limit_bucket")
 }
 
 /// License states. Note: expiry NEVER blocks a clinical action — it drives a
@@ -183,50 +260,536 @@ enum SessionRevokeReason {
 
 /// 1
 model Facility {
-  id           String   @id @default(uuid())
-  code         String   @unique
-  name         String
-  // Two local names, not one: Farhat's region reads Dari (prs) and Pashto (ps),
+  hrPositions         Position[]
+  employees           Employee[]
+  employeeDocuments   EmployeeDocument[]
+  employeeCredentials Credential[]
+  credentialReminders CredentialReminder[]
+  attendanceDays      AttendanceDay[]
+  leaveTypes          LeaveType[]
+  leaveRequests       LeaveRequest[]
+  hrHolidays          HrHoliday[]
+  shiftTypes          ShiftType[]
+  rosterEntries       RosterEntry[]
+  hrNotifications     HrNotification[]
+  crmInteractions     CrmInteraction[]
+  crmLeads            CrmLead[]
+  crmContacts         CrmContact[]
+  reportGrants        FinanceReportGrant[]
+  reportTemplates     FinanceReportTemplate[]
+  cashClassifications FinanceCashClassification[]
+  periodEvents        FinancePeriodEvent[]
+  yearClosings        FinanceYearClosing[]
+  assets              FinanceAsset[]
+  assetEntries        FinanceAssetEntry[]
+  budgets             FinanceBudget[]
+  payrollConfig       PayrollConfig?
+  payrollEmployees    PayrollEmployee[]
+  payrollRuns         PayrollRun[]
+  payrollItems        PayrollItem[]
+  payrollLoans        PayrollLoan[]
+  payrollRepayments   PayrollRepayment[]
+  payrollPayments     PayrollPayment[]
+  id                  String                      @id @default(uuid())
+  code                String                      @unique
+  name                String
+  // Two local names, not one: Axon's region reads Dari (prs) and Pashto (ps),
   // and a single column forces a choice the hospital should not have to make.
   // Both optional — fill what you have. Column suffixes match the app's i18n
   // locale codes (prs/ps) so the wire, the DB, and the UI all speak one vocabulary.
-  nameLocalPrs String?  @map("name_local_prs")
-  nameLocalPs  String?  @map("name_local_ps")
-  address      String?
-  phone        String?
-  // Printed at the foot of the invoice when set (task: Farhat field changes). Optional —
+  nameLocalPrs        String?                     @map("name_local_prs")
+  nameLocalPs         String?                     @map("name_local_ps")
+  address             String?
+  phone               String?
+  // Printed at the foot of the invoice when set (task: Axon field changes). Optional —
   // a hospital without an email address simply prints no footer line for it.
-  email        String?
-  logoPath     String?  @map("logo_path")
-  timezone     String   @default("Asia/Kabul")
-  currency     String   @default("AFN")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  email               String?
+  logoPath            String?                     @map("logo_path")
+  timezone            String                      @default("Asia/Kabul")
+  currency            String                      @default("AFN")
+  isActive            Boolean                     @default(true) @map("is_active")
+  createdAt           DateTime                    @default(now()) @map("created_at")
+  updatedAt           DateTime                    @updatedAt @map("updated_at")
 
-  departments     Department[]
-  rooms           Room[]
-  users           AppUser[]
-  practitioners   Practitioner[]
-  patients        Patient[]
-  visits          Visit[]
-  appointments    Appointment[]
-  drugs           Drug[]
-  labTests        LabTest[]
-  labPanels       LabPanel[]
-  services        Service[]
-  invoices        Invoice[]
-  labOrders       LabOrder[]
-  panels          Panel[]
-  auditLogs       AuditLog[]
-  errorLogs       ErrorLog[]
-  numberSequences NumberSequence[]
-  settings        Setting[]
-  templates       Template[]
-  license         License?
-  modules         FacilityModule[]
+  departments           Department[]
+  rooms                 Room[]
+  users                 AppUser[]
+  practitioners         Practitioner[]
+  patients              Patient[]
+  visits                Visit[]
+  appointments          Appointment[]
+  drugs                 Drug[]
+  labTests              LabTest[]
+  labPanels             LabPanel[]
+  services              Service[]
+  invoices              Invoice[]
+  labOrders             LabOrder[]
+  panels                Panel[]
+  auditLogs             AuditLog[]
+  errorLogs             ErrorLog[]
+  numberSequences       NumberSequence[]
+  settings              Setting[]
+  templates             Template[]
+  license               License?
+  modules               FacilityModule[]
+  integrationEvents     IntegrationEvent[]
+  commandReceipts       CommandReceipt[]
+  financeSettings       FinanceSettings?
+  financeAccounts       FinanceAccount[]
+  financePeriods        FiscalPeriod[]
+  fiscalYears           FiscalYear[]
+  legacyFinancePeriods  FinanceLegacyPeriod[]
+  financeJournals       FinanceJournal[]
+  financeSuppliers      FinanceSupplier[]
+  financeBills          FinanceBill[]
+  financeSettlements    FinanceSettlement[]
+  financeStatements     FinanceStatement[]
+  financeAudits         FinanceAudit[]
+  revenueMappings       FinanceRevenueMapping[]
+  tillCloses            FinanceTillClose[]
+  financeDeposits       FinanceDeposit[]
+  invoiceFinanceStates  FinanceInvoiceState[]
+  costCentres           FinanceCostCentre[]
+  expenseMappings       FinanceExpenseMapping[]
+  procurementReceipts   FinanceProcurementReceipt[]
+  receptionBeds         ReceptionBed[]
+  receptionCareRequests ReceptionCareRequest[]
+  appointmentWaitlist   AppointmentWaitlist[]
+  patientDocuments      PatientDocument[]
+  patientContacts       PatientContact[]
+  patientCoverages      PatientCoverage[]
+  patientDeposits       ReceptionPatientDeposit[]
+  receptionReminders    ReceptionReminder[]
+  receptionHandovers    ReceptionShiftHandover[]
 
   @@map("facility")
+}
+
+// Finance owns its ledger. Clinical and billing records remain their source data.
+enum FinanceAccountType {
+  asset
+  liability
+  equity
+  revenue
+  expense
+}
+
+enum FinanceJournalStatus {
+  draft
+  posted
+}
+
+model FinanceSettings {
+  facilityId  String   @id @map("facility_id")
+  currency    String   @default("AFN")
+  cutoverDate DateTime @map("cutover_date") @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  facility    Facility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+
+  @@map("finance_settings")
+}
+
+model FinanceAccount {
+  budgets         FinanceBudget[]
+  id              String                  @id @default(uuid())
+  facilityId      String                  @map("facility_id")
+  code            String
+  name            String
+  type            FinanceAccountType
+  parentId        String?                 @map("parent_id")
+  normalBalance   String                  @default(dbgenerated()) @map("normal_balance")
+  isPosting       Boolean                 @default(true) @map("is_posting")
+  parent              FinanceAccount?         @relation("AccountHierarchy", fields: [parentId, facilityId], references: [id, facilityId], onUpdate: NoAction, map: "account_parent_facility")
+  children        FinanceAccount[]        @relation("AccountHierarchy")
+  revenueMappings FinanceRevenueMapping[]
+  expenseMappings FinanceExpenseMapping[]
+  systemKey       String?                 @map("system_key")
+  isControl       Boolean                 @default(false) @map("is_control")
+  isCash          Boolean                 @default(false) @map("is_cash")
+  isActive        Boolean                 @default(true) @map("is_active")
+  createdAt       DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  facility        Facility                @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  lines           FinanceJournalLine[]
+  statements      FinanceStatement[]
+
+  @@unique([facilityId, code])
+  @@unique([facilityId, systemKey])
+  @@unique([id, facilityId])
+  @@map("finance_account")
+  finance_asset_entry FinanceAssetEntry[]
+}
+
+model FiscalYear {
+  closing    FinanceYearClosing?
+  id         String              @id @default(uuid())
+  facilityId String              @map("facility_id")
+  year       Int
+  label      String
+  startsOn   DateTime            @map("starts_on") @db.Timestamptz(3)
+  endsOn     DateTime            @map("ends_on") @db.Timestamptz(3)
+  facility   Facility            @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  periods    FiscalPeriod[]
+
+  @@unique([facilityId, year])
+  @@unique([id, facilityId])
+  @@map("fiscal_year")
+}
+
+/// Read-only archive of pre-Shamsi periods; closed ranges remain posting restrictions.
+model FinanceLegacyPeriod {
+  id         String           @id
+  facilityId String           @map("facility_id")
+  name       String
+  startsOn   DateTime         @map("starts_on") @db.Timestamptz(3)
+  endsOn     DateTime         @map("ends_on") @db.Timestamptz(3)
+  closedAt   DateTime?        @map("closed_at") @db.Timestamptz(3)
+  closedBy   String?          @map("closed_by")
+  closer     AppUser?         @relation("LegacyPeriodCloser", fields: [closedBy, facilityId], references: [id, facilityId], onDelete: Restrict)
+  facility   Facility         @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  journals   FinanceJournal[]
+
+  @@unique([id, facilityId])
+  @@map("finance_legacy_period")
+}
+
+model FiscalPeriod {
+  lockedAt       DateTime?            @map("locked_at") @db.Timestamptz(3)
+  lockedBy       String?              @map("locked_by")
+  closeEvents    FinancePeriodEvent[]
+  startingAssets FinanceAsset[]
+  assetEntries   FinanceAssetEntry[]
+  budgets        FinanceBudget[]
+  payrollRuns    PayrollRun[]
+  payrollLoans   PayrollLoan[]
+  yearId         String               @map("year_id")
+  month          Int
+  label          String
+  fiscalYear     FiscalYear           @relation(fields: [yearId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  id             String               @id @default(uuid())
+  facilityId     String               @map("facility_id")
+  name           String
+  startsOn       DateTime             @map("starts_on") @db.Timestamptz(3)
+  endsOn         DateTime             @map("ends_on") @db.Timestamptz(3)
+  closedAt       DateTime?            @map("closed_at") @db.Timestamptz(3)
+  closedBy       String?              @map("closed_by")
+  closer         AppUser?             @relation("FiscalPeriodCloser", fields: [closedBy, facilityId], references: [id, facilityId], onDelete: Restrict)
+  facility       Facility             @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  journals       FinanceJournal[]
+
+  @@unique([facilityId, name])
+  @@unique([id, facilityId])
+  @@unique([yearId, month])
+  @@unique([facilityId, label])
+  @@index([facilityId, startsOn, endsOn])
+  @@map("finance_period")
+  app_user_finance_period_locked_by_facility_idToapp_user AppUser?             @relation("finance_period_locked_by_facility_idToapp_user", fields: [lockedBy, facilityId], references: [id, facilityId], onDelete: NoAction, onUpdate: NoAction, map: "period_lock_actor")
+}
+
+model FinanceJournal {
+  cashClassification FinanceCashClassification?
+  yearClosing        FinanceYearClosing?
+  assetEntry         FinanceAssetEntry?
+  payrollRun         PayrollRun?
+  payrollLoan        PayrollLoan?
+  payrollPayment     PayrollPayment?
+  id                 String                     @id @default(uuid())
+  facilityId         String                     @map("facility_id")
+  periodId           String                     @map("period_id")
+  legacyPeriodId     String?                    @map("legacy_period_id")
+  legacyPeriod       FinanceLegacyPeriod?       @relation(fields: [legacyPeriodId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  number             String?
+  date               DateTime                   @db.Timestamptz(3)
+  currency           String                     @default("AFN")
+  memo               String
+  status             FinanceJournalStatus       @default(draft)
+  sourceType         String                     @default("manual") @map("source_type")
+  sourceId           String?                    @map("source_id")
+  invoiceId          String?                    @map("invoice_id")
+  paymentId          String?                    @map("payment_id")
+  panelId            String?                    @map("panel_id")
+  invoice            Invoice?                   @relation(fields: [invoiceId, facilityId], references: [id, facilityId], onUpdate: NoAction, map: "finance_journal_invoice_fk")
+  panel              Panel?                     @relation(fields: [panelId, facilityId], references: [id, facilityId], onUpdate: NoAction, map: "finance_journal_panel_fk")
+  deposit            FinanceDeposit?
+  reversalOfId       String?                    @unique @map("reversal_of_id")
+  version            Int                        @default(1)
+  createdBy          String                     @map("created_by")
+  createdAt          DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  postedBy           String?                    @map("posted_by")
+  postedAt           DateTime?                  @map("posted_at") @db.Timestamptz(3)
+  creator            AppUser                    @relation("JournalCreator", fields: [createdBy, facilityId], references: [id, facilityId], onDelete: Restrict)
+  poster             AppUser?                   @relation("JournalPoster", fields: [postedBy, facilityId], references: [id, facilityId], onDelete: Restrict)
+  facility           Facility                   @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  period             FiscalPeriod               @relation(fields: [periodId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  reversalOf         FinanceJournal?            @relation("FinanceReversal", fields: [reversalOfId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  reversal           FinanceJournal?            @relation("FinanceReversal")
+  lines              FinanceJournalLine[]
+  bill               FinanceBill?
+  settlements        FinanceSettlement[]
+
+  @@unique([reversalOfId, facilityId])
+  @@unique([facilityId, number])
+  @@unique([facilityId, sourceType, sourceId])
+  @@unique([id, facilityId])
+  @@index([facilityId, date, status])
+  @@map("finance_journal")
+}
+
+model FinanceJournalLine {
+  capitalizedAssets FinanceAsset[]
+  id                String                @id @default(uuid())
+  facilityId        String                @map("facility_id")
+  journalId         String                @map("journal_id")
+  accountId         String                @map("account_id")
+  description       String                @default("")
+  costCentreId      String?               @map("cost_centre_id")
+  costCentre        FinanceCostCentre?    @relation(fields: [costCentreId, facilityId], references: [id, facilityId], onUpdate: NoAction, map: "finance_line_centre_fk")
+  debit             Decimal               @default(0) @db.Decimal(18, 2)
+  credit            Decimal               @default(0) @db.Decimal(18, 2)
+  currency          String                @default("AFN")
+  exchangeRate      Decimal               @default(1) @map("exchange_rate") @db.Decimal(20, 10)
+  baseDebit         Decimal               @default(dbgenerated()) @map("base_debit") @db.Decimal(18, 2)
+  baseCredit        Decimal               @default(dbgenerated()) @map("base_credit") @db.Decimal(18, 2)
+  journal           FinanceJournal        @relation(fields: [journalId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  account           FinanceAccount        @relation(fields: [accountId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  statementLine     FinanceStatementLine?
+
+  @@unique([id, facilityId])
+  @@index([facilityId, accountId])
+  @@map("finance_journal_line")
+}
+
+model FinanceAudit {
+  id         String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  facilityId String   @map("facility_id")
+  journalId  String?  @map("journal_id")
+  actorId    String?  @map("actor_id")
+  occurredAt DateTime @default(dbgenerated("clock_timestamp()")) @map("occurred_at") @db.Timestamptz(3)
+  action     String
+  entity     String
+  entityId   String   @map("entity_id")
+  before     Json?
+  after      Json?
+  facility   Facility @relation(fields: [facilityId], references: [id], onUpdate: NoAction)
+
+  @@index([facilityId, journalId, occurredAt])
+  @@map("finance_audit")
+}
+
+model FinanceRevenueMapping {
+  id         String         @id @default(uuid())
+  facilityId String         @map("facility_id")
+  category   String
+  accountId  String         @map("account_id")
+  facility   Facility       @relation(fields: [facilityId], references: [id], onUpdate: NoAction)
+  account    FinanceAccount @relation(fields: [accountId, facilityId], references: [id, facilityId], onUpdate: NoAction, map: "finance_mapping_account_fk")
+
+  @@unique([facilityId, category])
+  @@map("finance_revenue_mapping")
+}
+
+model FinanceInvoiceState {
+  id         String   @id @default(uuid())
+  facilityId String   @map("facility_id")
+  invoiceId  String   @unique @map("invoice_id")
+  target     Json
+  facility   Facility @relation(fields: [facilityId], references: [id], onUpdate: NoAction)
+  invoice    Invoice  @relation(fields: [invoiceId, facilityId], references: [id, facilityId], onUpdate: NoAction)
+
+  @@unique([invoiceId, facilityId])
+  @@map("finance_invoice_state")
+}
+
+model FinanceTillClose {
+  id         String           @id @default(uuid())
+  facilityId String           @map("facility_id")
+  userId     String           @map("user_id")
+  origin     String
+  label      String
+  startsAt   DateTime         @map("starts_at") @db.Timestamptz(3)
+  endsAt     DateTime         @map("ends_at") @db.Timestamptz(3)
+  opening    Decimal          @db.Decimal(18, 2)
+  expected   Decimal          @db.Decimal(18, 2)
+  counted    Decimal          @db.Decimal(18, 2)
+  difference Decimal          @db.Decimal(18, 2)
+  paymentIds Json             @map("payment_ids")
+  note       String
+  createdBy  String           @map("created_by")
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  approvedBy String?          @map("approved_by")
+  approvedAt DateTime?        @map("approved_at") @db.Timestamptz(3)
+  facility                                                      Facility         @relation(fields: [facilityId], references: [id], onUpdate: NoAction)
+  deposits   FinanceDeposit[]
+
+  @@unique([id, facilityId])
+  @@index([facilityId, userId, startsAt])
+  @@map("finance_till_close")
+  app_user_finance_till_close_approved_by_facility_idToapp_user AppUser?         @relation("finance_till_close_approved_by_facility_idToapp_user", fields: [approvedBy, facilityId], references: [id, facilityId], onUpdate: NoAction)
+  app_user_finance_till_close_created_by_facility_idToapp_user  AppUser          @relation("finance_till_close_created_by_facility_idToapp_user", fields: [createdBy, facilityId], references: [id, facilityId], onUpdate: NoAction)
+  app_user_finance_till_close_user_id_facility_idToapp_user     AppUser          @relation("finance_till_close_user_id_facility_idToapp_user", fields: [userId, facilityId], references: [id, facilityId], onUpdate: NoAction)
+}
+
+model FinanceDeposit {
+  id          String            @id @default(uuid())
+  facilityId  String            @map("facility_id")
+  journalId   String            @unique @map("journal_id")
+  tillCloseId String?           @map("till_close_id")
+  reference   String
+  amount      Decimal           @db.Decimal(18, 2)
+  facility    Facility          @relation(fields: [facilityId], references: [id], onUpdate: NoAction)
+  journal     FinanceJournal    @relation(fields: [journalId, facilityId], references: [id, facilityId], onUpdate: NoAction)
+  tillClose   FinanceTillClose? @relation(fields: [tillCloseId, facilityId], references: [id, facilityId], onUpdate: NoAction)
+
+  @@unique([journalId, facilityId])
+  @@unique([facilityId, reference])
+  @@map("finance_deposit")
+}
+
+model FinanceSupplier {
+  id                  String                      @id @default(uuid())
+  facilityId          String                      @map("facility_id")
+  name                String
+  reference           String?
+  termsDays           Int                         @default(0) @map("terms_days")
+  terms               String                      @default("")
+  contact             String                      @default("")
+  isActive            Boolean                     @default(true) @map("is_active")
+  createdAt           DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  facility            Facility                    @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  bills               FinanceBill[]
+  procurementReceipts FinanceProcurementReceipt[]
+
+  @@unique([id, facilityId])
+  @@unique([facilityId, name])
+  @@map("finance_supplier")
+}
+
+model FinanceBill {
+  id          String                     @id @default(uuid())
+  facilityId  String                     @map("facility_id")
+  supplierId  String                     @map("supplier_id")
+  reference   String
+  kind        String                     @default("bill")
+  receiptId   String?                    @unique @map("receipt_id")
+  receipt     FinanceProcurementReceipt? @relation(fields: [receiptId, facilityId], references: [id, facilityId], onUpdate: NoAction, map: "finance_bill_receipt_fk")
+  dueOn       DateTime                   @map("due_on") @db.Timestamptz(3)
+  amount      Decimal                    @db.Decimal(18, 2)
+  journalId   String                     @unique @map("journal_id")
+  facility    Facility                   @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  supplier    FinanceSupplier            @relation(fields: [supplierId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  journal     FinanceJournal             @relation(fields: [journalId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  settlements FinanceSettlement[]
+
+  @@unique([journalId, facilityId])
+  @@unique([facilityId, supplierId, reference])
+  @@unique([receiptId, facilityId])
+  @@unique([id, facilityId])
+  @@map("finance_bill")
+}
+
+model FinanceSettlement {
+  id         String         @id @default(uuid())
+  facilityId String         @map("facility_id")
+  billId     String         @map("bill_id")
+  amount     Decimal        @db.Decimal(18, 2)
+  journalId  String         @map("journal_id")
+  facility   Facility       @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  bill       FinanceBill    @relation(fields: [billId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  journal    FinanceJournal @relation(fields: [journalId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([journalId, billId])
+  @@map("finance_settlement")
+}
+
+model FinanceCostCentre {
+  assets           FinanceAsset[]
+  budgets          FinanceBudget[]
+  payrollEmployees PayrollEmployee[]
+  payrollItems     PayrollItem[]
+  id               String                  @id @default(uuid())
+  facilityId       String                  @map("facility_id")
+  code             String
+  name             String
+  isActive         Boolean                 @default(true) @map("is_active")
+  facility         Facility                @relation(fields: [facilityId], references: [id], onUpdate: NoAction)
+  lines            FinanceJournalLine[]
+  mappings         FinanceExpenseMapping[]
+
+  @@unique([id, facilityId])
+  @@unique([facilityId, code])
+  @@map("finance_cost_centre")
+}
+
+model FinanceExpenseMapping {
+  id           String             @id @default(uuid())
+  facilityId   String             @map("facility_id")
+  category     String
+  accountId    String             @map("account_id")
+  costCentreId String?            @map("cost_centre_id")
+  facility     Facility           @relation(fields: [facilityId], references: [id], onUpdate: NoAction)
+  account      FinanceAccount     @relation(fields: [accountId, facilityId], references: [id, facilityId], onUpdate: NoAction)
+  costCentre   FinanceCostCentre? @relation(fields: [costCentreId, facilityId], references: [id, facilityId], onUpdate: NoAction)
+
+  @@unique([facilityId, category])
+  @@map("finance_expense_mapping")
+}
+
+// Immutable output consumed from procurement; purchase orders and stock remain upstream.
+model FinanceProcurementReceipt {
+  id           String          @id @default(uuid())
+  facilityId   String          @map("facility_id")
+  supplierId   String          @map("supplier_id")
+  sourceSystem String          @map("source_system")
+  poReference  String          @map("po_reference")
+  grnReference String          @map("grn_reference")
+  receivedOn   DateTime        @map("received_on") @db.Timestamptz(3)
+  lines        Json
+  amount       Decimal         @db.Decimal(18, 2)
+  createdBy    String          @map("created_by")
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  facility     Facility        @relation(fields: [facilityId], references: [id], onUpdate: NoAction)
+  supplier     FinanceSupplier @relation(fields: [supplierId, facilityId], references: [id, facilityId], onUpdate: NoAction)
+  bill         FinanceBill?
+
+  @@unique([id, facilityId])
+  @@unique([facilityId, sourceSystem, grnReference])
+  @@map("finance_procurement_receipt")
+  app_user     AppUser         @relation(fields: [createdBy, facilityId], references: [id, facilityId], onUpdate: NoAction)
+}
+
+model FinanceStatement {
+  id             String                 @id @default(uuid())
+  facilityId     String                 @map("facility_id")
+  accountId      String                 @map("account_id")
+  reference      String
+  startsOn       DateTime               @map("starts_on") @db.Timestamptz(3)
+  endsOn         DateTime               @map("ends_on") @db.Timestamptz(3)
+  openingBalance Decimal                @map("opening_balance") @db.Decimal(18, 2)
+  closingBalance Decimal                @map("closing_balance") @db.Decimal(18, 2)
+  reconciledAt   DateTime?              @map("reconciled_at") @db.Timestamptz(3)
+  reconciledBy   String?                @map("reconciled_by")
+  reconciler     AppUser?               @relation("StatementReconciler", fields: [reconciledBy, facilityId], references: [id, facilityId], onDelete: Restrict)
+  facility       Facility               @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  account        FinanceAccount         @relation(fields: [accountId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  lines          FinanceStatementLine[]
+
+  @@unique([facilityId, accountId, reference])
+  @@unique([id, facilityId])
+  @@map("finance_statement")
+}
+
+model FinanceStatementLine {
+  id            String              @id @default(uuid())
+  facilityId    String              @map("facility_id")
+  statementId   String              @map("statement_id")
+  date          DateTime            @db.Timestamptz(3)
+  description   String
+  amount        Decimal             @db.Decimal(18, 2)
+  journalLineId String?             @unique @map("journal_line_id")
+  statement     FinanceStatement    @relation(fields: [statementId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  journalLine   FinanceJournalLine? @relation(fields: [journalLineId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([journalLineId, facilityId])
+  @@map("finance_statement_line")
 }
 
 /// 2 — ONE department table with a type enum.
@@ -243,14 +806,20 @@ model Department {
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")
 
-  facility     Facility                 @relation(fields: [facilityId], references: [id])
-  rooms        Room[]
-  services     Service[]
-  visits       Visit[]
-  appointments Appointment[]
-  staff        PractitionerDepartment[]
+  facility            Facility                 @relation(fields: [facilityId], references: [id])
+  rooms               Room[]
+  services            Service[]
+  visits              Visit[]
+  appointments        Appointment[]
+  staff               PractitionerDepartment[]
+  employees           Employee[]
+  rosterEntries       RosterEntry[]
+  receptionBeds       ReceptionBed[]
+  receptionRequests   ReceptionCareRequest[]
+  appointmentWaitlist AppointmentWaitlist[]
 
   @@unique([facilityId, code])
+  @@unique([id, facilityId])
   @@index([facilityId, type])
   @@map("department")
 }
@@ -265,11 +834,13 @@ model Room {
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  facility   Facility   @relation(fields: [facilityId], references: [id])
-  department Department @relation(fields: [departmentId], references: [id])
-  visits     Visit[]
+  facility      Facility       @relation(fields: [facilityId], references: [id])
+  department    Department     @relation(fields: [departmentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  visits        Visit[]
+  receptionBeds ReceptionBed[]
 
   @@unique([facilityId, code])
+  @@unique([id, facilityId])
   @@map("room")
 }
 
@@ -279,17 +850,31 @@ model Room {
 
 /// 4
 model AppUser {
-  id           String    @id @default(uuid())
-  facilityId   String    @map("facility_id")
-  username     String
-  email        String?
-  passwordHash String    @map("password_hash")
-  fullName     String    @map("full_name")
-  isActive     Boolean   @default(true) @map("is_active")
-  lastLoginAt  DateTime? @map("last_login_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  deletedAt    DateTime? @map("deleted_at")
+  ownedCrmTasks               CrmTask[]                @relation("CrmTaskOwner")
+  crmTaskHistory              CrmTaskHistory[]         @relation("CrmTaskActor")
+  crmTaskAssignments          CrmTaskHistory[]         @relation("CrmTaskHistoryOwner")
+  completedCrmCalls           CrmCall[]
+  crmInteractions             CrmInteraction[]         @relation("CrmInteractionAuthor")
+  crmInteractionRevisions     CrmInteractionRevision[]
+  ownedCrmLeads               CrmLead[]                @relation("CrmLeadOwner")
+  crmLeadChanges              CrmLeadStatusChange[]
+  reportGrants                FinanceReportGrant[]     @relation("ReportViewer")
+  createdFinanceJournals      FinanceJournal[]         @relation("JournalCreator")
+  postedFinanceJournals       FinanceJournal[]         @relation("JournalPoster")
+  closedFiscalPeriods         FiscalPeriod[]           @relation("FiscalPeriodCloser")
+  closedLegacyPeriods         FinanceLegacyPeriod[]    @relation("LegacyPeriodCloser")
+  reconciledFinanceStatements FinanceStatement[]       @relation("StatementReconciler")
+  id                          String                   @id @default(uuid())
+  facilityId                  String                   @map("facility_id")
+  username                    String
+  email                       String?
+  passwordHash                String                   @map("password_hash")
+  fullName                    String                   @map("full_name")
+  isActive                    Boolean                  @default(true) @map("is_active")
+  lastLoginAt                 DateTime?                @map("last_login_at")
+  createdAt                   DateTime                 @default(now()) @map("created_at")
+  updatedAt                   DateTime                 @updatedAt @map("updated_at")
+  deletedAt                   DateTime?                @map("deleted_at")
 
   facility          Facility           @relation(fields: [facilityId], references: [id])
   practitioner      Practitioner?
@@ -298,9 +883,27 @@ model AppUser {
   auditLogs         AuditLog[]
   errorLogs         ErrorLog[]
   followUpResponses FollowUpResponse[]
+  employee          Employee?
+  hrNotifications   HrNotification[]
 
   @@unique([facilityId, username])
+  @@unique([id, facilityId])
   @@map("app_user")
+  crm_lead_patient_crm_lead_patient_created_by_facility_idToapp_user           CrmLeadPatient[]            @relation("crm_lead_patient_created_by_facility_idToapp_user")
+  crm_lead_patient_crm_lead_patient_revoked_by_facility_idToapp_user           CrmLeadPatient[]            @relation("crm_lead_patient_revoked_by_facility_idToapp_user")
+  finance_asset                                                                FinanceAsset[]
+  finance_period_finance_period_locked_by_facility_idToapp_user                FiscalPeriod[]              @relation("finance_period_locked_by_facility_idToapp_user")
+  finance_period_event                                                         FinancePeriodEvent[]
+  finance_procurement_receipt                                                  FinanceProcurementReceipt[]
+  finance_report_grant_finance_report_grant_granted_by_facility_idToapp_user   FinanceReportGrant[]        @relation("finance_report_grant_granted_by_facility_idToapp_user")
+  finance_till_close_finance_till_close_approved_by_facility_idToapp_user      FinanceTillClose[]          @relation("finance_till_close_approved_by_facility_idToapp_user")
+  finance_till_close_finance_till_close_created_by_facility_idToapp_user       FinanceTillClose[]          @relation("finance_till_close_created_by_facility_idToapp_user")
+  finance_till_close_finance_till_close_user_id_facility_idToapp_user          FinanceTillClose[]          @relation("finance_till_close_user_id_facility_idToapp_user")
+  finance_year_closing_finance_year_closing_finalized_by_facility_idToapp_user FinanceYearClosing[]        @relation("finance_year_closing_finalized_by_facility_idToapp_user")
+  finance_year_closing_finance_year_closing_prepared_by_facility_idToapp_user  FinanceYearClosing[]        @relation("finance_year_closing_prepared_by_facility_idToapp_user")
+  payroll_run_payroll_run_approved_by_facility_idToapp_user                    PayrollRun[]                @relation("payroll_run_approved_by_facility_idToapp_user")
+  payroll_run_payroll_run_created_by_facility_idToapp_user                     PayrollRun[]                @relation("payroll_run_created_by_facility_idToapp_user")
+  payroll_run_payroll_run_reviewed_by_facility_idToapp_user                    PayrollRun[]                @relation("payroll_run_reviewed_by_facility_idToapp_user")
 }
 
 /// 5 — admin, receptionist, nurse, doctor, lab_tech, pharmacist, management.
@@ -402,7 +1005,7 @@ model AuditLog {
   before     Json?
   after      Json?
   ipAddress  String?     @map("ip_address")
-  createdAt  DateTime    @default(now()) @map("created_at")
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
 
   facility Facility @relation(fields: [facilityId], references: [id])
   user     AppUser? @relation(fields: [userId], references: [id])
@@ -472,18 +1075,21 @@ model Practitioner {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
 
-  facility      Facility                 @relation(fields: [facilityId], references: [id])
-  user          AppUser?                 @relation(fields: [userId], references: [id])
-  speciality    Speciality?              @relation(fields: [specialityId], references: [id])
-  departments   PractitionerDepartment[]
-  visits        Visit[]
-  appointments  Appointment[]
-  prescriptions Prescription[]
-  labOrders     LabOrder[]
-  diagnoses     Diagnosis[]
-  clinicalNotes ClinicalNote[]
+  facility            Facility                 @relation(fields: [facilityId], references: [id])
+  user                AppUser?                 @relation(fields: [userId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  speciality          Speciality?              @relation(fields: [specialityId], references: [id])
+  departments         PractitionerDepartment[]
+  visits              Visit[]
+  appointments        Appointment[]
+  prescriptions       Prescription[]
+  labOrders           LabOrder[]
+  diagnoses           Diagnosis[]
+  clinicalNotes       ClinicalNote[]
+  appointmentWaitlist AppointmentWaitlist[]
 
   @@unique([facilityId, code])
+  @@unique([id, facilityId])
+  @@unique([userId, facilityId])
   @@map("practitioner")
 }
 
@@ -506,13 +1112,14 @@ model PractitionerDepartment {
 
 /// 14 — dateOfBirth, NOT age. Age is derived.
 model Patient {
-  id          String    @id @default(uuid())
-  facilityId  String    @map("facility_id")
-  mrn         String // human-facing medical record number
-  prefix      String? // Mr. / Mrs. / Dr.
-  firstName   String    @map("first_name")
-  lastName    String?   @map("last_name")
-  dateOfBirth DateTime? @map("date_of_birth") @db.Date
+  crmRelationships CrmRelationship[]
+  id               String            @id @default(uuid())
+  facilityId       String            @map("facility_id")
+  mrn              String // human-facing medical record number
+  prefix           String? // Mr. / Mrs. / Dr.
+  firstName        String            @map("first_name")
+  lastName         String?           @map("last_name")
+  dateOfBirth      DateTime?         @map("date_of_birth") @db.Date
 
   /// DOB is often genuinely unknown here. When it is, record the ESTIMATE —
   /// years+months+days, because "1 year old" is useless for an infant.
@@ -542,14 +1149,23 @@ model Patient {
   deletedAt        DateTime?         @map("deleted_at")
   createdBy        String?           @map("created_by")
 
-  facility     Facility            @relation(fields: [facilityId], references: [id])
-  identifiers  PatientIdentifier[]
-  allergies    Allergy[]
-  visits       Visit[]
-  appointments Appointment[]
-  invoices     Invoice[]
+  facility              Facility                  @relation(fields: [facilityId], references: [id])
+  identifiers           PatientIdentifier[]
+  allergies             Allergy[]
+  visits                Visit[]
+  appointments          Appointment[]
+  invoices              Invoice[]
+  receptionRequests     ReceptionCareRequest[]    @relation("ReceptionRequestPatient")
+  receptionMergeTargets ReceptionCareRequest[]    @relation("ReceptionRequestTargetPatient")
+  appointmentWaitlist   AppointmentWaitlist[]
+  receptionDocuments    PatientDocument[]
+  receptionContacts     PatientContact[]
+  receptionCoverages    PatientCoverage[]
+  receptionDeposits     ReceptionPatientDeposit[]
+  receptionReminders    ReceptionReminder[]
 
   @@unique([facilityId, mrn])
+  @@unique([id, facilityId])
   @@index([facilityId, phone])
   @@index([facilityId, lastName, firstName])
   @@map("patient")
@@ -598,6 +1214,11 @@ model Allergy {
 
 /// 17 — the PLAN. Optional. Separate from what actually happened.
 model Appointment {
+  endsAt         DateTime?         @map("ends_at")
+  crmLinkId      String?           @map("crm_link_id")
+  crmLeadId      String?           @map("crm_lead_id")
+  crmLink            CrmRelationship?       @relation(fields: [crmLinkId, patientId, facilityId], references: [id, patientId, facilityId], map: "appointment_crm_link_fkey")
+  crmLead            CrmLead?               @relation(fields: [crmLeadId, facilityId], references: [id, facilityId], map: "appointment_crm_lead_fkey")
   id             String            @id @default(uuid())
   facilityId     String            @map("facility_id")
   patientId      String            @map("patient_id")
@@ -610,12 +1231,16 @@ model Appointment {
   updatedAt      DateTime          @updatedAt @map("updated_at")
   createdBy      String?           @map("created_by")
 
-  facility     Facility      @relation(fields: [facilityId], references: [id])
-  patient      Patient       @relation(fields: [patientId], references: [id])
-  practitioner Practitioner? @relation(fields: [practitionerId], references: [id])
-  department   Department    @relation(fields: [departmentId], references: [id])
-  visit        Visit?
+  facility           Facility               @relation(fields: [facilityId], references: [id])
+  patient            Patient                @relation(fields: [patientId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  practitioner       Practitioner?          @relation(fields: [practitionerId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  department         Department             @relation(fields: [departmentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  visit              Visit?
+  receptionRequests  ReceptionCareRequest[]
+  waitlistEntries    AppointmentWaitlist[]
+  receptionReminders ReceptionReminder[]
 
+  @@unique([id, facilityId])
   @@index([facilityId, scheduledAt])
   @@index([patientId])
   @@map("appointment")
@@ -644,28 +1269,34 @@ model Visit {
   referredBy     String? @map("referred_by")
   referralSource String? @map("referral_source")
 
-  startedAt DateTime  @default(now()) @map("started_at")
-  endedAt   DateTime? @map("ended_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  createdBy String?   @map("created_by")
+  startedAt               DateTime  @default(now()) @map("started_at")
+  endedAt                 DateTime? @map("ended_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+  createdBy               String?   @map("created_by")
+  queuePriority           Int       @default(0) @map("queue_priority")
+  queuePriorityReason     String?   @map("queue_priority_reason")
+  queuePriorityApprovedBy String?   @map("queue_priority_approved_by")
+  queuePriorityApprovedAt DateTime? @map("queue_priority_approved_at") @db.Timestamptz(3)
 
-  facility      Facility             @relation(fields: [facilityId], references: [id])
-  patient       Patient              @relation(fields: [patientId], references: [id])
-  appointment   Appointment?         @relation(fields: [appointmentId], references: [id])
-  department    Department           @relation(fields: [departmentId], references: [id])
-  practitioner  Practitioner?        @relation(fields: [practitionerId], references: [id])
-  room          Room?                @relation(fields: [roomId], references: [id])
-  statusHistory VisitStatusHistory[]
-  vitals        Vitals[]
-  diagnoses     Diagnosis[]
-  clinicalNotes ClinicalNote[]
-  prescriptions Prescription[]
-  labOrders     LabOrder[]
-  attachments   Attachment[]
-  invoices      Invoice[]
+  facility          Facility               @relation(fields: [facilityId], references: [id])
+  patient           Patient                @relation(fields: [patientId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  appointment       Appointment?           @relation(fields: [appointmentId], references: [id])
+  department        Department             @relation(fields: [departmentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  practitioner      Practitioner?          @relation(fields: [practitionerId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  room              Room?                  @relation(fields: [roomId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  statusHistory     VisitStatusHistory[]
+  vitals            Vitals[]
+  diagnoses         Diagnosis[]
+  clinicalNotes     ClinicalNote[]
+  prescriptions     Prescription[]
+  labOrders         LabOrder[]
+  attachments       Attachment[]
+  invoices          Invoice[]
+  receptionRequests ReceptionCareRequest[]
 
   @@unique([facilityId, visitNo])
+  @@unique([id, facilityId])
   /// THIS INDEX IS THE DOCTOR'S QUEUE.
   @@index([facilityId, departmentId, status, startedAt])
   /// And this one is the same queue asked the other way (task 3.7). A doctor opens
@@ -675,6 +1306,249 @@ model Visit {
   @@index([facilityId, practitionerId, status, startedAt])
   @@index([patientId, startedAt])
   @@map("visit")
+}
+
+/// Reception-side coordination only. Clinical admission, transfer, discharge and
+/// queue-priority decisions stay pending until an authorised reviewer approves them.
+model ReceptionCareRequest {
+  id              String    @id @default(uuid())
+  facilityId      String    @map("facility_id")
+  reference       String
+  kind            String
+  patientId       String    @map("patient_id")
+  targetPatientId String?   @map("target_patient_id")
+  visitId         String?   @map("visit_id")
+  appointmentId   String?   @map("appointment_id")
+  departmentId    String?   @map("department_id")
+  sourceBedId     String?   @map("source_bed_id")
+  targetBedId     String?   @map("target_bed_id")
+  priority        String    @default("routine")
+  status          String    @default("pending")
+  reason          String
+  notes           String    @default("")
+  requestedBy     String    @map("requested_by")
+  requestedAt     DateTime  @default(now()) @map("requested_at") @db.Timestamptz(3)
+  reviewedBy      String?   @map("reviewed_by")
+  reviewedAt      DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  reviewNote      String    @default("") @map("review_note")
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  facility      Facility      @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  patient       Patient       @relation("ReceptionRequestPatient", fields: [patientId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  targetPatient Patient?      @relation("ReceptionRequestTargetPatient", fields: [targetPatientId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  department    Department?   @relation(fields: [departmentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  sourceBed     ReceptionBed? @relation("ReceptionRequestSourceBed", fields: [sourceBedId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  targetBed     ReceptionBed? @relation("ReceptionRequestTargetBed", fields: [targetBedId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  visit         Visit?        @relation(fields: [visitId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  appointment   Appointment?  @relation(fields: [appointmentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([facilityId, reference])
+  @@unique([id, facilityId])
+  @@index([facilityId, status, requestedAt])
+  @@index([patientId, requestedAt])
+  @@map("reception_care_request")
+}
+
+model ReceptionBed {
+  id           String   @id @default(uuid())
+  facilityId   String   @map("facility_id")
+  departmentId String   @map("department_id")
+  roomId       String?  @map("room_id")
+  code         String
+  label        String
+  status       String   @default("available")
+  notes        String   @default("")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  facility       Facility               @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  department     Department             @relation(fields: [departmentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  room           Room?                  @relation(fields: [roomId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  sourceRequests ReceptionCareRequest[] @relation("ReceptionRequestSourceBed")
+  targetRequests ReceptionCareRequest[] @relation("ReceptionRequestTargetBed")
+
+  @@unique([facilityId, code])
+  @@unique([id, facilityId])
+  @@index([facilityId, departmentId, status])
+  @@map("reception_bed")
+}
+
+model AppointmentWaitlist {
+  id             String    @id @default(uuid())
+  facilityId     String    @map("facility_id")
+  patientId      String    @map("patient_id")
+  departmentId   String    @map("department_id")
+  practitionerId String?   @map("practitioner_id")
+  preferredOn    DateTime? @map("preferred_on") @db.Date
+  priority       String    @default("routine")
+  status         String    @default("waiting")
+  note           String    @default("")
+  appointmentId  String?   @map("appointment_id")
+  createdBy      String    @map("created_by")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  contactedAt    DateTime? @map("contacted_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  facility     Facility      @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  patient      Patient       @relation(fields: [patientId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  department   Department    @relation(fields: [departmentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  practitioner Practitioner? @relation(fields: [practitionerId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  appointment  Appointment?  @relation(fields: [appointmentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([id, facilityId])
+  @@index([facilityId, status, preferredOn])
+  @@index([patientId, status])
+  @@map("appointment_waitlist")
+}
+
+model PatientDocument {
+  id         String    @id @default(uuid())
+  facilityId String    @map("facility_id")
+  patientId  String    @map("patient_id")
+  category   String
+  fileName   String    @map("file_name")
+  mimeType   String    @map("mime_type")
+  sizeBytes  Int       @map("size_bytes")
+  sha256     String
+  content    Bytes
+  uploadedBy String    @map("uploaded_by")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  voidedAt   DateTime? @map("voided_at") @db.Timestamptz(3)
+  voidedBy   String?   @map("voided_by")
+  voidReason String?   @map("void_reason")
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  patient  Patient  @relation(fields: [patientId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([id, facilityId])
+  @@index([patientId, createdAt])
+  @@map("patient_document")
+}
+
+model PatientContact {
+  id               String    @id @default(uuid())
+  facilityId       String    @map("facility_id")
+  patientId        String    @map("patient_id")
+  name             String
+  relationship     String
+  phone            String?
+  kind             String    @default("family")
+  isPrimary        Boolean   @default(false) @map("is_primary")
+  isEmergency      Boolean   @default(false) @map("is_emergency")
+  canCall          Boolean   @default(false) @map("can_call")
+  canSms           Boolean   @default(false) @map("can_sms")
+  canWhatsapp      Boolean   @default(false) @map("can_whatsapp")
+  safeInstructions String    @default("") @map("safe_instructions")
+  createdBy        String    @map("created_by")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  archivedAt       DateTime? @map("archived_at") @db.Timestamptz(3)
+
+  facility  Facility            @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  patient   Patient             @relation(fields: [patientId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  reminders ReceptionReminder[]
+
+  @@unique([id, facilityId])
+  @@index([patientId, archivedAt])
+  @@map("patient_contact")
+}
+
+model PatientCoverage {
+  id         String    @id @default(uuid())
+  facilityId String    @map("facility_id")
+  patientId  String    @map("patient_id")
+  panelId    String    @map("panel_id")
+  memberNo   String    @map("member_no")
+  status     String    @default("pending")
+  validFrom  DateTime? @map("valid_from") @db.Date
+  validTo    DateTime? @map("valid_to") @db.Date
+  notes      String    @default("")
+  verifiedBy String?   @map("verified_by")
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
+  createdBy  String    @map("created_by")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  patient  Patient  @relation(fields: [patientId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  panel    Panel    @relation(fields: [panelId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([facilityId, panelId, memberNo])
+  @@unique([id, facilityId])
+  @@index([patientId, status])
+  @@map("patient_coverage")
+}
+
+model ReceptionPatientDeposit {
+  id               String        @id @default(uuid())
+  facilityId       String        @map("facility_id")
+  patientId        String        @map("patient_id")
+  amount           Decimal       @db.Decimal(18, 2)
+  currency         String        @default("AFN")
+  method           PaymentMethod
+  reference        String?
+  status           String        @default("active")
+  receivedBy       String        @map("received_by")
+  receivedAt       DateTime      @default(now()) @map("received_at") @db.Timestamptz(3)
+  appliedInvoiceId String?       @map("applied_invoice_id")
+  closedBy         String?       @map("closed_by")
+  closedAt         DateTime?     @map("closed_at") @db.Timestamptz(3)
+  closeReason      String?       @map("close_reason")
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  patient  Patient  @relation(fields: [patientId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  invoice  Invoice? @relation(fields: [appliedInvoiceId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([id, facilityId])
+  @@index([facilityId, patientId, status])
+  @@map("reception_patient_deposit")
+}
+
+model ReceptionReminder {
+  id            String    @id @default(uuid())
+  facilityId    String    @map("facility_id")
+  patientId     String    @map("patient_id")
+  appointmentId String?   @map("appointment_id")
+  contactId     String?   @map("contact_id")
+  channel       String
+  destination   String
+  template      String
+  status        String    @default("queued")
+  scheduledFor  DateTime  @map("scheduled_for") @db.Timestamptz(3)
+  sentAt        DateTime? @map("sent_at") @db.Timestamptz(3)
+  failureReason String?   @map("failure_reason")
+  createdBy     String    @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  facility    Facility        @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  patient     Patient         @relation(fields: [patientId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  appointment Appointment?    @relation(fields: [appointmentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  contact     PatientContact? @relation(fields: [contactId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([id, facilityId])
+  @@index([facilityId, status, scheduledFor])
+  @@map("reception_reminder")
+}
+
+model ReceptionShiftHandover {
+  id             String    @id @default(uuid())
+  facilityId     String    @map("facility_id")
+  fromUserId     String    @map("from_user_id")
+  toUserId       String?   @map("to_user_id")
+  status         String    @default("open")
+  note           String
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  acknowledgedBy String?   @map("acknowledged_by")
+  acknowledgedAt DateTime? @map("acknowledged_at") @db.Timestamptz(3)
+  closedAt       DateTime? @map("closed_at") @db.Timestamptz(3)
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+
+  @@unique([id, facilityId])
+  @@index([facilityId, status, createdAt])
+  @@map("reception_shift_handover")
 }
 
 /// 19 — who moved the visit to which status, and when. Medico-legal.
@@ -754,7 +1628,7 @@ model Diagnosis {
 }
 
 /// 23 — SOAP = Subjective / Objective / Assessment / Plan.
-/// FOR FARHAT THIS IS THE MOST IMPORTANT CLINICAL TABLE: a psychiatric
+/// FOR AXON THIS IS THE MOST IMPORTANT CLINICAL TABLE: a psychiatric
 /// assessment (mental state exam, risk assessment, history) is long-form and
 /// shaped nothing like a surgical note. `content` is Json so each noteType
 /// carries its own fields — this is the flexibility Mongo promised, inside Postgres.
@@ -842,8 +1716,8 @@ model Drug {
   sellPrice       Decimal? @map("sell_price") @db.Decimal(12, 2)
   isControlled    Boolean  @default(false) @map("is_controlled")
   isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   facility          Facility           @relation(fields: [facilityId], references: [id])
   prescriptionItems PrescriptionItem[]
@@ -879,6 +1753,8 @@ model DrugInteraction {
 
 /// 28 — the clinical order. NO money here.
 model Prescription {
+  crmTasks             CrmTask[]
+  version              Int         @default(1)
   id                   String      @id @default(uuid())
   visitId              String      @map("visit_id")
   practitionerId       String      @map("practitioner_id")
@@ -906,6 +1782,53 @@ model Prescription {
 
   @@index([visitId])
   @@map("prescription")
+}
+
+/// Durable, versioned module notifications. Written with the source transaction.
+/// Consumers must process through IntegrationService so their local effects and
+/// receipt commit together. Clinical text and credentials are excluded.
+model IntegrationEvent {
+  sequence      Int                  @unique @default(autoincrement())
+  id            String               @id @default(uuid())
+  facilityId    String               @map("facility_id")
+  sourceAuditId String               @unique @map("source_audit_id")
+  type          String
+  version       Int                  @default(1)
+  aggregateType String               @map("aggregate_type")
+  aggregateId   String               @map("aggregate_id")
+  payload       Json
+  occurredAt    DateTime             @default(now()) @map("occurred_at") @db.Timestamptz(3)
+  facility      Facility             @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  receipts      IntegrationReceipt[]
+
+  @@index([facilityId, occurredAt, id])
+  @@map("integration_event")
+}
+
+/// One successful local delivery per named consumer. Failed transactions leave
+/// no receipt and remain pending; one consumer cannot acknowledge another's work.
+model IntegrationReceipt {
+  eventId     String           @map("event_id")
+  consumer    String
+  processedAt DateTime         @default(now()) @map("processed_at") @db.Timestamptz(3)
+  event       IntegrationEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, consumer])
+  @@map("integration_receipt")
+}
+
+model CommandReceipt {
+  facilityId  String   @map("facility_id")
+  userId      String   @map("user_id")
+  operation   String
+  key         String
+  requestHash String   @map("request_hash")
+  response    Json
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  facility    Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@id([facilityId, userId, operation, key])
+  @@map("command_receipt")
 }
 
 enum FollowUpResponseStatus {
@@ -988,7 +1911,7 @@ model LabTest {
   unit         String? // mg/dL | %
   price        Decimal? @db.Decimal(12, 2)
   isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   facility        Facility         @relation(fields: [facilityId], references: [id])
   panelTests      LabPanelTest[]
@@ -1060,8 +1983,8 @@ model LabOrder {
   createdAt      DateTime    @default(now()) @map("created_at")
 
   facility     Facility       @relation(fields: [facilityId], references: [id])
-  visit        Visit          @relation(fields: [visitId], references: [id])
-  practitioner Practitioner?  @relation(fields: [practitionerId], references: [id])
+  visit        Visit          @relation(fields: [visitId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  practitioner Practitioner?  @relation(fields: [practitionerId, facilityId], references: [id, facilityId], onDelete: Restrict)
   items        LabOrderItem[]
 
   // The order number is issued per facility (the counter restarts at 1 in each), so it is
@@ -1093,18 +2016,22 @@ model LabOrderItem {
 
 /// 36 — FHIR Observation. Flows back to the doctor via the visit.
 model LabResult {
-  id             String    @id @default(uuid())
-  labOrderItemId String    @unique @map("lab_order_item_id")
-  valueNumeric   Decimal?  @map("value_numeric") @db.Decimal(12, 4)
-  valueText      String?   @map("value_text")
-  unit           String?
-  isAbnormal     Boolean   @default(false) @map("is_abnormal")
-  flag           String? // H | L | HH | LL
-  comment        String?
-  enteredBy      String?   @map("entered_by")
-  enteredAt      DateTime  @default(now()) @map("entered_at")
-  verifiedBy     String?   @map("verified_by")
-  verifiedAt     DateTime? @map("verified_at")
+  referenceLow        Decimal?  @map("reference_low") @db.Decimal(12, 4)
+  referenceHigh       Decimal?  @map("reference_high") @db.Decimal(12, 4)
+  referenceText       String?   @map("reference_text")
+  referenceCapturedAt DateTime? @map("reference_captured_at")
+  id                  String    @id @default(uuid())
+  labOrderItemId      String    @unique @map("lab_order_item_id")
+  valueNumeric        Decimal?  @map("value_numeric") @db.Decimal(12, 4)
+  valueText           String?   @map("value_text")
+  unit                String?
+  isAbnormal          Boolean   @default(false) @map("is_abnormal")
+  flag                String? // H | L | HH | LL
+  comment             String?
+  enteredBy           String?   @map("entered_by")
+  enteredAt           DateTime  @default(now()) @map("entered_at")
+  verifiedBy          String?   @map("verified_by")
+  verifiedAt          DateTime? @map("verified_at")
 
   labOrderItem LabOrderItem @relation(fields: [labOrderItemId], references: [id])
 
@@ -1134,7 +2061,7 @@ model Service {
 
 /// 38 — insurance / corporate / NGO payer. Straight off the Medi-Pro "Panel" field.
 /// An employer or NGO pays instead of the patient.
-/// ASK DR. HAFIZULLAH whether Farhat actually has panels before you build the UI.
+/// ASK DR. HAFIZULLAH whether Axon actually has panels before you build the UI.
 model Panel {
   id            String   @id @default(uuid())
   facilityId    String   @map("facility_id")
@@ -1144,12 +2071,15 @@ model Panel {
   phone         String?
   discountPct   Decimal? @map("discount_pct") @db.Decimal(5, 2)
   isActive      Boolean  @default(true) @map("is_active")
-  createdAt     DateTime @default(now()) @map("created_at")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  facility Facility  @relation(fields: [facilityId], references: [id])
-  invoices Invoice[]
+  facility         Facility          @relation(fields: [facilityId], references: [id])
+  invoices         Invoice[]
+  journals         FinanceJournal[]
+  patientCoverages PatientCoverage[]
 
   @@unique([facilityId, code])
+  @@unique([id, facilityId])
   @@map("panel")
 }
 
@@ -1176,23 +2106,27 @@ model Invoice {
   /// carries the AppUser.id of the admin who approved it at the till — the second person
   /// the rule requires. Plain id, like createdBy, not a relation.
   discountApprovedBy String?   @map("discount_approved_by")
-  discountApprovedAt DateTime? @map("discount_approved_at")
+  discountApprovedAt DateTime? @map("discount_approved_at") @db.Timestamptz(3)
 
   total      Decimal  @default(0) @db.Decimal(12, 2)
   paidAmount Decimal  @default(0) @map("paid_amount") @db.Decimal(12, 2)
   currency   String   @default("AFN")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   createdBy  String?  @map("created_by")
 
-  facility Facility      @relation(fields: [facilityId], references: [id])
-  patient  Patient       @relation(fields: [patientId], references: [id])
-  visit    Visit?        @relation(fields: [visitId], references: [id])
-  panel    Panel?        @relation(fields: [panelId], references: [id])
-  items    InvoiceItem[]
-  payments Payment[]
+  facility          Facility                  @relation(fields: [facilityId], references: [id])
+  patient           Patient                   @relation(fields: [patientId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  visit             Visit?                    @relation(fields: [visitId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  panel              Panel?                    @relation(fields: [panelId, facilityId], references: [id, facilityId], onUpdate: NoAction)
+  journals          FinanceJournal[]
+  financeState      FinanceInvoiceState?
+  items             InvoiceItem[]
+  payments          Payment[]
+  receptionDeposits ReceptionPatientDeposit[]
 
   @@unique([facilityId, invoiceNo])
+  @@unique([id, facilityId])
   @@index([patientId])
   @@map("invoice")
 }
@@ -1215,7 +2149,7 @@ model InvoiceItem {
   // cost nothing). Invoice.paidAmount stays the sum of paid lines, so the invoice total still
   // reconciles.
   isPaid      Boolean   @default(false) @map("is_paid")
-  paidAt      DateTime? @map("paid_at")
+  paidAt      DateTime? @map("paid_at") @db.Timestamptz(3)
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
@@ -1232,7 +2166,7 @@ model Payment {
   reference  String?
   receiptNo  String?       @map("receipt_no")
   receivedBy String?       @map("received_by")
-  receivedAt DateTime      @default(now()) @map("received_at")
+  receivedAt DateTime      @default(now()) @map("received_at") @db.Timestamptz(3)
   isReversed Boolean       @default(false) @map("is_reversed")
 
   invoice Invoice @relation(fields: [invoiceId], references: [id])
@@ -1249,7 +2183,7 @@ model Payment {
 model NumberSequence {
   id         String   @id @default(uuid())
   facilityId String   @map("facility_id")
-  key        String // patient_mrn | visit_no | invoice_no | lab_order_no
+  key        String // patient_mrn | visit_no | invoice_no | lab_order_no | receipt_no | finance_journal | employee_no | reception_request
   prefix     String?
   year       Int?
   current    Int      @default(0)
@@ -1329,4 +2263,955 @@ model FacilityModule {
 
   @@id([facilityId, module])
   @@map("facility_module")
+}
+
+model PayrollConfig {
+  facilityId String   @id @map("facility_id")
+  taxName    String   @map("tax_name")
+  taxBands   Json     @map("tax_bands")
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+
+  @@map("payroll_config")
+}
+
+model PayrollEmployee {
+  id           String            @id @default(uuid())
+  facilityId   String            @map("facility_id")
+  code         String
+  name         String
+  nameDari     String            @default("") @map("name_dari")
+  basic        Decimal           @db.Decimal(18, 2)
+  allowance    Decimal           @db.Decimal(18, 2)
+  overtimeRate Decimal           @map("overtime_rate") @db.Decimal(18, 2)
+  currency     String            @default("AFN")
+  costCentreId String            @map("cost_centre_id")
+  startsOn     DateTime          @map("starts_on") @db.Timestamptz(3)
+  endsOn       DateTime?         @map("ends_on") @db.Timestamptz(3)
+  isActive     Boolean           @default(true) @map("is_active")
+  facility     Facility          @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  costCentre   FinanceCostCentre @relation(fields: [costCentreId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  items        PayrollItem[]
+  loans        PayrollLoan[]
+
+  @@unique([id, facilityId])
+  @@unique([facilityId, code])
+  @@map("payroll_employee")
+}
+
+model PayrollRun {
+  id         String          @id @default(uuid())
+  facilityId String          @map("facility_id")
+  periodId   String          @map("period_id")
+  date       DateTime        @db.Timestamptz(3)
+  status     String          @default("calculated")
+  version    Int             @default(1)
+  createdBy  String          @map("created_by")
+  reviewedBy String?         @map("reviewed_by")
+  approvedBy String?         @map("approved_by")
+  approvedAt DateTime?       @map("approved_at") @db.Timestamptz(3)
+  taxName    String          @map("tax_name")
+  taxBands   Json            @map("tax_bands")
+  journalId  String?         @unique @map("journal_id")
+  facility   Facility        @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  period     FiscalPeriod    @relation(fields: [periodId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  journal    FinanceJournal? @relation(fields: [journalId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  items      PayrollItem[]
+
+  @@unique([id, facilityId])
+  @@unique([facilityId, periodId])
+  @@unique([journalId, facilityId])
+  @@map("payroll_run")
+  app_user_payroll_run_approved_by_facility_idToapp_user AppUser?        @relation("payroll_run_approved_by_facility_idToapp_user", fields: [approvedBy, facilityId], references: [id, facilityId], onDelete: NoAction, onUpdate: NoAction)
+  app_user_payroll_run_created_by_facility_idToapp_user  AppUser         @relation("payroll_run_created_by_facility_idToapp_user", fields: [createdBy, facilityId], references: [id, facilityId], onDelete: NoAction, onUpdate: NoAction)
+  app_user_payroll_run_reviewed_by_facility_idToapp_user AppUser?        @relation("payroll_run_reviewed_by_facility_idToapp_user", fields: [reviewedBy, facilityId], references: [id, facilityId], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model PayrollItem {
+  id             String             @id @default(uuid())
+  facilityId     String             @map("facility_id")
+  runId          String             @map("run_id")
+  employeeId     String             @map("employee_id")
+  costCentreId   String             @map("cost_centre_id")
+  snapshot       Json
+  gross          Decimal            @db.Decimal(18, 2)
+  tax            Decimal            @db.Decimal(18, 2)
+  loanDeduction  Decimal            @map("loan_deduction") @db.Decimal(18, 2)
+  otherDeduction Decimal            @map("other_deduction") @db.Decimal(18, 2)
+  net            Decimal            @db.Decimal(18, 2)
+  facility       Facility           @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  run            PayrollRun         @relation(fields: [runId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  employee       PayrollEmployee    @relation(fields: [employeeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  costCentre     FinanceCostCentre  @relation(fields: [costCentreId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  repayments     PayrollRepayment[]
+  payments       PayrollPayment[]
+
+  @@unique([id, facilityId])
+  @@unique([runId, employeeId])
+  @@map("payroll_item")
+}
+
+model PayrollLoan {
+  id            String             @id @default(uuid())
+  facilityId    String             @map("facility_id")
+  employeeId    String             @map("employee_id")
+  kind          String
+  reference     String
+  amount        Decimal            @db.Decimal(18, 2)
+  installment   Decimal            @db.Decimal(18, 2)
+  firstPeriodId String             @map("first_period_id")
+  journalId     String             @unique @map("journal_id")
+  facility      Facility           @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  employee      PayrollEmployee    @relation(fields: [employeeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  firstPeriod   FiscalPeriod       @relation(fields: [firstPeriodId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  journal       FinanceJournal     @relation(fields: [journalId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  repayments    PayrollRepayment[]
+
+  @@unique([id, facilityId])
+  @@unique([facilityId, reference])
+  @@unique([journalId, facilityId])
+  @@map("payroll_loan")
+}
+
+model PayrollRepayment {
+  id         String      @id @default(uuid())
+  facilityId String      @map("facility_id")
+  loanId     String      @map("loan_id")
+  itemId     String      @map("item_id")
+  amount     Decimal     @db.Decimal(18, 2)
+  facility   Facility    @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  loan       PayrollLoan @relation(fields: [loanId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  item       PayrollItem @relation(fields: [itemId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([loanId, itemId])
+  @@map("payroll_repayment")
+}
+
+model PayrollPayment {
+  id         String         @id @default(uuid())
+  facilityId String         @map("facility_id")
+  itemId     String         @map("item_id")
+  journalId  String         @unique @map("journal_id")
+  amount     Decimal        @db.Decimal(18, 2)
+  reference  String
+  facility   Facility       @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  item       PayrollItem    @relation(fields: [itemId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  journal    FinanceJournal @relation(fields: [journalId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([facilityId, reference])
+  @@unique([journalId, facilityId])
+  @@map("payroll_payment")
+}
+
+model FinanceAsset {
+  id            String              @id @default(uuid())
+  facilityId    String              @map("facility_id")
+  code          String
+  name          String
+  category      String
+  location      String
+  cost          Decimal             @db.Decimal(18, 2)
+  residual      Decimal             @db.Decimal(18, 2)
+  lifeMonths    Int                 @map("life_months")
+  acquiredOn    DateTime            @map("acquired_on") @db.Timestamptz(3)
+  startPeriodId String              @map("start_period_id")
+  costCentreId  String?             @map("cost_centre_id")
+  billLineId    String?             @map("bill_line_id")
+  createdBy     String              @map("created_by")
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  facility      Facility            @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  startPeriod   FiscalPeriod        @relation(fields: [startPeriodId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  costCentre    FinanceCostCentre?  @relation(fields: [costCentreId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  billLine      FinanceJournalLine? @relation(fields: [billLineId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  entries       FinanceAssetEntry[]
+
+  @@unique([id, facilityId])
+  @@unique([facilityId, code])
+  @@map("finance_asset")
+  app_user      AppUser             @relation(fields: [createdBy, facilityId], references: [id, facilityId], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model FinanceAssetEntry {
+  id              String         @id @default(uuid())
+  facilityId      String         @map("facility_id")
+  assetId         String         @map("asset_id")
+  journalId       String         @unique @map("journal_id")
+  periodId        String         @map("period_id")
+  kind            String
+  amount          Decimal        @db.Decimal(18, 2)
+  proceeds        Decimal        @default(0) @db.Decimal(18, 2)
+  offsetAccountId String         @map("offset_account_id")
+  facility        Facility       @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  asset           FinanceAsset   @relation(fields: [assetId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  journal         FinanceJournal @relation(fields: [journalId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  period          FiscalPeriod   @relation(fields: [periodId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([id, facilityId])
+  @@unique([journalId, facilityId])
+  @@index([assetId, periodId])
+  @@map("finance_asset_entry")
+  finance_account FinanceAccount @relation(fields: [offsetAccountId, facilityId], references: [id, facilityId], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model FinanceBudget {
+  id           String             @id @default(uuid())
+  facilityId   String             @map("facility_id")
+  periodId     String             @map("period_id")
+  accountId    String             @map("account_id")
+  costCentreId String?            @map("cost_centre_id")
+  amount       Decimal            @db.Decimal(18, 2)
+  version      Int                @default(1)
+  facility     Facility           @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  period       FiscalPeriod       @relation(fields: [periodId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  account      FinanceAccount     @relation(fields: [accountId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  costCentre   FinanceCostCentre? @relation(fields: [costCentreId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([id, facilityId])
+  @@index([facilityId, periodId])
+  @@map("finance_budget")
+}
+
+model FinanceReportGrant {
+  id               String    @id @default(uuid())
+  facilityId       String    @map("facility_id")
+  viewerId         String    @map("viewer_id")
+  viewerFacilityId String    @map("viewer_facility_id")
+  grantedBy        String    @map("granted_by")
+  reason           String
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
+  version          Int       @default(1)
+  facility         Facility  @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  viewer           AppUser   @relation("ReportViewer", fields: [viewerId, viewerFacilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([facilityId, viewerId])
+  @@map("finance_report_grant")
+  app_user_finance_report_grant_granted_by_facility_idToapp_user AppUser   @relation("finance_report_grant_granted_by_facility_idToapp_user", fields: [grantedBy, facilityId], references: [id, facilityId], onDelete: NoAction, onUpdate: NoAction, map: "report_grant_actor")
+}
+
+model FinanceReportTemplate {
+  id         String   @id @default(uuid())
+  facilityId String   @map("facility_id")
+  name       String
+  authority  String
+  version    Int      @default(1)
+  definition Json
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+
+  @@unique([id, facilityId])
+  @@unique([facilityId, name])
+  @@map("finance_report_template")
+}
+
+model FinanceCashClassification {
+  id         String         @id @default(uuid())
+  facilityId String         @map("facility_id")
+  journalId  String         @unique @map("journal_id")
+  rows       Json
+  reason     String
+  version    Int            @default(1)
+  facility   Facility       @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  journal    FinanceJournal @relation(fields: [journalId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([journalId, facilityId])
+  @@map("finance_cash_classification")
+}
+
+model FinancePeriodEvent {
+  id         String       @id @default(uuid())
+  facilityId String       @map("facility_id")
+  periodId   String       @map("period_id")
+  actorId    String       @map("actor_id")
+  action     String
+  reason     String
+  details    Json
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  facility   Facility     @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  period     FiscalPeriod @relation(fields: [periodId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@index([facilityId, periodId])
+  @@map("finance_period_event")
+  app_user   AppUser      @relation(fields: [actorId, facilityId], references: [id, facilityId], onDelete: NoAction, onUpdate: NoAction, map: "period_event_actor")
+}
+
+model FinanceYearClosing {
+  id          String          @id @default(uuid())
+  facilityId  String          @map("facility_id")
+  yearId      String          @unique @map("year_id")
+  journalId   String?         @unique @map("journal_id")
+  preparedBy  String          @map("prepared_by")
+  finalizedBy String?         @map("finalized_by")
+  finalizedAt DateTime?       @map("finalized_at") @db.Timestamptz(3)
+  snapshot    Json
+  facility    Facility        @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  year        FiscalYear      @relation(fields: [yearId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  journal     FinanceJournal? @relation(fields: [journalId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([journalId, facilityId])
+  @@unique([yearId, facilityId])
+  @@map("finance_year_closing")
+  app_user_finance_year_closing_finalized_by_facility_idToapp_user AppUser?        @relation("finance_year_closing_finalized_by_facility_idToapp_user", fields: [finalizedBy, facilityId], references: [id, facilityId], onDelete: NoAction, onUpdate: NoAction, map: "year_finalized_actor")
+  app_user_finance_year_closing_prepared_by_facility_idToapp_user  AppUser         @relation("finance_year_closing_prepared_by_facility_idToapp_user", fields: [preparedBy, facilityId], references: [id, facilityId], onDelete: NoAction, onUpdate: NoAction, map: "year_prepared_actor")
+}
+
+model CrmContact {
+  interactions     CrmInteraction[]
+  leads            CrmLead[]
+  id               String            @id @default(uuid())
+  facilityId       String            @map("facility_id")
+  name             String
+  nameKey          String            @map("name_key")
+  phone            String
+  altPhone         String            @map("alt_phone")
+  email            String
+  language         String
+  preferredChannel String            @map("preferred_channel")
+  safeInstructions String            @map("safe_instructions")
+  doNotContact     Boolean           @default(false) @map("do_not_contact")
+  archived         Boolean           @default(false)
+  version          Int               @default(0)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  facility         Facility          @relation(fields: [facilityId], references: [id])
+  links            CrmRelationship[]
+  consents         CrmConsent[]
+
+  @@unique([id, facilityId])
+  @@index([facilityId, nameKey])
+  @@index([facilityId, phone])
+  @@index([facilityId, altPhone])
+  @@map("crm_contact")
+}
+
+model CrmRelationship {
+  leadMappings  CrmLeadPatient[]
+  appointments  Appointment[]
+  interactions  CrmInteraction[]
+  id            String            @id @default(uuid())
+  facilityId    String            @map("facility_id")
+  contactId     String            @map("contact_id")
+  patientId     String            @map("patient_id")
+  relationship  String
+  authority     String            @default("pending")
+  source        String?
+  authorizedBy  String?           @map("authorized_by")
+  authorizedAt  DateTime?         @map("authorized_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  contact       CrmContact        @relation(fields: [contactId, facilityId], references: [id, facilityId])
+  patient       Patient           @relation(fields: [patientId, facilityId], references: [id, facilityId])
+  consents      CrmConsent[]
+  verifications CrmVerification[]
+
+  @@unique([contactId, patientId])
+  @@unique([id, patientId, facilityId])
+  @@unique([id, contactId, facilityId])
+  @@index([facilityId, patientId])
+  @@map("crm_relationship")
+}
+
+model CrmConsent {
+  id          String           @id @default(uuid())
+  facilityId  String           @map("facility_id")
+  contactId   String           @map("contact_id")
+  linkId      String?          @map("link_id")
+  channel     String
+  purpose     String
+  status      String
+  source      String
+  destination String
+  recordedBy  String           @map("recorded_by")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  sequence    Int
+  contact     CrmContact       @relation(fields: [contactId, facilityId], references: [id, facilityId])
+  link        CrmRelationship? @relation(fields: [linkId, contactId, facilityId], references: [id, contactId, facilityId])
+
+  @@index([facilityId, contactId, sequence])
+  @@map("crm_consent")
+}
+
+model CrmVerification {
+  id             String          @id @default(uuid())
+  facilityId     String          @map("facility_id")
+  contactId      String          @map("contact_id")
+  linkId         String          @map("link_id")
+  method         String
+  passed         Boolean
+  verifiedBy     String          @map("verified_by")
+  contactVersion Int             @map("contact_version")
+  expiresAt      DateTime        @map("expires_at")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  link           CrmRelationship @relation(fields: [linkId, contactId, facilityId], references: [id, contactId, facilityId])
+
+  @@index([facilityId, linkId, verifiedBy, createdAt])
+  @@map("crm_verification")
+}
+
+model CrmLead {
+  patientMappings    CrmLeadPatient[]
+  appointments       Appointment[]
+  interactions       CrmInteraction[]
+  id                 String                @id @default(uuid())
+  facilityId         String                @map("facility_id")
+  title              String
+  contactId          String?               @map("contact_id")
+  ownerId            String?               @map("owner_id")
+  source             String
+  sourceDetail       String                @map("source_detail")
+  serviceInterest    String                @map("service_interest")
+  status             String                @default("new")
+  needsConfirmed     Boolean               @default(false) @map("needs_confirmed")
+  serviceMatched     Boolean               @default(false) @map("service_matched")
+  qualificationNotes String                @map("qualification_notes")
+  closedReason       String?               @map("closed_reason")
+  version            Int                   @default(0)
+  createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  facility           Facility              @relation(fields: [facilityId], references: [id])
+  contact            CrmContact?           @relation(fields: [contactId, facilityId], references: [id, facilityId])
+  owner              AppUser?              @relation("CrmLeadOwner", fields: [ownerId, facilityId], references: [id, facilityId])
+  history            CrmLeadStatusChange[]
+
+  @@unique([id, facilityId])
+  @@index([facilityId, status, updatedAt])
+  @@index([facilityId, ownerId, status])
+  @@index([facilityId, contactId])
+  @@index([facilityId, source])
+  @@map("crm_lead")
+}
+
+model CrmLeadStatusChange {
+  id         String   @id @default(uuid())
+  facilityId String   @map("facility_id")
+  leadId     String   @map("lead_id")
+  fromStatus String?  @map("from_status")
+  toStatus   String   @map("to_status")
+  reason     String
+  changedBy  String   @map("changed_by")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  sequence   Int
+  lead       CrmLead  @relation(fields: [leadId, facilityId], references: [id, facilityId])
+  actor      AppUser  @relation(fields: [changedBy, facilityId], references: [id, facilityId])
+
+  @@unique([leadId, sequence])
+  @@index([facilityId, leadId, createdAt])
+  @@map("crm_lead_status_change")
+}
+
+model CrmInteraction {
+  tasks      CrmTask[]
+  kind       String                   @default("interaction")
+  call       CrmCall?
+  id         String                   @id @default(uuid())
+  facilityId String                   @map("facility_id")
+  leadId     String?                  @map("lead_id")
+  contactId  String?                  @map("contact_id")
+  linkId     String?                  @map("link_id")
+  purpose    String
+  channel    String
+  direction  String
+  occurredAt DateTime                 @map("occurred_at") @db.Timestamptz(3)
+  createdAt  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt  DateTime                 @map("expires_at") @db.Timestamptz(3)
+  recordedBy String                   @map("recorded_by")
+  summary    String
+  outcome    String
+  version    Int                      @default(0)
+  voided     Boolean                  @default(false)
+  facility   Facility                 @relation(fields: [facilityId], references: [id])
+  lead       CrmLead?                 @relation(fields: [leadId, facilityId], references: [id, facilityId])
+  contact    CrmContact?              @relation(fields: [contactId, facilityId], references: [id, facilityId])
+  link       CrmRelationship?         @relation(fields: [linkId, contactId, facilityId], references: [id, contactId, facilityId])
+  author     AppUser                  @relation("CrmInteractionAuthor", fields: [recordedBy, facilityId], references: [id, facilityId])
+  revisions  CrmInteractionRevision[]
+
+  @@unique([id, facilityId])
+  @@index([facilityId, leadId, occurredAt])
+  @@index([facilityId, contactId, occurredAt])
+  @@index([facilityId, expiresAt])
+  @@map("crm_interaction")
+}
+
+model CrmInteractionRevision {
+  id            String         @id @default(uuid())
+  facilityId    String         @map("facility_id")
+  interactionId String         @map("interaction_id")
+  version       Int
+  summary       String
+  outcome       String
+  voided        Boolean
+  reason        String
+  changedBy     String         @map("changed_by")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  interaction   CrmInteraction @relation(fields: [interactionId, facilityId], references: [id, facilityId])
+  actor         AppUser        @relation(fields: [changedBy, facilityId], references: [id, facilityId])
+
+  @@unique([interactionId, version])
+  @@map("crm_interaction_revision")
+}
+
+model CrmCall {
+  id             String         @id @default(uuid())
+  facilityId     String         @map("facility_id")
+  interactionId  String         @unique @map("interaction_id")
+  state          String
+  callerPhone    String         @map("caller_phone")
+  endedAt        DateTime?      @map("ended_at") @db.Timestamptz(3)
+  nextAction     String         @map("next_action")
+  actionNote     String         @map("action_note")
+  relatedCallId  String?        @map("related_call_id")
+  version        Int            @default(0)
+  completedAt    DateTime?      @map("completed_at") @db.Timestamptz(3)
+  completedBy    String?        @map("completed_by")
+  completionNote String         @default("") @map("completion_note")
+  interaction    CrmInteraction @relation(fields: [interactionId, facilityId], references: [id, facilityId])
+  relatedCall    CrmCall?       @relation("CrmCallbacks", fields: [relatedCallId, facilityId], references: [id, facilityId])
+  callbacks      CrmCall[]      @relation("CrmCallbacks")
+  completer      AppUser?       @relation(fields: [completedBy, facilityId], references: [id, facilityId])
+
+  @@unique([id, facilityId])
+  @@unique([interactionId, facilityId])
+  @@index([facilityId, state, completedAt])
+  @@index([facilityId, callerPhone])
+  @@map("crm_call")
+}
+
+model CrmTask {
+  id                     String           @id @default(uuid())
+  facilityId             String           @map("facility_id")
+  interactionId          String           @map("interaction_id")
+  prescriptionId         String?          @map("prescription_id")
+  ownerId                String?          @map("owner_id")
+  title                  String
+  notes                  String
+  dueAt                  DateTime         @map("due_at") @db.Timestamptz(3)
+  reminderAt             DateTime?        @map("reminder_at") @db.Timestamptz(3)
+  reminderAcknowledgedAt DateTime?        @map("reminder_acknowledged_at") @db.Timestamptz(3)
+  priority               String
+  status                 String           @default("open")
+  outcome                String           @default("")
+  escalations            Int              @default(0)
+  version                Int              @default(0)
+  closedAt               DateTime?        @map("closed_at") @db.Timestamptz(3)
+  createdAt              DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  interaction            CrmInteraction   @relation(fields: [interactionId, facilityId], references: [id, facilityId])
+  owner                  AppUser?         @relation("CrmTaskOwner", fields: [ownerId, facilityId], references: [id, facilityId])
+  prescription           Prescription?    @relation(fields: [prescriptionId], references: [id])
+  history                CrmTaskHistory[]
+
+  @@unique([id, facilityId])
+  @@index([facilityId, ownerId, status, dueAt])
+  @@index([facilityId, status, reminderAt])
+  @@map("crm_task")
+}
+
+model CrmTaskHistory {
+  id         String    @id @default(uuid())
+  facilityId String    @map("facility_id")
+  taskId     String    @map("task_id")
+  version    Int
+  event      String
+  title      String
+  notes      String
+  ownerId    String?   @map("owner_id")
+  dueAt      DateTime  @map("due_at") @db.Timestamptz(3)
+  reminderAt DateTime? @map("reminder_at") @db.Timestamptz(3)
+  priority   String
+  status     String
+  outcome    String
+  reason     String
+  changedBy  String    @map("changed_by")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  task       CrmTask   @relation(fields: [taskId, facilityId], references: [id, facilityId])
+  actor      AppUser   @relation("CrmTaskActor", fields: [changedBy, facilityId], references: [id, facilityId])
+  owner      AppUser?  @relation("CrmTaskHistoryOwner", fields: [ownerId, facilityId], references: [id, facilityId])
+
+  @@unique([taskId, version])
+  @@map("crm_task_history")
+}
+
+model CrmLeadPatient {
+  id         String          @id @default(uuid())
+  facilityId String          @map("facility_id")
+  leadId     String          @map("lead_id")
+  linkId     String          @map("link_id")
+  patientId  String          @map("patient_id")
+  action     String
+  createdBy  String          @map("created_by")
+  createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  revokedAt  DateTime?       @map("revoked_at") @db.Timestamptz(3)
+  revokedBy  String?         @map("revoked_by")
+  reason     String?
+  lead                                                       CrmLead         @relation(fields: [leadId, facilityId], references: [id, facilityId], map: "crm_lead_patient_lead_fk")
+  link                                                       CrmRelationship @relation(fields: [linkId, patientId, facilityId], references: [id, patientId, facilityId], map: "crm_lead_patient_link_fk")
+
+  @@index([facilityId, leadId, createdAt])
+  @@map("crm_lead_patient")
+  app_user_crm_lead_patient_created_by_facility_idToapp_user AppUser         @relation("crm_lead_patient_created_by_facility_idToapp_user", fields: [createdBy, facilityId], references: [id, facilityId], onUpdate: NoAction, map: "crm_lead_patient_actor_fk")
+  app_user_crm_lead_patient_revoked_by_facility_idToapp_user AppUser?        @relation("crm_lead_patient_revoked_by_facility_idToapp_user", fields: [revokedBy, facilityId], references: [id, facilityId], onUpdate: NoAction, map: "crm_lead_patient_revoker_fk")
+}
+
+// ============================================================
+// HUMAN RESOURCES / STAFF
+// ============================================================
+
+model Position {
+  id         String    @id @default(uuid())
+  facilityId String    @map("facility_id")
+  titleEn    String    @map("title_en")
+  titlePrs   String?   @map("title_prs")
+  titlePs    String?   @map("title_ps")
+  category   String?
+  isClinical Boolean   @default(false) @map("is_clinical")
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy  String    @map("created_by")
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy  String    @map("updated_by")
+  voidedAt   DateTime? @map("voided_at") @db.Timestamptz(3)
+  voidedBy   String?   @map("voided_by")
+  voidReason String?   @map("void_reason")
+
+  facility  Facility   @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  employees Employee[]
+
+  @@unique([facilityId, titleEn])
+  @@unique([id, facilityId])
+  @@index([facilityId, isActive])
+  @@map("hr_position")
+}
+
+model Employee {
+  id                  String         @id @default(uuid())
+  facilityId          String         @map("facility_id")
+  employeeNo          String         @map("employee_no")
+  userId              String?        @unique @map("user_id")
+  firstName           String         @map("first_name")
+  fatherName          String?        @map("father_name")
+  grandfatherName     String?        @map("grandfather_name")
+  lastName            String?        @map("last_name")
+  sex                 HrSex
+  dateOfBirth         DateTime?      @map("date_of_birth") @db.Date
+  nationalId          String?        @map("national_id")
+  photoUrl            String?        @map("photo_url")
+  phone               String?
+  alternatePhone      String?        @map("alternate_phone")
+  addressProvince     String?        @map("address_province")
+  addressDistrict     String?        @map("address_district")
+  addressText         String?        @map("address_text")
+  emergencyName       String?        @map("emergency_name")
+  emergencyRelation   String?        @map("emergency_relation")
+  emergencyPhone      String?        @map("emergency_phone")
+  departmentId        String         @map("department_id")
+  positionId          String         @map("position_id")
+  reportsToEmployeeId String?        @map("reports_to_employee_id")
+  employmentType      EmploymentType @map("employment_type")
+  joinedOn            DateTime       @map("joined_on") @db.Date
+  contractStartsOn    DateTime?      @map("contract_starts_on") @db.Date
+  contractEndsOn      DateTime?      @map("contract_ends_on") @db.Date
+  status              EmployeeStatus @default(active)
+  exitDate            DateTime?      @map("exit_date") @db.Date
+  exitReason          String?        @map("exit_reason")
+  baseSalaryMinor     Int?           @map("base_salary_minor")
+  salaryCurrency      String         @default("AFN") @map("salary_currency")
+  notes               String?
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy           String         @map("created_by")
+  updatedAt           DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy           String         @map("updated_by")
+  voidedAt            DateTime?      @map("voided_at") @db.Timestamptz(3)
+  voidedBy            String?        @map("voided_by")
+  voidReason          String?        @map("void_reason")
+
+  facility       Facility           @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  user           AppUser?           @relation(fields: [userId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  department     Department         @relation(fields: [departmentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  position       Position           @relation(fields: [positionId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  manager        Employee?          @relation("EmployeeManager", fields: [reportsToEmployeeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  directReports  Employee[]         @relation("EmployeeManager")
+  documents      EmployeeDocument[]
+  credentials    Credential[]
+  attendanceDays AttendanceDay[]
+  leaveRequests  LeaveRequest[]
+  rosterEntries  RosterEntry[]
+  notifications  HrNotification[]
+
+  @@unique([facilityId, employeeNo])
+  @@unique([id, facilityId])
+  @@unique([userId, facilityId])
+  @@index([facilityId, status, departmentId])
+  @@index([facilityId, firstName, lastName])
+  @@map("employee")
+}
+
+model EmployeeDocument {
+  id         String               @id @default(uuid())
+  facilityId String               @map("facility_id")
+  employeeId String               @map("employee_id")
+  type       EmployeeDocumentType
+  title      String
+  fileName   String               @map("file_name")
+  mimeType   String               @map("mime_type")
+  sizeBytes  Int                  @map("size_bytes")
+  content    Bytes
+  issuedOn   DateTime?            @map("issued_on") @db.Date
+  expiresOn  DateTime?            @map("expires_on") @db.Date
+  note       String?
+  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy  String               @map("created_by")
+  updatedAt  DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy  String               @map("updated_by")
+  voidedAt   DateTime?            @map("voided_at") @db.Timestamptz(3)
+  voidedBy   String?              @map("voided_by")
+  voidReason String?              @map("void_reason")
+
+  facility         Facility       @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  employee         Employee       @relation(fields: [employeeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  credentials      Credential[]
+  leaveAttachments LeaveRequest[] @relation("LeaveAttachment")
+
+  @@unique([id, facilityId])
+  @@index([facilityId, employeeId, type])
+  @@map("employee_document")
+}
+
+model Credential {
+  id                 String         @id @default(uuid())
+  facilityId         String         @map("facility_id")
+  employeeId         String         @map("employee_id")
+  type               CredentialType
+  name               String
+  issuingAuthority   String?        @map("issuing_authority")
+  referenceNo        String?        @map("reference_no")
+  issuedOn           DateTime?      @map("issued_on") @db.Date
+  expiresOn          DateTime?      @map("expires_on") @db.Date
+  blocksClinicalWork Boolean        @default(false) @map("blocks_clinical_work")
+  documentId         String?        @map("document_id")
+  note               String?
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy          String         @map("created_by")
+  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy          String         @map("updated_by")
+  voidedAt           DateTime?      @map("voided_at") @db.Timestamptz(3)
+  voidedBy           String?        @map("voided_by")
+  voidReason         String?        @map("void_reason")
+
+  facility  Facility             @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  employee  Employee             @relation(fields: [employeeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  document  EmployeeDocument?    @relation(fields: [documentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  reminders CredentialReminder[]
+
+  @@unique([id, facilityId])
+  @@index([facilityId, expiresOn])
+  @@map("employee_credential")
+}
+
+model CredentialReminder {
+  id           String   @id @default(uuid())
+  facilityId   String   @map("facility_id")
+  credentialId String   @map("credential_id")
+  threshold    Int
+  sentAt       DateTime @default(now()) @map("sent_at") @db.Timestamptz(3)
+  recipients   Json
+
+  facility   Facility   @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  credential Credential @relation(fields: [credentialId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([credentialId, threshold])
+  @@index([facilityId, sentAt])
+  @@map("credential_reminder")
+}
+
+model ShiftType {
+  id              String    @id @default(uuid())
+  facilityId      String    @map("facility_id")
+  code            String
+  nameEn          String    @map("name_en")
+  namePrs         String?   @map("name_prs")
+  namePs          String?   @map("name_ps")
+  startsAt        DateTime  @map("starts_at") @db.Time(0)
+  endsAt          DateTime  @map("ends_at") @db.Time(0)
+  crossesMidnight Boolean   @default(false) @map("crosses_midnight")
+  color           String?
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy       String    @map("created_by")
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy       String    @map("updated_by")
+  voidedAt        DateTime? @map("voided_at") @db.Timestamptz(3)
+  voidedBy        String?   @map("voided_by")
+  voidReason      String?   @map("void_reason")
+
+  facility       Facility        @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  attendanceDays AttendanceDay[]
+  rosterEntries  RosterEntry[]
+
+  @@unique([facilityId, code])
+  @@unique([id, facilityId])
+  @@index([facilityId, isActive])
+  @@map("shift_type")
+}
+
+model AttendanceDay {
+  id             String           @id @default(uuid())
+  facilityId     String           @map("facility_id")
+  employeeId     String           @map("employee_id")
+  workDate       DateTime         @map("work_date") @db.Date
+  shiftTypeId    String?          @map("shift_type_id")
+  status         AttendanceStatus
+  minutesLate    Int              @default(0) @map("minutes_late")
+  note           String?
+  leaveRequestId String?          @map("leave_request_id")
+  markedByUserId String           @map("marked_by_user_id")
+  markedAt       DateTime         @default(now()) @map("marked_at") @db.Timestamptz(3)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy      String           @map("created_by")
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy      String           @map("updated_by")
+  voidedAt       DateTime?        @map("voided_at") @db.Timestamptz(3)
+  voidedBy       String?          @map("voided_by")
+  voidReason     String?          @map("void_reason")
+
+  facility     Facility      @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  employee     Employee      @relation(fields: [employeeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  shiftType    ShiftType?    @relation(fields: [shiftTypeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  leaveRequest LeaveRequest? @relation(fields: [leaveRequestId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@unique([id, facilityId])
+  @@index([facilityId, workDate, employeeId])
+  @@map("attendance_day")
+}
+
+model LeaveType {
+  id                 String    @id @default(uuid())
+  facilityId         String    @map("facility_id")
+  code               String
+  nameEn             String    @map("name_en")
+  namePrs            String?   @map("name_prs")
+  namePs             String?   @map("name_ps")
+  annualEntitlement  Int?      @map("annual_entitlement")
+  requiresAttachment Boolean   @default(false) @map("requires_attachment")
+  isPaid             Boolean   @default(true) @map("is_paid")
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy          String    @map("created_by")
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy          String    @map("updated_by")
+  voidedAt           DateTime? @map("voided_at") @db.Timestamptz(3)
+  voidedBy           String?   @map("voided_by")
+  voidReason         String?   @map("void_reason")
+
+  facility      Facility       @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  leaveRequests LeaveRequest[]
+
+  @@unique([facilityId, code])
+  @@unique([id, facilityId])
+  @@index([facilityId, isActive])
+  @@map("leave_type")
+}
+
+model LeaveRequest {
+  id                   String             @id @default(uuid())
+  facilityId           String             @map("facility_id")
+  employeeId           String             @map("employee_id")
+  leaveTypeId          String             @map("leave_type_id")
+  startsOn             DateTime           @map("starts_on") @db.Date
+  endsOn               DateTime           @map("ends_on") @db.Date
+  daysRequested        Int                @map("days_requested")
+  reason               String?
+  status               LeaveRequestStatus @default(submitted)
+  attachmentDocumentId String?            @map("attachment_document_id")
+  decidedBy            String?            @map("decided_by")
+  decidedAt            DateTime?          @map("decided_at") @db.Timestamptz(3)
+  decisionNote         String?            @map("decision_note")
+  cancelledAt          DateTime?          @map("cancelled_at") @db.Timestamptz(3)
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy            String             @map("created_by")
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy            String             @map("updated_by")
+  voidedAt             DateTime?          @map("voided_at") @db.Timestamptz(3)
+  voidedBy             String?            @map("voided_by")
+  voidReason           String?            @map("void_reason")
+
+  facility           Facility          @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  employee           Employee          @relation(fields: [employeeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  leaveType          LeaveType         @relation(fields: [leaveTypeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  attachmentDocument EmployeeDocument? @relation("LeaveAttachment", fields: [attachmentDocumentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  attendanceDays     AttendanceDay[]
+
+  @@unique([id, facilityId])
+  @@index([facilityId, employeeId, startsOn, endsOn])
+  @@index([facilityId, status])
+  @@map("leave_request")
+}
+
+model HrHoliday {
+  id          String   @id @default(uuid())
+  facilityId  String   @map("facility_id")
+  holidayDate DateTime @map("holiday_date") @db.Date
+  nameEn      String   @map("name_en")
+  namePrs     String?  @map("name_prs")
+  namePs      String?  @map("name_ps")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy   String   @map("created_by")
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy   String   @map("updated_by")
+
+  facility Facility @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+
+  @@unique([facilityId, holidayDate])
+  @@map("hr_holiday")
+}
+
+model RosterEntry {
+  id            String       @id @default(uuid())
+  facilityId    String       @map("facility_id")
+  employeeId    String       @map("employee_id")
+  departmentId  String       @map("department_id")
+  shiftTypeId   String       @map("shift_type_id")
+  dutyDate      DateTime     @map("duty_date") @db.Date
+  roleOnShift   String?      @map("role_on_shift")
+  status        RosterStatus @default(draft)
+  publishedAt   DateTime?    @map("published_at") @db.Timestamptz(3)
+  publishedBy   String?      @map("published_by")
+  swappedFromId String?      @map("swapped_from_id")
+  notes         String?
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy     String       @map("created_by")
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy     String       @map("updated_by")
+  voidedAt      DateTime?    @map("voided_at") @db.Timestamptz(3)
+  voidedBy      String?      @map("voided_by")
+  voidReason    String?      @map("void_reason")
+
+  facility    Facility      @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  employee    Employee      @relation(fields: [employeeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  department  Department    @relation(fields: [departmentId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  shiftType   ShiftType     @relation(fields: [shiftTypeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  swappedFrom RosterEntry?  @relation("RosterSwap", fields: [swappedFromId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  swaps       RosterEntry[] @relation("RosterSwap")
+
+  @@unique([facilityId, employeeId, dutyDate, shiftTypeId])
+  @@unique([id, facilityId])
+  @@index([facilityId, departmentId, dutyDate, status])
+  @@map("roster_entry")
+}
+
+model HrNotification {
+  id              String    @id @default(uuid())
+  facilityId      String    @map("facility_id")
+  employeeId      String?   @map("employee_id")
+  recipientUserId String?   @map("recipient_user_id")
+  type            String
+  title           String
+  message         String
+  payload         Json?
+  readAt          DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  facility      Facility  @relation(fields: [facilityId], references: [id], onDelete: Restrict)
+  employee      Employee? @relation(fields: [employeeId, facilityId], references: [id, facilityId], onDelete: Restrict)
+  recipientUser AppUser?  @relation(fields: [recipientUserId, facilityId], references: [id, facilityId], onDelete: Restrict)
+
+  @@index([facilityId, recipientUserId, readAt])
+  @@map("hr_notification")
 }

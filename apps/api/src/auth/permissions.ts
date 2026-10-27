@@ -21,6 +21,26 @@
 /** The 7 roles. `cashier` is not among them: the receptionist is the cashier. */
 export const ROLES = [
   {
+    code: 'auditor',
+    name: 'Auditor',
+    description: 'Read-only finance reports and exports; no clinical access.',
+  },
+  {
+    code: 'payroll_officer',
+    name: 'Payroll officer',
+    description: 'Prepare employee payroll and attendance; independent approval required.',
+  },
+  {
+    code: 'accountant',
+    name: 'Accountant',
+    description: 'Finance records and reconciliation; no clinical access.',
+  },
+  {
+    code: 'finance_manager',
+    name: 'Finance manager',
+    description: 'Finance configuration, posting, closing and reconciliation; no clinical access.',
+  },
+  {
     code: 'admin',
     name: 'Administrator',
     description:
@@ -60,7 +80,7 @@ export const ROLES = [
     code: 'call_center',
     name: 'Call center',
     description:
-      'Confirms upcoming follow-ups by phone. Sees only the recall list — never the clinical record (R13).',
+      'Reads CRM workspace guidance and confirms upcoming follow-ups by phone. No clinical record access (R13).',
   },
 ] as const satisfies ReadonlyArray<{ code: string; name: string; description: string }>;
 
@@ -97,8 +117,91 @@ type Grants = Partial<Record<RoleCode, Grant>>;
  * for PermissionCode below instead of widening to string.
  */
 export const PERMISSION_MATRIX = {
+  // ---- Reception coordination --------------------------------------------
+  'reception.read': { admin: YES, receptionist: YES, nurse: YES, doctor: YES },
+  'reception.coordinate': { admin: YES, receptionist: YES },
+  'reception.manage_beds': { admin: YES, nurse: YES },
+  'reception.clinical_review': { admin: YES, doctor: YES },
+  'reception.supervise': { admin: YES, management: YES },
+  'hr.employee.view': { admin: YES, finance_manager: YES, payroll_officer: YES, management: YES },
+  'hr.employee.create': { admin: YES },
+  'hr.employee.edit': { admin: YES },
+  'hr.employee.exit': { admin: YES },
+  'hr.salary.view': { admin: YES, finance_manager: YES, payroll_officer: YES, management: YES },
+  'hr.salary.edit': { admin: YES, finance_manager: YES },
+  'hr.document.manage': { admin: YES },
+  'hr.credential.manage': { admin: YES },
+  'hr.attendance.view': { admin: YES, finance_manager: YES, payroll_officer: YES, management: YES },
+  'hr.attendance.mark': { admin: YES, payroll_officer: YES },
+  'hr.leave.request': {
+    admin: YES, receptionist: YES, nurse: YES, doctor: YES, lab_tech: YES,
+    pharmacist: YES, management: YES, call_center: YES, payroll_officer: YES,
+    accountant: YES, finance_manager: YES, auditor: YES,
+  },
+  'hr.leave.approve': { admin: YES },
+  'hr.roster.view': {
+    admin: YES, receptionist: YES, nurse: YES, doctor: YES, lab_tech: YES,
+    pharmacist: YES, management: YES, payroll_officer: YES,
+  },
+  'hr.roster.edit': { admin: YES },
+  'hr.report.view': { admin: YES, finance_manager: YES, payroll_officer: YES, management: YES },
+  'hr.self.view': {
+    admin: YES, receptionist: YES, nurse: YES, doctor: YES, lab_tech: YES,
+    pharmacist: YES, management: YES, call_center: YES, payroll_officer: YES,
+    accountant: YES, finance_manager: YES, auditor: YES,
+  },
+  'crm.read': { admin: YES, call_center: YES },
+  'crm.configure': { admin: YES },
+  'crm.contacts.write': { admin: YES, call_center: YES },
+  'crm.contacts.authorize': { admin: YES },
+  'crm.leads.write': { admin: YES, call_center: YES },
+  'crm.leads.assign': { admin: YES },
+  'crm.interactions.write': { admin: YES, call_center: YES },
+  'crm.interactions.correct': { admin: YES },
+  'crm.calls.write': { admin: YES, call_center: YES },
+  'crm.tasks.write': { admin: YES, call_center: YES },
+  'crm.tasks.assign': { admin: YES },
+  'crm.appointments.write': { admin: YES, call_center: YES },
+  'crm.patients.link': { admin: YES, call_center: YES },
+  'payroll.read': {
+    admin: YES,
+    accountant: YES,
+    finance_manager: YES,
+    payroll_officer: YES,
+    management: YES,
+  },
+  'payroll.write': { admin: YES, accountant: YES, finance_manager: YES, payroll_officer: YES },
+  'payroll.configure': { admin: YES, finance_manager: YES },
+  'payroll.approve': { admin: YES, finance_manager: YES },
+  'payroll.pay': { admin: YES, accountant: YES, finance_manager: YES },
+  'finance.consolidation.manage': { admin: YES },
+  'finance.export': {
+    admin: YES,
+    accountant: YES,
+    finance_manager: YES,
+    management: YES,
+    auditor: YES,
+  },
+  'finance.read': {
+    auditor: YES,
+    admin: YES,
+    accountant: YES,
+    finance_manager: YES,
+    management: YES,
+    payroll_officer: YES,
+  },
+  'finance.write': { admin: YES, accountant: YES, finance_manager: YES },
+  'finance.configure': { admin: YES, finance_manager: YES },
+  'finance.post': { admin: YES, finance_manager: YES, accountant: YES },
+  'finance.close': { admin: YES, finance_manager: YES },
+  'finance.reconcile': { admin: YES, accountant: YES, finance_manager: YES },
   // ---- 1. Authentication & Users -------------------------------------------
   'auth.login': {
+    auditor: YES,
+    call_center: YES,
+    payroll_officer: YES,
+    accountant: YES,
+    finance_manager: YES,
     admin: YES,
     receptionist: YES,
     nurse: YES,
@@ -117,6 +220,11 @@ export const PERMISSION_MATRIX = {
    * which the server still decides per endpoint.
    */
   'auth.me': {
+    auditor: YES,
+    call_center: YES,
+    payroll_officer: YES,
+    accountant: YES,
+    finance_manager: YES,
     admin: YES,
     receptionist: YES,
     nurse: YES,
@@ -159,7 +267,7 @@ export const PERMISSION_MATRIX = {
   'drug.read': { admin: YES, nurse: YES, doctor: YES, pharmacist: YES },
   /** Test catalog. Lab proposes, admin approves (R9). */
   'labtest.manage': { admin: YES, lab_tech: 'R9' },
-  /** Insurance panels. Open question 5: may not exist at Farhat. */
+  /** Insurance panels. Open question 5: may not exist at Axon. */
   'panel.manage': { admin: YES },
   'template.manage.own': { admin: YES, doctor: YES },
   'template.manage.shared': { admin: YES },
@@ -305,7 +413,7 @@ export const PERMISSION_MATRIX = {
   'appointment.mark_no_show': { admin: YES, receptionist: YES },
 
   // ---- 5. Clinical record --------------------------------------------------
-  // Farhat is a psychiatric hospital. A leaked diagnosis does real harm in a
+  // Axon is a psychiatric hospital. A leaked diagnosis does real harm in a
   // small community. Default to denial.
   'vitals.record': { nurse: YES, doctor: YES },
   'vitals.read': { admin: 'R2', nurse: YES, doctor: YES },
@@ -342,7 +450,7 @@ export const PERMISSION_MATRIX = {
    *
    * Its own permission rather than a second use of `appointment.read`, because it is a
    * different list about different people. The book knows who made an appointment; this
-   * knows who was told to return, which at Farhat is most of them and overlaps the book
+   * knows who was told to return, which at Axon is most of them and overlaps the book
    * hardly at all. Overloading `appointment.read` would make this file — the one document
    * that answers "who can see what" — quietly untrue.
    *
@@ -399,7 +507,7 @@ export const PERMISSION_MATRIX = {
    * visit the caller reached through their own work — a bill Collections showed them
    * unpaid, a visit they are servicing — and stays theirs. Browsing every bill the
    * facility has ever raised, filterable by day, is a different act: it is how a
-   * receptionist would back into the hospital's revenue, which Farhat's owner and
+   * receptionist would back into the hospital's revenue, which Axon's owner and
    * management were explicit is not the front desk's to see.
    *
    * Pharmacist is R12 here too (see below) — the register they may still browse excludes
@@ -465,7 +573,7 @@ export function splitPermissionCode(code: string): { resource: string; action: s
  *    silently corrected, because guessing at a permission rule is how you end
  *    up with a matrix nobody trusts. Likely a typo for R8 (task-scoped) — needs
  *    confirming.
- *  - `lab.verify_result`: the same tech enters and verifies. If Farhat has a
+ *  - `lab.verify_result`: the same tech enters and verifies. If Axon has a
  *    lab supervisor this needs a `lab_supervisor` role (doc question 1).
  *  - R7 may be too tight if nurses assist in consultations (doc question 3).
  *  - No "break glass" emergency access exists (doc question 7). Recommended by

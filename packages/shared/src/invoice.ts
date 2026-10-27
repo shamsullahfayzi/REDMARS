@@ -195,13 +195,14 @@ export const paymentTenderSchema = z.enum(PAYMENT_TENDERS)
 export type PaymentTender = z.infer<typeof paymentTenderSchema>
 
 export const recordPaymentRequestSchema = z.object({
+  idempotencyKey: z.uuid().optional(),
   /**
    * What the patient handed over. Server-clamped: never more than the bill still owes, so
    * an instalment settles part and the balance stays exact. A payment is a tender, not a
    * price — the server does not trust it as a charge, only as cash received against a total
    * it computed itself.
    */
-  amount: moneySchema.refine((v) => Number(v) > 0, 'Enter an amount greater than zero'),
+  amount: moneySchema.refine((v) => /[1-9]/.test(v), 'Enter an amount greater than zero'),
   method: paymentTenderSchema,
   /** A card slip number, a transfer reference — free text, optional. */
   reference: z.string().trim().max(120).optional(),
@@ -249,7 +250,7 @@ export const discountApprovalSchema = z.object({
 export type DiscountApproval = z.infer<typeof discountApprovalSchema>
 
 export const applyDiscountRequestSchema = z.object({
-  amount: moneySchema.refine((v) => Number(v) > 0, 'Enter a discount greater than zero'),
+  amount: moneySchema.refine((v) => /[1-9]/.test(v), 'Enter a discount greater than zero'),
   reason: z.string().trim().min(3, 'Give a reason for the discount').max(200),
   /** Only needed — and only checked — when the discount exceeds the caller's ceiling. */
   approval: discountApprovalSchema.optional(),
@@ -277,6 +278,7 @@ export type ApplyDiscountResponse = z.infer<typeof applyDiscountResponseSchema>
 // ---------------------------------------------------------------------------------
 
 export const refundPaymentRequestSchema = z.object({
+  idempotencyKey: z.uuid().optional(),
   /** Why the money is going back — required by R5, logged on the reversal. */
   reason: z.string().trim().min(3, 'Give a reason for the refund').max(200),
 })

@@ -1,6 +1,6 @@
 # REDMARS HMIS — Roles & Permissions Matrix (v1, OPD)
 
-> **Status:** draft for review with Farhat / AXON staff.
+> **Status:** draft for review with Axon / AXON staff.
 > Rows marked ❓ are open questions — confirm with Dr. Hafizullah before building.
 
 ## Roles
@@ -82,9 +82,23 @@ cannot already infer from "absence is denial," the rule this whole document runs
 | `appointment.create` | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | `appointment.cancel` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
+### 4a. Reception coordination
+
+| Action | Admin | Recep | Nurse | Doctor | Lab | Pharm | Mgmt |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| `reception.read` | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| `reception.coordinate` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `reception.manage_beds` | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `reception.clinical_review` | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| `reception.supervise` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+Reception coordination creates requests and operational records. It does not grant the receptionist
+authority to approve admission, transfer, discharge, queue-priority or duplicate-merge decisions.
+The requester cannot approve their own clinical request or till discrepancy.
+
 ## 5. Clinical record
 
-> This is the confidentiality core. Farhat is a **psychiatric hospital** — a leaked diagnosis
+> This is the confidentiality core. Axon is a **psychiatric hospital** — a leaked diagnosis
 > does real harm in a small community. Default to denial.
 
 | Action | Admin | Recep | Nurse | Doctor | Lab | Pharm | Mgmt |
@@ -214,11 +228,11 @@ Positive scope, not a subtraction: a bill must carry a `prescription_item` line 
 
 ## Open questions for Dr. Hafizullah / the hospital
 
-1. **Who verifies lab results?** Right now the same tech enters and verifies. Real labs separate these (tech enters, senior verifies). Does Farhat have a lab supervisor? If yes → new role `lab_supervisor`.
+1. **Who verifies lab results?** Right now the same tech enters and verifies. Real labs separate these (tech enters, senior verifies). Does Axon have a lab supervisor? If yes → new role `lab_supervisor`.
 2. **Is the receptionist also the cashier?** The workflow doc implies yes. Confirmed → keep merged.
 3. **Do nurses assist in consultations?** If yes, R7 needs loosening.
 4. **Is Dr. Hafizullah `admin` or `management`?** He'll want to see everything — but as CEO he probably shouldn't be the one creating users at 2am. Consider giving him both roles, and note that `clinical_note.read` is denied to admin (R2) but he *is* a psychiatrist, so he'd hold `doctor` too.
-5. **Do panels/insurance exist at Farhat?** If not, drop the Panel table from v1.
+5. **Do panels/insurance exist at Axon?** If not, drop the Panel table from v1.
 6. **Discount ceiling — is 10% right?** Should there be a per-day total cap per user?
 7. **Emergency access ("break glass")?** If a patient arrives unconscious and the treating doctor isn't the assigned one — should any doctor be able to force access with a written reason, heavily logged? Standard in hospitals. Recommended.
 
@@ -226,6 +240,121 @@ Positive scope, not a subtraction: a bill must carry a `prescription_item` line 
 
 ## Implementation note
 
+### Internal finance module (2026-09)
+
+The hospital commissioned internal AFN accounting. Two dedicated roles are added:
+`accountant` prepares and reviews journals, maintains suppliers and reconciles statements;
+`finance_manager` also configures accounts/periods and closes periods.
+Neither role receives clinical permissions. Finance source views expose billing
+references, patient names/MRNs and visit numbers for accounting traceability. Both receive
+`auth.login` and `auth.me`.
+
+| Permission | Admin | Accountant | Finance manager | Management |
+|---|---|---|---|---|
+| finance.read | Yes | Yes | Yes | Yes |
+| finance.write | Yes | Yes | Yes | No |
+| finance.configure | Yes | No | Yes | No |
+| finance.post | Yes | Yes | Yes | No |
+| finance.close | Yes | No | Yes | No |
+| finance.reconcile | Yes | Yes | Yes | No |
+| finance.export | Yes | Yes | Yes | Yes |
+| finance.consolidation.manage | Yes | No | No | No |
+
+All finance routes additionally require the facility's finance module to be enabled.
+The Layer 6 `auditor` role receives only `auth.login`, `auth.me`, `finance.read`
+and `finance.export`. It has no finance mutation, payroll-detail or clinical
+permissions. A source facility's administrator may grant consolidated report
+access to a named active admin, finance manager, management user or auditor at
+another facility. The recipient's current role, active grant and each facility's
+enabled finance module are checked on every consolidated request. Grants are
+audited to the source facility and can be revoked immediately.
+Posting requires a different user from the preparer, including admins. Editing a
+manual draft makes that editor its current preparer; the original history remains
+in the audit trail. Generated journals and reversals wait for review. A till count
+also requires a different accountant's approval before a linked bank deposit.
+
 These rows map 1:1 to the `Permission` table (`resource` + `action`). Seed them; wire them to `Role` via `RolePermission`; enforce with a **NestJS guard**.
 
 **Enforce on the backend, always.** Hiding a button in React is a courtesy, not a control.
+# Payroll permissions — Layer 4 (2026-10-11)
+
+`payroll_officer` prepares employee pay records, attendance, loans and runs.
+It receives `auth.login`, `auth.me`, `finance.read`, `payroll.read` and
+`payroll.write`. It cannot approve payroll, pay salaries or post journals.
+
+| Permission | Roles |
+|---|---|
+| payroll.read | admin, accountant, finance_manager, payroll_officer, management |
+| payroll.write | admin, accountant, finance_manager, payroll_officer |
+| payroll.configure | admin, finance_manager |
+| payroll.approve | admin, finance_manager |
+| payroll.pay | admin, accountant, finance_manager |
+
+Payroll approval always requires a different user from the preparer. Salary
+payment requires approved payroll and a posted accrual. All permissions remain
+facility-scoped and require the Finance module. Management has read-only access.
+## CRM Foundation — Module 1
+
+| Permission | Administrator | Call center | Other roles |
+|---|---|---|---|
+| `crm.read` | Allowed | Allowed | Denied |
+| `crm.configure` | Allowed | Denied | Denied |
+| `crm.contacts.write` | Allowed | Allowed | Denied |
+| `crm.contacts.authorize` | Allowed | Denied | Denied |
+| `crm.leads.write` | Allowed | Own leads and explicit claims | Denied |
+| `crm.leads.assign` | Allowed | Denied | Denied |
+| `crm.interactions.write` | Allowed | Allowed | Denied |
+| `crm.interactions.correct` | Allowed | Own entries only | Denied |
+| `crm.calls.write` | Allowed | Allowed | Denied |
+
+All CRM permissions require CRM to be enabled for the signed-in facility. Settings
+are facility-scoped and audited; callers cannot supply another facility ID.
+Call-center users also hold `auth.login` and `auth.me` for their existing account
+and navigation. Their clinical permissions remain unchanged. R13 permits the
+existing follow-up queue and the CRM workspace's operational guidance; it does
+not grant general patient, clinical note, prescription or financial record access.
+CRM configuration is stored in the existing Setting table as `crm.settings`.
+
+Module 2 adds facility-scoped contacts, preferences, consent decisions and caller
+checks. Only administrators link existing patients and approve/revoke relationship
+scopes. Call-center staff cannot browse the patient registry. Minimal linked
+patient name/MRN is visible to agents only after a successful check of caller
+identity and authority, valid for that staff member for 15 minutes and invalidated
+by contact changes. Consent is scoped by contact, patient relationship, purpose,
+channel and destination. Shared phones never establish identity. No clinical
+notes, diagnoses or financial details are returned by CRM endpoints.
+
+Module 3 adds leads with an optional CRM contact, source, service interest,
+qualification and stage history. Agents create leads assigned to themselves,
+edit their own open leads and may claim an unassigned open lead. Administrators
+may reassign leads to active eligible CRM staff in their facility. Only admins
+can reopen a closed lead, with a reason. Qualification requires an active
+contact, an eligible owner, service interest and both administrative confirmations.
+This does not authorize contacting anyone or establish clinical eligibility.
+Leads never create patients, appointments or financial records. Source is retained
+from creation, version checks reject stale updates, and audit snapshots redact
+inquiry text and status-change reasons.
+
+Module 4 adds interaction timelines under leads and contacts. Entries with an
+authorized patient relationship are filtered by that relationship's purpose,
+active contact/patient and the agent's successful unexpired caller check for the
+current contact version. Counts, details and revisions apply the same filter.
+Administrators with `crm.contacts.authorize` bypass the caller check but cannot
+read patient entries through a revoked relationship. Only patient name/MRN are
+projected. Agents correct their own active entries; administrators may correct
+others. Corrections append a revision, require a reason and reject stale versions.
+Withdrawal preserves history. No CRM deletion endpoint exists.
+
+CRM configuration includes interaction visibility retention (30–3650 days,
+default 365). New entries expire from their event time; existing expiry dates do
+not change when the setting changes. Expired entries and revisions are hidden.
+Physical database/backup deletion is a separate operational procedure.
+
+Module 5 adds manual call records and a pending-action queue. Call reads reuse
+`crm.read` and the timeline's facility, relationship, caller-check and retention
+filters. `crm.calls.write` permits logging calls and completing pending actions
+with a note and version check. Call notes use timeline correction permissions;
+call facts and outcome are immutable. Unknown callers need no contact or patient
+registration. Callback attempts retain the original subject and phone. Audit
+snapshots redact caller phones and action/completion notes. No dialing, provider
+credentials or new clinical access is granted.

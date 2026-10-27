@@ -159,6 +159,9 @@ describe('Visit lab results / doctor read-back (e2e)', () => {
       data: {
         labOrderItemId: gItem.id,
         valueNumeric: '90',
+        referenceLow: '70',
+        referenceHigh: '110',
+        referenceCapturedAt: new Date(),
         unit: 'mg/dL',
         isAbnormal: false,
         enteredBy: doctorId,

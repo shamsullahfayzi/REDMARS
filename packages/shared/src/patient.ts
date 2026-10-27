@@ -6,7 +6,7 @@ import { genderSchema } from './referenceRange.js'
  *
  * The contract is deliberately STRICTER than the columns in two places and LOOSER in
  * none. `phone` is nullable in the schema (legacy Medi-Pro rows arrive without one and
- * must still be storable) but required here, because Farhat's reception desk asks every
+ * must still be storable) but required here, because Axon's reception desk asks every
  * patient. Policy belongs in the contract; storage stays permissive.
  *
  * Age is the subtle one. There is no `age` column — there is a real `dateOfBirth` OR an

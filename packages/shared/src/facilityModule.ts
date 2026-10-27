@@ -22,10 +22,16 @@ export const MODULE_KEYS = [
   'radiology',
   'billing',
   'reports',
+  'finance',
+  'crm',
+  'hr',
 ] as const
 
 export const moduleKeySchema = z.enum(MODULE_KEYS)
 export type ModuleKey = z.infer<typeof moduleKeySchema>
+
+/** Integration keys are reserved until their module is installed. */
+export const RESERVED_MODULE_KEYS: readonly ModuleKey[] = []
 
 export const facilityModuleSummarySchema = z.object({
   module: moduleKeySchema,

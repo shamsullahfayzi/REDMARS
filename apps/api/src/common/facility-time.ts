@@ -1,7 +1,7 @@
 /**
  * What "today" means at the hospital.
  *
- * Farhat is UTC+04:30 with no daylight saving. The server may well run in UTC, so a
+ * Axon is UTC+04:30 with no daylight saving. The server may well run in UTC, so a
  * naive `new Date()` day boundary is four and a half hours out: a patient registered at
  * 08:00 Kabul on Tuesday is 03:30 UTC Tuesday (fine), but one registered at 02:00 Kabul
  * on Tuesday is 21:30 UTC MONDAY — and would drop off Tuesday's queue entirely. A night

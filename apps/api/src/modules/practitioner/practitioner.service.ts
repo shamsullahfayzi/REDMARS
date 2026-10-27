@@ -4,8 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { hash } from '@node-rs/argon2';
 import type {
+  CreatePractitionerAccountRequest,
   CreatePractitionerRequest,
+  PractitionerAccountResult,
   PractitionerListResponse,
   PractitionerSummary,
   SetActiveRequest,
@@ -108,6 +111,101 @@ export class PractitionerService {
     });
 
     return this.getSummaryOrThrow(created.id);
+  }
+
+  async createAccount(
+    facilityId: string,
+    id: string,
+    input: CreatePractitionerAccountRequest,
+  ): Promise<PractitionerAccountResult> {
+    const practitioner = await this.prisma.db.practitioner.findFirst({
+      where: { id, facilityId, deletedAt: null },
+      select: { id: true, userId: true, firstName: true, lastName: true, isActive: true },
+    });
+    if (!practitioner) throw new NotFoundException('Practitioner not found');
+    if (!practitioner.isActive) {
+      throw new BadRequestException({
+        code: 'inactive_practitioner',
+        message: 'Reactivate this practitioner before creating a login account.',
+      });
+    }
+    if (practitioner.userId) {
+      throw new ConflictException({
+        code: 'practitioner_account_exists',
+        message: 'This practitioner already has a linked login account.',
+      });
+    }
+    const clash = await this.prisma.db.appUser.findUnique({
+      where: { facilityId_username: { facilityId, username: input.username } },
+      select: { id: true },
+    });
+    if (clash) {
+      throw new ConflictException({
+        code: 'username_exists',
+        message: 'That username is already in use.',
+      });
+    }
+    const doctorRole = await this.prisma.db.role.findUnique({ where: { code: 'doctor' } });
+    if (!doctorRole) throw new BadRequestException('Doctor role is not configured.');
+    const passwordHash = await hash(input.password);
+
+    const userId = await this.prisma.db.$transaction(async (tx) => {
+      const user = await tx.appUser.create({
+        data: {
+          facilityId,
+          username: input.username,
+          email: input.email,
+          fullName: [practitioner.firstName, practitioner.lastName].filter(Boolean).join(' '),
+          passwordHash,
+        },
+      });
+      await tx.userRole.create({ data: { userId: user.id, roleId: doctorRole.id } });
+      // The preflight read is only for a helpful response. Claim the link inside
+      // the transaction so another request cannot replace it and leave an orphan
+      // Doctor account with clinical access.
+      const linked = await tx.practitioner.updateMany({
+        where: { id, facilityId, userId: null, isActive: true, deletedAt: null },
+        data: { userId: user.id },
+      });
+      if (linked.count !== 1) {
+        throw new ConflictException({
+          code: 'practitioner_account_changed',
+          message: 'This practitioner changed. Reload before creating a login account.',
+        });
+      }
+      return user.id;
+    });
+    return this.accountResult(id, userId, true);
+  }
+
+  async grantDoctorRole(facilityId: string, id: string): Promise<PractitionerAccountResult> {
+    const practitioner = await this.prisma.db.practitioner.findFirst({
+      where: { id, facilityId, deletedAt: null },
+      select: { id: true, userId: true, isActive: true },
+    });
+    if (!practitioner) throw new NotFoundException('Practitioner not found');
+    if (!practitioner.isActive) {
+      throw new BadRequestException({
+        code: 'inactive_practitioner',
+        message: 'Reactivate this practitioner before granting Doctor access.',
+      });
+    }
+    if (!practitioner.userId) {
+      throw new BadRequestException({
+        code: 'practitioner_account_missing',
+        message: 'Create a login account for this practitioner first.',
+      });
+    }
+    const doctorRole = await this.prisma.db.role.findUnique({ where: { code: 'doctor' } });
+    if (!doctorRole) throw new BadRequestException('Doctor role is not configured.');
+    await this.prisma.db.userRole.upsert({
+      where: {
+        userId_roleId: { userId: practitioner.userId, roleId: doctorRole.id },
+      },
+      create: { userId: practitioner.userId, roleId: doctorRole.id },
+      update: {},
+    });
+    return this.accountResult(id, practitioner.userId, false);
   }
 
   async setActive(
@@ -223,5 +321,26 @@ export class PractitionerService {
       select: PRACTITIONER_SELECT,
     });
     return toSummary(full);
+  }
+
+  private async accountResult(
+    practitionerId: string,
+    userId: string,
+    created: boolean,
+  ): Promise<PractitionerAccountResult> {
+    const user = await this.prisma.db.appUser.findUniqueOrThrow({
+      where: { id: userId },
+      select: {
+        username: true,
+        userRoles: { select: { role: { select: { code: true } } } },
+      },
+    });
+    return {
+      practitionerId,
+      userId,
+      username: user.username,
+      roles: user.userRoles.map((entry) => entry.role.code),
+      created,
+    };
   }
 }

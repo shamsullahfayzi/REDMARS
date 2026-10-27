@@ -10,7 +10,7 @@ import { labOrderItemStatusSchema } from './labOrder.js'
  * unit of work here is the ordered test, keyed back to its order and patient so the screen
  * can group them again when it wants to.
  *
- * PAYMENT TRAVELS WITH THE ROW. Farhat collects at the window before a sample is taken, so
+ * PAYMENT TRAVELS WITH THE ROW. Axon collects at the window before a sample is taken, so
  * the fact that decides whether the bench may act — is this paid — is on every entry, next
  * to the test. `paid` is true only when the order's whole invoice is settled; a
  * part-payment leaves it false, because which specific line a partial sum covers is not yet
@@ -89,7 +89,7 @@ export type LabQueueResponse = z.infer<typeof labQueueResponseSchema>
  * ordered, so the bench collects the order's tests together in a single action. The request
  * is the item ids to draw; the server refuses the whole batch rather than half-collecting if
  * any one of them is not ready — a test whose sample was already taken, or, the point of
- * this slice, one the reception has not been paid for. Farhat collects at the window first,
+ * this slice, one the reception has not been paid for. Axon collects at the window first,
  * and this is where that rule stops being advisory and becomes a locked door.
  */
 export const collectSampleRequestSchema = z.object({

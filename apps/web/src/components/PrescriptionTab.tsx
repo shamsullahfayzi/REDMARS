@@ -175,6 +175,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
   /** Task 4.15 — YYYY-MM-DD, or '' for no review set. */
   const [followUpDate, setFollowUpDate] = useState('')
   const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  const [loadedVersion, setLoadedVersion] = useState(0)
   const [error, setError] = useState<string | null>(null)
   /** Reasons typed against the block, keyed by drug. Cleared once the save goes through. */
   const [overrides, setOverrides] = useState<Record<string, string>>({})
@@ -213,6 +214,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
     setFollowUpDate(stored?.followUpDate ?? '')
     setInteractionAck(stored?.interactionAckReason ?? '')
     setLoadedFor(visit.id)
+    setLoadedVersion(stored?.version ?? 0)
   }, [listQuery.isSuccess, stored, loadedFor, visit.id])
 
   const savedSignature = useMemo(
@@ -263,6 +265,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
 
   const doSave = useCallback(async () => {
     const parsed = savePrescriptionRequestSchema.safeParse({
+      expectedVersion: loadedVersion,
       items: rows.map((row) => ({
         id: row.id,
         drugId: row.drugId,
@@ -293,6 +296,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
     }
     setError(null)
     const result = await save.mutateAsync(parsed.data)
+    setLoadedVersion(result.prescription?.version ?? 0)
     // Re-seed from the server so new rows pick up their ids and the next save is a diff
     // rather than a second insert.
     setRows(
@@ -311,7 +315,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
       })),
     )
     setOverrides({})
-  }, [rows, advice, followUpDate, overrides, interactionAck, stored, save, t])
+  }, [rows, advice, followUpDate, overrides, interactionAck, stored, loadedVersion, save, t])
 
   useConsultSaver('prescription', { isDirty, save: doSave })
 
@@ -527,7 +531,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
                   )}
                 </div>
 
-                {/* Column order follows Farhat's own prescription sheet — dose, frequency,
+                {/* Column order follows Axon's own prescription sheet — dose, frequency,
                     duration, qty, route, remarks — so a doctor moving off the old system
                     reads left to right in the order their hand already knows. */}
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
@@ -562,7 +566,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
                     invalid={open && !row.duration}
                     onChange={(duration) => setRowAndSuggestQuantity(index, { duration })}
                   />
-                  {/* Farhat fills this on every line and the pharmacy dispenses against it.
+                  {/* Axon fills this on every line and the pharmacy dispenses against it.
                       Optional here because the strength and duration often say it, and a
                       required box the prescriber does not know the answer to gets a
                       guess typed into it. */}

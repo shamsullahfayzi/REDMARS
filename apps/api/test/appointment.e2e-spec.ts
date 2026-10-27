@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { hash } from '@node-rs/argon2';
@@ -542,6 +543,63 @@ describe('Appointments (e2e)', () => {
     // Walking in today does not consume next month's appointment.
     const after = await prisma.appointment.findUniqueOrThrow({ where: { id: future.id } });
     expect(after.status).toBe('booked');
+  });
+
+  it('reschedules an overlapping interval and preserves the original if the replacement is unavailable', async () => {
+    const scheduledOn = kabulDate(40);
+    const patient = await seedPatient();
+    const original = (
+      await book(
+        body({
+          patientId: patient,
+          scheduledOn,
+          scheduledAt: `${scheduledOn}T10:00:00+04:30`,
+          durationMinutes: 30,
+        }),
+      ).expect(201)
+    ).body as AppointmentSummary;
+    const rescheduled = await request(server)
+      .patch(`/appointments/${original.id}/reschedule`)
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .send({
+        departmentId: opdId,
+        practitionerId: drOpdId,
+        scheduledOn,
+        scheduledAt: `${scheduledOn}T10:10:00+04:30`,
+        durationMinutes: 30,
+        reason: 'Synthetic time correction',
+        idempotencyKey: randomUUID(),
+      })
+      .expect(200);
+    const replacement = (rescheduled.body as { replacement: AppointmentSummary }).replacement;
+    expect(
+      (await prisma.appointment.findUniqueOrThrow({ where: { id: original.id } })).status,
+    ).toBe('cancelled');
+    expect(replacement.status).toBe('booked');
+    await book(
+      body({
+        patientId: await seedPatient(),
+        scheduledOn,
+        scheduledAt: `${scheduledOn}T11:00:00+04:30`,
+        durationMinutes: 30,
+      }),
+    ).expect(201);
+    await request(server)
+      .patch(`/appointments/${replacement.id}/reschedule`)
+      .set('Authorization', `Bearer ${receptionistToken}`)
+      .send({
+        departmentId: opdId,
+        practitionerId: drOpdId,
+        scheduledOn,
+        scheduledAt: `${scheduledOn}T11:00:00+04:30`,
+        durationMinutes: 30,
+        reason: 'Synthetic conflicting correction',
+        idempotencyKey: randomUUID(),
+      })
+      .expect(409);
+    expect(
+      (await prisma.appointment.findUniqueOrThrow({ where: { id: replacement.id } })).status,
+    ).toBe('booked');
   });
 
   it('a fulfilled booking reports the visit it became', async () => {

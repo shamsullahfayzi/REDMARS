@@ -11,7 +11,7 @@ import { useVisitLabResults } from '@/hooks/useLabOrder'
  *
  * ONLY VERIFIED results print. A report is an official document a patient may take to another
  * clinic, so it carries values that have been signed off, not provisional ones — the same rule
- * the read-back follows. Modelled on the prescription sheet's restraint: no logo (Farhat prints
+ * the read-back follows. Modelled on the prescription sheet's restraint: no logo (Axon prints
  * on pre-printed letterhead), a boxed identity header in their form, then the results table.
  *
  * Task 6b.6 — verified is necessary but no longer sufficient: a result the doctor un-ticked on

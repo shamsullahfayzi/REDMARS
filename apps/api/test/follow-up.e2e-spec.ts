@@ -1,3 +1,4 @@
+import { fixtureDepartment } from './scoped-fixtures';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { hash } from '@node-rs/argon2';
@@ -480,7 +481,7 @@ describe('Follow-up recall list (e2e)', () => {
       data: {
         facilityId: otherFacilityId,
         patientId: theirs,
-        departmentId: opdId,
+        departmentId: await fixtureDepartment(prisma, otherFacilityId, opdId),
         visitNo: `${PREFIX}VOTHER`,
         type: 'opd_consult',
         status: 'in_progress',
@@ -610,7 +611,7 @@ describe('Follow-up recall list (e2e)', () => {
         data: {
           facilityId: otherFacilityId,
           patientId: theirs.id,
-          departmentId: opdId,
+          departmentId: await fixtureDepartment(prisma, otherFacilityId, opdId),
           visitNo: `${PREFIX}VOTHER2`,
           type: 'opd_consult',
           status: 'in_progress',

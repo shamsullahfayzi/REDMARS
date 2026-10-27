@@ -15,7 +15,7 @@ import { toWesternDigits, type PatientFormValues } from '@/hooks/usePatientForm'
  * must tab past cost time on every single registration; optional fields behind a toggle
  * cost nothing.
  *
- * Age is three boxes — years, months, days — after Farhat ran a real day and asked for it:
+ * Age is three boxes — years, months, days — after Axon ran a real day and asked for it:
  * a child is "1 year 2 months", and forcing that through a single number and a unit toggle
  * loses half of it. Any box left blank stays blank; only what is typed is sent.
  */
@@ -187,7 +187,7 @@ export function PatientFormFields({
         {belowPhone}
       </Field>
 
-      {/* Up front, not in the drawer — Farhat's desk asks for it on every registration. */}
+      {/* Up front, not in the drawer — Axon's desk asks for it on every registration. */}
       <Field id="address" label={t('patients.fields.address')} error={errors.address}>
         <Input
           id="address"

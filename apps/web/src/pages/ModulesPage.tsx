@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { Lock } from 'lucide-react'
-import type { ModuleKey } from '@redmars/shared'
+import { RESERVED_MODULE_KEYS, type ModuleKey } from '@redmars/shared'
 import { PageHeader } from '@/components/PageHeader'
 import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { useFacilityModules, useSetFacilityModule } from '@/hooks/useFacilityModules'
+import { ApiError } from '@/lib/api'
 
 /**
  * Admin screen for the facility's optional modules (task 2.12) — a list of switches.
@@ -21,9 +22,18 @@ export function ModulesPage() {
   const setModule = useSetFacilityModule()
 
   const modules = modulesQuery.data?.modules ?? []
-  const pendingModule = setModule.isPending
-    ? (setModule.variables?.module ?? null)
-    : null
+  const pendingModule = setModule.isPending ? (setModule.variables?.module ?? null) : null
+
+  if (modulesQuery.error instanceof ApiError && modulesQuery.error.status === 403) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t('nav.modules')} description={t('modules.subtitle')} />
+        <Card className="max-w-2xl p-6">
+          <p role="alert">{t('modules.accessDenied')}</p>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -52,12 +62,16 @@ export function ModulesPage() {
               <div>
                 <p className="font-medium text-foreground">{t(`modules.names.${key}`)}</p>
                 <p className="text-sm text-muted-foreground">
-                  {mod.enabled ? t('modules.on') : t('modules.off')}
+                  {RESERVED_MODULE_KEYS.includes(key)
+                    ? t('modules.notInstalled')
+                    : mod.enabled
+                      ? t('modules.on')
+                      : t('modules.off')}
                 </p>
               </div>
               <Switch
                 checked={mod.enabled}
-                disabled={pendingModule === key}
+                disabled={pendingModule === key || RESERVED_MODULE_KEYS.includes(key)}
                 onCheckedChange={(enabled) => setModule.mutate({ module: key, enabled })}
                 aria-label={t(`modules.names.${key}`)}
               />

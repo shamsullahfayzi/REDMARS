@@ -24,7 +24,7 @@ import { useVisitOptions } from '@/hooks/useVisits'
  * put it on the consult page itself for exactly this reason — the room the sentence gets
  * said in.
  *
- * A day, not a time. Farhat does not run slots, and a booking that promises 10:15 the
+ * A day, not a time. Axon does not run slots, and a booking that promises 10:15 the
  * clinic has no way to honour is worse than a date the patient can be sure of.
  *
  * `lockToSelf` is task 6b.5: a doctor books a follow-up with themselves, never on

@@ -1,14 +1,14 @@
+import { moneyDecimal, parseMoneyInput } from '@redmars/shared'
 import { PatientIdCard } from '@/components/PatientIdCard'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { useDebounced } from '@/hooks/useDebounced'
 import { useDiscountCeiling } from '@/hooks/useDiscountCeiling'
 import { usePatientSearch } from '@/hooks/usePatientSearch'
 import { toPayload, usePatientForm } from '@/hooks/usePatientForm'
-import { conflictFromError, fromMinor, toMinor, useCheckIn } from '@/hooks/useReception'
+import { conflictFromError, useCheckIn } from '@/hooks/useReception'
 import { useVisitOptions } from '@/hooks/useVisits'
 import { printTarget } from '@/lib/print'
 import { cn } from '@/lib/utils'
@@ -20,10 +20,11 @@ import { DuplicateNotice } from '@/components/DuplicateNotice'
 import { PageHeader } from '@/components/PageHeader'
 import { PatientFormFields } from '@/components/PatientFormFields'
 import { Check, Printer, CreditCard, UserPlus, Search, X } from 'lucide-react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 export function ReceptionPage() {
   const { t, i18n } = useTranslation()
+  const [searchParams] = useSearchParams()
   const optionsQuery = useVisitOptions()
   const checkIn = useCheckIn()
   const ceilingQuery = useDiscountCeiling()
@@ -37,14 +38,16 @@ export function ReceptionPage() {
   const patientForm = usePatientForm()
 
   // --- Step 2: why ---------------------------------------------------------------
-  const [visitType, setVisitType] = useState<VisitCreateType>('opd_consult')
+  const requestedType = searchParams.get('type')
+  const [visitType, setVisitType] = useState<VisitCreateType>(
+    requestedType === 'emergency' ? 'emergency' : 'opd_consult',
+  )
   const [departmentId, setDepartmentId] = useState('')
   const [departmentSearch, setDepartmentSearch] = useState('')
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false)
   const [practitionerId, setPractitionerId] = useState('')
   const [doctorSearch, setDoctorSearch] = useState('')
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false)
-  const [chiefComplaint, setChiefComplaint] = useState('')
 
   // --- Step 3: what it costs -----------------------------------------------------
   const [quantities, setQuantities] = useState<Record<string, number>>({})
@@ -119,14 +122,14 @@ export function ReceptionPage() {
   }, [])
 
   const chosenServices = services.filter((s) => (quantities[s.id] ?? 0) > 0)
-  const subtotalMinor = chosenServices.reduce(
-    (sum, service) => sum + toMinor(service.fee) * quantities[service.id],
-    0,
+  const subtotalAmount = chosenServices.reduce(
+    (sum, service) => sum.add(moneyDecimal(service.fee).mul(String(quantities[service.id]))),
+    moneyDecimal('0'),
   )
-  const discountMinor = discount.trim() === '' ? 0 : toMinor(discount.trim())
-  const ceilingMinor = Math.floor((subtotalMinor * maxDiscountPercent) / 100)
-  const overCeiling = discountMinor > ceilingMinor
-  const totalMinor = Math.max(0, subtotalMinor - discountMinor)
+  const discountAmount = parseMoneyInput(discount) ?? moneyDecimal('0')
+  const ceilingAmount = subtotalAmount.mul(String(maxDiscountPercent)).div('100').toDecimalPlaces(2, 1)
+  const overCeiling = discountAmount.gt(ceilingAmount)
+  const totalAmount = subtotalAmount.gt(discountAmount) ? subtotalAmount.sub(discountAmount) : moneyDecimal('0')
 
   const conflict = conflictFromError(checkIn.error)
 
@@ -141,7 +144,7 @@ export function ReceptionPage() {
     setPractitionerId('')
     setDoctorSearch('')
 
-    // A department can BE a service too — Farhat's "OPD" department carries a same-named
+    // A department can BE a service too — Axon's "OPD" department carries a same-named
     // "OPD" consultation fee. Auto-apply it instead of making the receptionist find and
     // click the very thing they just chose, a second time, in a list on the other side of
     // the screen. Matched against the department's CODE or base name, never the localized
@@ -248,9 +251,9 @@ export function ReceptionPage() {
   // second source of truth; the server still computes off the catalog subtotal).
   function onDiscountAmountChange(text: string) {
     setDiscount(text)
-    const minor = text.trim() === '' ? 0 : toMinor(text.trim())
+    const minor = parseMoneyInput(text) ?? moneyDecimal('0')
     setDiscountPercentText(
-      subtotalMinor > 0 ? String(Math.round((minor / subtotalMinor) * 10000) / 100) : '',
+      subtotalAmount.gt('0') ? minor.div(subtotalAmount).mul('100').toFixed(2) : '',
     )
   }
 
@@ -260,9 +263,9 @@ export function ReceptionPage() {
       setDiscount('')
       return
     }
-    const pct = Number(text)
-    if (!Number.isFinite(pct)) return
-    setDiscount(fromMinor(Math.round((subtotalMinor * pct) / 100)))
+    const pct = parseMoneyInput(text)
+    if (!pct) return
+    setDiscount(subtotalAmount.mul(pct).div('100').toFixed(2))
   }
 
   function buildPayload(overrides: Partial<CheckInRequest> = {}) {
@@ -277,7 +280,7 @@ export function ReceptionPage() {
         type: visitType,
         departmentId,
         practitionerId: practitionerId || null,
-        chiefComplaint: chiefComplaint.trim() || null,
+        chiefComplaint: null,
         referredBy: null,
         referralSource: null,
       },
@@ -285,7 +288,7 @@ export function ReceptionPage() {
         serviceId: service.id,
         quantity: quantities[service.id],
       })),
-      discount: discountMinor > 0 ? fromMinor(discountMinor) : '0',
+      discount: discountAmount.gt('0') ? discountAmount.toFixed(2) : '0',
       discountReason: discountReason.trim() || null,
       paymentMethod,
       paymentReference: paymentReference.trim() || null,
@@ -316,7 +319,6 @@ export function ReceptionPage() {
     setTerm('')
     setChosen(null)
     patientForm.reset()
-    setChiefComplaint('')
     setQuantities({})
     setDiscount('')
     setDiscountPercentText('')
@@ -382,8 +384,11 @@ export function ReceptionPage() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <div className="border-b px-4 py-2">
+      <div className="flex items-center justify-between gap-3 border-b px-4 py-2">
         <PageHeader title={t('reception.title')} />
+        <Link className={cn(buttonVariants({ variant: 'outline' }))} to="/reception/operations">
+          Reception operations
+        </Link>
       </div>
 
       <form
@@ -630,19 +635,6 @@ export function ReceptionPage() {
                 )}
               </div>
 
-              <div>
-                <Label className="text-xs" htmlFor="chiefComplaint">
-                  {t('visits.fields.chiefComplaint')}
-                </Label>
-                <Textarea
-                  id="chiefComplaint"
-                  rows={2}
-                  value={chiefComplaint}
-                  placeholder={t('visits.create.complaintPlaceholder')}
-                  onChange={(e) => setChiefComplaint(e.target.value)}
-                  className="resize-none text-sm"
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -743,7 +735,7 @@ export function ReceptionPage() {
                       />
                       {overCeiling && (
                         <p className="mt-0.5 text-[10px] text-destructive">
-                          Max {maxDiscountPercent}% ({fromMinor(ceilingMinor)})
+                          Max {maxDiscountPercent}% ({ceilingAmount.toFixed(2)})
                         </p>
                       )}
                     </div>
@@ -754,7 +746,7 @@ export function ReceptionPage() {
                       <Input
                         id="discountReason"
                         value={discountReason}
-                        disabled={discountMinor <= 0}
+                        disabled={discountAmount.lte('0')}
                         onChange={(e) => setDiscountReason(e.target.value)}
                         className="h-7 text-xs"
                       />
@@ -763,17 +755,17 @@ export function ReceptionPage() {
 
                   <div className="flex items-baseline justify-between text-xs">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-mono">{fromMinor(subtotalMinor)}</span>
+                    <span className="font-mono">{subtotalAmount.toFixed(2)}</span>
                   </div>
-                  {discountMinor > 0 && (
+                  {discountAmount.gt('0') && (
                     <div className="flex items-baseline justify-between text-xs">
                       <span className="text-muted-foreground">Discount</span>
-                      <span className="font-mono text-destructive">−{fromMinor(discountMinor)}</span>
+                      <span className="font-mono text-destructive">−{discountAmount.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="mt-1 flex items-baseline justify-between border-t pt-1">
                     <span className="font-semibold">Total</span>
-                    <span className="text-lg font-bold font-mono">{fromMinor(totalMinor)}</span>
+                    <span className="text-lg font-bold font-mono">{totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
               </>
@@ -822,7 +814,7 @@ export function ReceptionPage() {
                   checkIn.isPending || !patientReady || !departmentId || chosenServices.length === 0
                 }
               >
-                {checkIn.isPending ? t('reception.saving') : t('reception.submit', { amount: fromMinor(totalMinor) })}
+                {checkIn.isPending ? t('reception.saving') : t('reception.submit', { amount: totalAmount.toFixed(2) })}
               </Button>
             </div>
 

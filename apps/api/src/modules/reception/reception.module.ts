@@ -5,6 +5,8 @@ import { AppointmentModule } from '../appointment/appointment.module';
 import { PatientModule } from '../patient/patient.module';
 import { VisitModule } from '../visit/visit.module';
 import { ReceptionController } from './reception.controller';
+import { ReceptionOperationsController } from './reception-operations.controller';
+import { ReceptionOperationsService } from './reception-operations.service';
 import { ReceptionService } from './reception.service';
 
 @Module({
@@ -12,7 +14,7 @@ import { ReceptionService } from './reception.service';
   // the duplicate guard, the age anchor and the open-visit guard have to behave the same
   // whether the desk uses this screen or the single-purpose ones.
   imports: [NumberSequenceModule, PatientModule, VisitModule, AppointmentModule, SettingModule],
-  controllers: [ReceptionController],
-  providers: [ReceptionService],
+  controllers: [ReceptionController, ReceptionOperationsController],
+  providers: [ReceptionService, ReceptionOperationsService],
 })
 export class ReceptionModule {}

@@ -1,3 +1,4 @@
+import { idempotentCommand } from '../../common/idempotent-command';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type {
@@ -6,6 +7,7 @@ import type {
   PayLabChargesRequest,
   PayLabChargesResponse,
 } from '@redmars/shared';
+import { NumberSequenceService } from '../../services/number-sequence.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
@@ -25,7 +27,10 @@ const ZERO = new Prisma.Decimal(0);
 
 @Injectable()
 export class LabBillingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sequence: NumberSequenceService,
+  ) {}
 
   async charges(facilityId: string, query: LabChargesQuery): Promise<LabChargesResponse> {
     const patient = await this.prisma.db.patient.findFirst({
@@ -138,83 +143,98 @@ export class LabBillingService {
     userId: string,
     input: PayLabChargesRequest,
   ): Promise<PayLabChargesResponse> {
-    const itemIds = [...new Set(input.itemIds)];
+    return this.prisma.db.$transaction((tx) =>
+      idempotentCommand(
+        tx,
+        { facilityId, userId, operation: 'lab.pay', key: input.idempotencyKey, input },
+        async () => {
+          const itemIds = [...new Set(input.itemIds)];
 
-    const lines = await this.prisma.db.invoiceItem.findMany({
-      where: { refType: LAB_REF_TYPE, refId: { in: itemIds }, invoice: { facilityId } },
-      select: { id: true, refId: true, total: true, isPaid: true, invoiceId: true },
-    });
-    if (lines.length !== itemIds.length) {
-      throw new BadRequestException({
-        message: 'One of those charges is not on this facility’s lab orders.',
-        code: 'unknown_charge',
-      });
-    }
-    const alreadyPaid = lines.filter((line) => line.isPaid);
-    if (alreadyPaid.length > 0) {
-      throw new BadRequestException({
-        message: 'One of those tests is already paid.',
-        code: 'already_paid',
-      });
-    }
+          const lines = await tx.invoiceItem.findMany({
+            where: { refType: LAB_REF_TYPE, refId: { in: itemIds }, invoice: { facilityId } },
+            select: { id: true, refId: true, total: true, isPaid: true, invoiceId: true },
+          });
+          if (lines.length !== itemIds.length) {
+            throw new BadRequestException({
+              message: 'One of those charges is not on this facility’s lab orders.',
+              code: 'unknown_charge',
+            });
+          }
+          const alreadyPaid = lines.filter((line) => line.isPaid);
+          if (alreadyPaid.length > 0) {
+            throw new BadRequestException({
+              message: 'One of those tests is already paid.',
+              code: 'already_paid',
+            });
+          }
 
-    // Sum the cash per invoice — a patient may be settling lines across more than one order.
-    const amountByInvoice = new Map<string, Prisma.Decimal>();
-    for (const line of lines) {
-      amountByInvoice.set(
-        line.invoiceId,
-        (amountByInvoice.get(line.invoiceId) ?? ZERO).add(line.total),
-      );
-    }
-    const total = lines.reduce((sum, line) => sum.add(line.total), ZERO);
-    const now = new Date();
-    const method = input.method;
+          // Sum the cash per invoice — a patient may be settling lines across more than one order.
+          const amountByInvoice = new Map<string, Prisma.Decimal>();
+          for (const line of lines) {
+            amountByInvoice.set(
+              line.invoiceId,
+              (amountByInvoice.get(line.invoiceId) ?? ZERO).add(line.total),
+            );
+          }
+          const total = lines.reduce((sum, line) => sum.add(line.total), ZERO);
+          const now = new Date();
+          const method = input.method;
 
-    await this.prisma.db.$transaction(async (tx) => {
-      // Re-check unpaid inside the transaction so two windows cannot both take the same cash.
-      const stillUnpaid = await tx.invoiceItem.count({
-        where: { refType: LAB_REF_TYPE, refId: { in: itemIds }, isPaid: false },
-      });
-      if (stillUnpaid !== itemIds.length) {
-        throw new BadRequestException({
-          message: 'One of those tests was just paid at another window. Reload.',
-          code: 'already_paid',
-        });
-      }
+          // Re-check unpaid inside the transaction so two windows cannot both take the same cash.
+          const stillUnpaid = await tx.invoiceItem.count({
+            where: { refType: LAB_REF_TYPE, refId: { in: itemIds }, isPaid: false },
+          });
+          if (stillUnpaid !== itemIds.length) {
+            throw new BadRequestException({
+              message: 'One of those tests was just paid at another window. Reload.',
+              code: 'already_paid',
+            });
+          }
 
-      for (const line of lines) {
-        await tx.invoiceItem.update({
-          where: { id: line.id },
-          data: { isPaid: true, paidAt: now },
-        });
-      }
+          for (const line of lines) {
+            await tx.invoiceItem.update({
+              where: { id: line.id },
+              data: { isPaid: true, paidAt: now },
+            });
+          }
 
-      for (const [invoiceId, amount] of amountByInvoice) {
-        const invoice = await tx.invoice.findUniqueOrThrow({
-          where: { id: invoiceId },
-          select: { total: true, paidAmount: true },
-        });
-        const paidAmount = invoice.paidAmount.add(amount);
-        await tx.invoice.update({
-          where: { id: invoiceId },
-          data: {
-            paidAmount,
-            status: paidAmount.greaterThanOrEqualTo(invoice.total) ? 'paid' : 'partially_paid',
-          },
-        });
-        // The cash trail — one payment per invoice touched, summing the lines settled on it.
-        await tx.payment.create({
-          data: {
-            invoiceId,
-            amount,
-            method,
-            reference: input.reference ?? null,
-            receivedBy: userId,
-          },
-        });
-      }
-    });
-
-    return { paidItemIds: itemIds, amount: total.toFixed(2) };
+          for (const [invoiceId, amount] of amountByInvoice) {
+            const invoice = await tx.invoice.findUniqueOrThrow({
+              where: { id: invoiceId },
+              select: { total: true, paidAmount: true, status: true, discount: true },
+            });
+            if (invoice.status === 'cancelled' || invoice.status === 'draft')
+              throw new BadRequestException('This invoice cannot accept payment');
+            if (invoice.discount.greaterThan(0))
+              throw new BadRequestException(
+                'Settle a discounted lab bill through the invoice payment screen',
+              );
+            const paidAmount = invoice.paidAmount.add(amount);
+            if (paidAmount.greaterThan(invoice.total))
+              throw new BadRequestException('Payment exceeds the remaining balance');
+            const receipt = await this.sequence.next(facilityId, 'receipt_no', undefined, tx);
+            await tx.invoice.update({
+              where: { id: invoiceId },
+              data: {
+                paidAmount,
+                status: paidAmount.greaterThanOrEqualTo(invoice.total) ? 'paid' : 'partially_paid',
+              },
+            });
+            // The cash trail — one payment per invoice touched, summing the lines settled on it.
+            await tx.payment.create({
+              data: {
+                invoiceId,
+                amount,
+                method,
+                reference: input.reference ?? null,
+                receivedBy: userId,
+                receiptNo: receipt.formatted,
+              },
+            });
+          }
+          return { paidItemIds: itemIds, amount: total.toFixed(2) };
+        },
+      ),
+    );
   }
 }

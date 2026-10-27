@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ModuleKey } from '@prisma/client';
 import type {
   FacilityModuleListResponse,
   FacilityModuleSummary,
   ModuleKey as ModuleKeyContract,
 } from '@redmars/shared';
-import { MODULE_KEYS } from '@redmars/shared';
+import { MODULE_KEYS, RESERVED_MODULE_KEYS } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 
 type ModuleRow = { module: ModuleKey; enabled: boolean; enabledAt: Date | null };
@@ -46,6 +46,9 @@ export class FacilityModuleService {
     module: ModuleKeyContract,
     enabled: boolean,
   ): Promise<FacilityModuleSummary> {
+    if (enabled && RESERVED_MODULE_KEYS.includes(module)) {
+      throw new BadRequestException('This module has an integration key but is not installed yet.');
+    }
     const enabledAt = enabled ? new Date() : null;
     const row: ModuleRow = await this.prisma.db.facilityModule.upsert({
       where: { facilityId_module: { facilityId, module } },

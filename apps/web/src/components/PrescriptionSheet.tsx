@@ -17,7 +17,7 @@ import { useVitals } from '@/hooks/useVitals'
 /**
  * Task 4.10 — the A4 page the patient walks out with.
  *
- * Modelled on a photograph of the sheet Farhat prints TODAY, because the doctor receiving
+ * Modelled on a photograph of the sheet Axon prints TODAY, because the doctor receiving
  * this has been reading that layout for years and the first print should look like the
  * thing it replaces. Their structure, in their order: a boxed two-column identity header,
  * grey band headings, and a treatment table reading drug, frequency, duration, qty, route,
@@ -43,7 +43,7 @@ import { useVitals } from '@/hooks/useVitals'
  *    dialog. Null meaning "no print was recorded" is true; a timestamp meaning "a print was
  *    attempted" would be a weaker claim wearing a stronger word.
  *  - A second language alongside the first. The build order asked for a bilingual sheet;
- *    Farhat's actual paper is monolingual English labels with the REMARKS column in Dari,
+ *    Axon's actual paper is monolingual English labels with the REMARKS column in Dari,
  *    which is already how this works — labels for the staff, instructions for the patient,
  *    each in the language its reader has. Printing every label twice would halve the space
  *    for the drugs. The sheet follows the interface language and lays out correctly in
@@ -72,7 +72,7 @@ export function PrescriptionSheet({
       {/*
         The letterhead gap, as an @page margin rather than a spacer element.
 
-        Farhat prints onto pre-printed stationery, so the top AND bottom of every page have
+        Axon prints onto pre-printed stationery, so the top AND bottom of every page have
         to stay clear — and "every page" is the whole reason this is not a div with a
         height. A spacer pushes only the first page's content and lets page two print its
         table across the hospital's letterhead.
@@ -86,7 +86,7 @@ export function PrescriptionSheet({
       <Header context={context} consultant={rx?.practitionerName ?? visit.practitionerName} />
 
       {/*
-        NOT on the sheet Farhat prints today, and on this one by default.
+        NOT on the sheet Axon prints today, and on this one by default.
 
         Tasks 4.6 and 4.8 exist to make a recorded allergy impossible to miss on screen. A
         prescription that leaves the building without it undoes both at the last step — the
@@ -141,7 +141,7 @@ export function PrescriptionSheet({
 }
 
 /**
- * The identity block, in Farhat's two-column boxed form.
+ * The identity block, in Axon's two-column boxed form.
  *
  * Every value in it is LTR-isolated. An MRN, a visit number and a date read left to right
  * whatever direction the page runs in, and a bare number dropped into an RTL paragraph
@@ -196,7 +196,7 @@ function Line({ label, value, ltr = false }: { label: string; value: string; ltr
   )
 }
 
-/** The grey band Farhat's sheet uses to separate sections. */
+/** The grey band Axon's sheet uses to separate sections. */
 function Band({ children }: { children: string }) {
   return (
     <h2 className="mt-3 bg-black/10 px-2 py-0.5 text-[9pt] font-bold uppercase tracking-wide">
@@ -389,7 +389,7 @@ function Treatment({
                   </td>
                 )}
                 {settings.showInstructions && (
-                  // The one column Farhat writes in Dari. No dir override — it takes the
+                  // The one column Axon writes in Dari. No dir override — it takes the
                   // page's direction, which is the whole point of it being free text.
                   <td className="py-1">{item.instructions ?? ''}</td>
                 )}
@@ -439,7 +439,7 @@ function Treatment({
  *
  * Fixed to en-GB and the Gregorian calendar rather than the interface locale, because a
  * date is one of the two things on this page a pharmacy and a patient have to agree about,
- * and "22-Jul-2026" is what Farhat's current sheet prints. Rendering it in Persian digits
+ * and "22-Jul-2026" is what Axon's current sheet prints. Rendering it in Persian digits
  * on a Dari interface would produce a document the pharmacist next door cannot read back.
  * The Hijri calendar question is real and belongs to whoever asks for it, with a setting.
  */

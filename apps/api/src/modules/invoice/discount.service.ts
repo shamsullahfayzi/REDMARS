@@ -114,6 +114,12 @@ export class DiscountService {
           discountApprovedAt: approver ? new Date() : null,
         },
       });
+      if (status === 'paid') {
+        await tx.invoiceItem.updateMany({
+          where: { invoiceId },
+          data: { isPaid: true, paidAt: new Date() },
+        });
+      }
       return { invoice, discount, total, status, approvedByName: approver?.fullName ?? null };
     });
 
@@ -181,7 +187,7 @@ export class DiscountService {
     approval: DiscountApproval,
   ): Promise<{ id: string; fullName: string }> {
     const approver = await tx.appUser.findFirst({
-      where: { facilityId, username: approval.username, deletedAt: null },
+      where: { facilityId, username: approval.username, isActive: true, deletedAt: null },
       select: {
         id: true,
         fullName: true,

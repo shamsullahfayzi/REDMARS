@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
-import { useAppointments, useCloseAppointment } from '@/hooks/useAppointments'
+import { useAppointments, useCloseAppointment, useRescheduleAppointment } from '@/hooks/useAppointments'
 import { useVisitOptions } from '@/hooks/useVisits'
 import { cn } from '@/lib/utils'
 
@@ -42,14 +42,19 @@ export function AppointmentsPage() {
   const canClose = roles.includes('admin') || roles.includes('receptionist')
 
   function departmentName(department: VisitDepartmentOption): string {
-    if (i18n.language === 'prs' && department.nameLocalPrs) return department.nameLocalPrs
-    if (i18n.language === 'ps' && department.nameLocalPs) return department.nameLocalPs
+    if (i18n.language === 'prs' && department.nameLocalPrs)
+      return department.nameLocalPrs
+    if (i18n.language === 'ps' && department.nameLocalPs)
+      return department.nameLocalPs
     return department.name
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('nav.appointments')} description={t('appointments.subtitle')} />
+      <PageHeader
+        title={t('nav.appointments')}
+        description={t('appointments.subtitle')}
+      />
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex gap-2">
@@ -99,12 +104,19 @@ export function AppointmentsPage() {
         </div>
       </div>
 
-      {book.isError && <p className="text-sm text-destructive">{t('appointments.error')}</p>}
+      {book.isError && (
+        <p className="text-sm text-destructive">{t('appointments.error')}</p>
+      )}
 
       {!book.isError && appointments.length === 0 && !book.isPending ? (
         <Card className="p-8 text-center">
-          <CalendarDays className="mx-auto size-8 text-muted-foreground" aria-hidden />
-          <p className="mt-3 text-muted-foreground">{t('appointments.empty')}</p>
+          <CalendarDays
+            className="mx-auto size-8 text-muted-foreground"
+            aria-hidden
+          />
+          <p className="mt-3 text-muted-foreground">
+            {t('appointments.empty')}
+          </p>
         </Card>
       ) : (
         <ul className="space-y-2">
@@ -114,6 +126,7 @@ export function AppointmentsPage() {
               appointment={appointment}
               canClose={canClose}
               showDate={upcoming}
+              departments={departments}
             />
           ))}
         </ul>
@@ -126,14 +139,20 @@ function AppointmentRow({
   appointment,
   canClose,
   showDate,
+  departments,
 }: {
   appointment: AppointmentSummary
   canClose: boolean
   showDate: boolean
+  departments: VisitDepartmentOption[]
 }) {
   const { t } = useTranslation()
   const close = useCloseAppointment(appointment.id)
-  const open = appointment.status === 'booked' || appointment.status === 'arrived'
+  const reschedule = useRescheduleAppointment(appointment.id)
+  const [editing, setEditing] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const open =
+    appointment.status === 'booked' || appointment.status === 'arrived'
 
   return (
     <li>
@@ -156,6 +175,22 @@ function AppointmentRow({
               </>
             )}
           </p>
+          {appointment.endsAt && appointment.scheduledAt && (
+            <p dir="ltr" className="text-sm">
+              {new Date(appointment.scheduledAt).toLocaleTimeString([], {
+                timeZone: 'Asia/Kabul',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}{' '}
+              –{' '}
+              {new Date(appointment.endsAt).toLocaleTimeString([], {
+                timeZone: 'Asia/Kabul',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}{' '}
+              (Asia/Kabul)
+            </p>
+          )}
           {appointment.reason && (
             <p className="mt-1 text-sm text-foreground">{appointment.reason}</p>
           )}
@@ -199,13 +234,18 @@ function AppointmentRow({
 
         {canClose && open && (
           <div className="flex flex-col items-end gap-1">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => setEditing((value) => !value)}>
+                Reschedule
+              </Button>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
                 disabled={close.isPending}
-                onClick={() => close.mutate({ status: 'no_show', reason: null })}
+                onClick={() =>
+                  close.mutate({ status: 'no_show', reason: 'No-show at scheduled time' })
+                }
               >
                 {t('appointments.action.no_show')}
               </Button>
@@ -213,14 +253,37 @@ function AppointmentRow({
                 type="button"
                 size="sm"
                 variant="ghost"
-                disabled={close.isPending}
-                onClick={() => close.mutate({ status: 'cancelled', reason: null })}
+                disabled={close.isPending || !cancelReason.trim()}
+                onClick={() =>
+                  close.mutate({ status: 'cancelled', reason: cancelReason })
+                }
               >
                 {t('appointments.action.cancelled')}
               </Button>
             </div>
+            <Input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="Cancellation reason" className="h-8 w-56" />
+            {editing && <form className="grid w-full min-w-72 gap-2 rounded-md border bg-muted/30 p-3" onSubmit={(event) => {
+              event.preventDefault()
+              const form = new FormData(event.currentTarget)
+              reschedule.mutate({
+                departmentId: form.get('departmentId') as string,
+                practitionerId: appointment.practitionerId,
+                scheduledOn: form.get('scheduledOn') as string,
+                reason: form.get('reason') as string,
+                appointmentReason: appointment.reason ?? '',
+                idempotencyKey: crypto.randomUUID(),
+              }, { onSuccess: () => setEditing(false) })
+            }}>
+              <Select name="departmentId" defaultValue={appointment.departmentId} required>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</Select>
+              <Input name="scheduledOn" type="date" required />
+              <Input name="reason" required placeholder="Reason for rescheduling" />
+              <Button size="sm" disabled={reschedule.isPending}>Save new appointment</Button>
+              {reschedule.isError && <p className="text-xs text-destructive">Could not reschedule appointment.</p>}
+            </form>}
             {close.isError && (
-              <p className="text-xs text-destructive">{t('appointments.action.failed')}</p>
+              <p className="text-xs text-destructive">
+                {t('appointments.action.failed')}
+              </p>
             )}
           </div>
         )}

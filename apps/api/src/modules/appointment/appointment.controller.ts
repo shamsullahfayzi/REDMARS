@@ -18,6 +18,7 @@ import {
   appointmentListQuerySchema,
   closeAppointmentRequestSchema,
   createAppointmentRequestSchema,
+  rescheduleAppointmentSchema,
 } from '@redmars/shared';
 import type { AppointmentListResponse, AppointmentSummary } from '@redmars/shared';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
@@ -101,6 +102,26 @@ export class AppointmentController {
     }
 
     return this.appointments.close(auth.facilityId, id, parsed.data);
+  }
+
+  @Patch(':id/reschedule')
+  @RequirePermission('appointment.cancel')
+  reschedule(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ) {
+    const parsed = rescheduleAppointmentSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: 'Invalid appointment reschedule',
+        errors: parsed.error.flatten().fieldErrors,
+      });
+    }
+    const auth = this.auth(req);
+    if (!auth.permissions.has('appointment.create'))
+      throw new ForbiddenException('Missing permission: appointment.create');
+    return this.appointments.reschedule(auth.facilityId, auth.userId, id, parsed.data);
   }
 
   private auth(req: Request): AuthContext {

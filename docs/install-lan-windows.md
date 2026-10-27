@@ -13,7 +13,7 @@ If this box is a single standalone PC that NO other device needs to reach,
 use `docs/install-simple-pc.md` instead — same tool, but everything binds to
 `localhost` and skips the firewall/static-IP work below entirely.
 
-Read `docs/farhat-server-setup.md` first if you haven't already — it covers
+Read `docs/axon-server-setup.md` first if you haven't already — it covers
 picking the machine, giving it a static LAN IP, and what happens to this
 install across a reboot/power-cut. This document is only the *software*
 install once that groundwork is done.
@@ -30,7 +30,7 @@ Every client's browser and every cert are pinned to one address. If this
 server's IP can change (DHCP), logins break the next time the DHCP lease
 renews with a different address. Set a static IP (or a DHCP reservation on
 the hospital's router, which amounts to the same thing) before continuing —
-covered in `docs/farhat-server-setup.md` step 2. Have that IP (e.g.
+covered in `docs/axon-server-setup.md` step 2. Have that IP (e.g.
 `192.168.1.50`) ready; every step below uses it.
 
 ## 1. Install Docker Desktop + Git for Windows
@@ -43,7 +43,7 @@ covered in `docs/farhat-server-setup.md` step 2. Have that IP (e.g.
    starting (whale icon in the tray goes steady, not animating).
 2. In Docker Desktop → **Settings → General**, confirm **"Start Docker
    Desktop when you sign in"** is checked. This matters more here than on a
-   dev laptop — see `docs/farhat-server-setup.md`'s reboot-persistence
+   dev laptop — see `docs/axon-server-setup.md`'s reboot-persistence
    section for why, and the Windows auto-login step that goes with it.
 3. Install **Git for Windows**: https://git-scm.com/download/win
    Default options are fine. This is what gives you Git Bash.
@@ -102,7 +102,7 @@ cp apps/api/.env.example apps/api/.env
 **Root `.env`**:
 - `POSTGRES_PASSWORD` — replace `change-me` with a real generated password:
   `openssl rand -hex 24` (hex only — a base64 password can contain `/`,
-  which breaks Prisma's connection-string parser; see `docs/farhat-server-setup.md`
+  which breaks Prisma's connection-string parser; see `docs/axon-server-setup.md`
   if you hit `P1013` anyway)
 - `POSTGRES_PORT` / `ADMINER_PORT` — defaults are fine unless something else
   on the box already owns 5433/8081
@@ -235,5 +235,5 @@ to the terminal — write it down immediately.
 - **Reboot/power-cut recovery** depends on Docker Desktop actually starting
   after the machine restarts, which needs someone logged into Windows (Docker
   Desktop is a per-user application, not a Windows service) — see
-  `docs/farhat-server-setup.md`'s reboot-persistence section before relying
+  `docs/axon-server-setup.md`'s reboot-persistence section before relying
   on this for unattended recovery from a power outage.

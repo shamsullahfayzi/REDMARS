@@ -1,12 +1,11 @@
 /**
  * A money amount spelled out in English words, for the bill's "Received with thanks …"
- * line — the way Farhat's old Medi-Pro bill printed it ("Afghani Three Hundred Only").
+ * line — the way Axon's old Medi-Pro bill printed it ("Afghani Three Hundred Only").
  *
  * English regardless of the interface language, on purpose: it matches the bill the
  * hospital has handed out for years, and staff read the amount in figures beside it.
- * Integers only up to the millions — a clinic bill never needs more, and pretending to
- * handle a billion would only add cases nobody will ever exercise. Any fractional afghanis
- * are shown as "and NN/100", the standard cheque form.
+ * Uses exact integer groups through quadrillions. Fractional afghanis are shown as
+ * "and NN/100", the standard cheque form; no amount passes through a JS number.
  */
 
 const ONES = [
@@ -19,28 +18,31 @@ const TENS = [
 ]
 
 /** 0–999 in words. */
-function underThousand(n: number): string {
-  if (n < 20) return ONES[n]
-  if (n < 100) {
-    const t = TENS[Math.floor(n / 10)]
-    const r = n % 10
-    return r === 0 ? t : `${t} ${ONES[r]}`
+function underThousand(n: bigint): string {
+  const word = (values: string[], index: bigint) => values.find((_, i) => BigInt(i) === index)!
+  if (n < 20n) return word(ONES, n)
+  if (n < 100n) {
+    const t = word(TENS, n / 10n)
+    const r = n % 10n
+    return r === 0n ? t : `${t} ${word(ONES, r)}`
   }
-  const h = `${ONES[Math.floor(n / 100)]} Hundred`
-  const r = n % 100
-  return r === 0 ? h : `${h} ${underThousand(r)}`
+  const h = `${word(ONES, n / 100n)} Hundred`
+  const r = n % 100n
+  return r === 0n ? h : `${h} ${underThousand(r)}`
 }
 
-/** A whole number in words. Groups by thousand/million; caps beyond the millions. */
-function wholeInWords(n: number): string {
-  if (n === 0) return ONES[0]
+/** A whole number in words, grouped in exact powers of one thousand. */
+function wholeInWords(n: bigint): string {
+  if (n === 0n) return ONES[0]
   const parts: string[] = []
-  const millions = Math.floor(n / 1_000_000)
-  const thousands = Math.floor((n % 1_000_000) / 1000)
-  const rest = n % 1000
-  if (millions > 0) parts.push(`${underThousand(millions)} Million`)
-  if (thousands > 0) parts.push(`${underThousand(thousands)} Thousand`)
-  if (rest > 0) parts.push(underThousand(rest))
+  const groups = ['', 'Thousand', 'Million', 'Billion', 'Trillion', 'Quadrillion']
+  let index = 0
+  while (n > 0n) {
+    const group = n % 1000n
+    if (group) parts.unshift(`${underThousand(group)}${groups[index] ? ` ${groups[index]}` : ''}`)
+    n /= 1000n
+    index++
+  }
   return parts.join(' ')
 }
 
@@ -50,8 +52,8 @@ function wholeInWords(n: number): string {
  */
 export function amountInWords(amount: string): string {
   const [wholeStr = '0', fracStr = '00'] = amount.split('.')
-  const whole = Math.floor(Number(wholeStr)) || 0
-  const words = wholeInWords(whole)
-  const frac = Number(fracStr.padEnd(2, '0').slice(0, 2))
-  return frac > 0 ? `${words} and ${String(frac).padStart(2, '0')}/100` : words
+  const whole = BigInt(wholeStr)
+  const words = `${amount.startsWith('-') ? 'Minus ' : ''}${wholeInWords(whole < 0n ? -whole : whole)}`
+  const frac = fracStr.padEnd(2, '0').slice(0, 2)
+  return /[1-9]/.test(frac) ? `${words} and ${frac}/100` : words
 }

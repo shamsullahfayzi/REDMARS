@@ -234,6 +234,29 @@ export function apiDelete<TSchema extends z.ZodType>(
   return request('DELETE', path, schema)
 }
 
+/** Multipart upload for protected employee documents. */
+export async function apiUpload<TSchema extends z.ZodType>(
+  path: string,
+  body: FormData,
+  schema: TSchema,
+): Promise<z.infer<TSchema>> {
+  const headers = buildHeaders(false)
+  const response = await fetch(`${API_BASE_URL}${path}`, { method: 'POST', headers, body })
+  return parseResponse(path, response, schema)
+}
+
+/** Download a protected file without putting the access token in a URL. */
+export async function apiDownload(path: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${path}`, { headers: buildHeaders(false) })
+  if (!response.ok) throw new ApiError(`${path} failed`, response.status)
+  const blob = await response.blob()
+  const disposition = response.headers.get('content-disposition') ?? ''
+  const name = decodeURIComponent(disposition.match(/filename\*=UTF-8''([^;]+)/)?.[1] ?? 'document')
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url; anchor.download = name; anchor.click(); URL.revokeObjectURL(url)
+}
+
 /**
  * The shared tail of every request: reject non-2xx by status (the caller decides
  * what a 401 or 400 means), then parse the body against the agreed schema so a

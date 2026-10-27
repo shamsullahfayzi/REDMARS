@@ -33,8 +33,7 @@ const optionalText = (max: number) =>
     .nullish()
     .transform((v) => (v ? v : null))
 
-const requiredText = (max: number, message: string) =>
-  z.string().trim().min(1, message).max(max)
+const requiredText = (max: number, message: string) => z.string().trim().min(1, message).max(max)
 
 /**
  * Task 4.15 — a follow-up date, as a plain calendar day.
@@ -104,6 +103,7 @@ export const prescriptionItemInputSchema = z.object({
 export type PrescriptionItemInput = z.infer<typeof prescriptionItemInputSchema>
 
 export const savePrescriptionRequestSchema = z.object({
+  expectedVersion: z.number().int().nonnegative().optional(),
   /**
    * An EMPTY list is meaningful: it means this visit has no prescription. Sending one
    * removes the sheet rather than storing an empty one, so a doctor who deletes the last
@@ -169,6 +169,7 @@ export const prescriptionItemSchema = z.object({
 export type PrescriptionItem = z.infer<typeof prescriptionItemSchema>
 
 export const prescriptionSchema = z.object({
+  version: z.number().int().positive(),
   id: z.uuid(),
   visitId: z.uuid(),
   status: z.string(),

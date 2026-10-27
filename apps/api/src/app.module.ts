@@ -41,6 +41,10 @@ import { FollowUpModule } from './modules/follow-up/follow-up.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { CollectionsModule } from './modules/collections/collections.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { IntegrationModule } from './integration/integration.module';
+import { FinanceModule } from './modules/finance/finance.module';
+import { CrmModule } from './modules/crm/crm.module';
+import { StaffModule } from './modules/staff/staff.module';
 
 @Module({
   imports: [
@@ -51,6 +55,10 @@ import { ReportsModule } from './modules/reports/reports.module';
       validate: validateEnv,
     }),
     PrismaModule,
+    IntegrationModule,
+    FinanceModule,
+    CrmModule,
+    StaffModule,
     HealthModule,
     AuthModule,
     UsersModule,

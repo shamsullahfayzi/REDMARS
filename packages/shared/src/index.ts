@@ -1,9 +1,10 @@
 // @redmars/shared — the wire contract between apps/api and apps/web.
 //
-// Everything here is a zod schema plus its inferred type. The schema is the
+// Contracts are zod schemas plus their inferred types. The schema is the
 // single source: the API types its responses against it at compile time, the
 // web client parses against it at runtime. Change a field here and both halves
 // fail to build — which is the entire point of this package existing.
+// Pure shared domain helpers, such as the Shamsi calendar wrapper, also live here.
 //
 // The .js extensions are deliberate and are not a mistake: ESM requires a real
 // file extension, and TypeScript maps './auth.js' back to './auth.ts' when
@@ -33,6 +34,7 @@ export * from './facilityModule.js'
 export * from './patient.js'
 export * from './visit.js'
 export * from './reception.js'
+export * from './receptionOperations.js'
 export * from './invoice.js'
 export * from './pharmacy.js'
 export * from './till.js'
@@ -51,3 +53,22 @@ export * from './followUp.js'
 export * from './settings.js'
 export * from './collections.js'
 export * from './reports.js'
+export * from './finance.js'
+export * from './financeRevenue.js'
+export * from './financePayables.js'
+export * from './shamsi.js'
+
+export * from './money.js'
+export * from './fiscal.js'
+export * from './financePayroll.js'
+export * from './financeAssets.js'
+export * from './financeStatements.js'
+export * from './crm.js'
+export * from './crmContacts.js'
+export * from './crmLeads.js'
+export * from './crmTimeline.js'
+export * from './crmCalls.js'
+export * from './crmTasks.js'
+export * from './crmAppointments.js'
+export * from './crmPatients.js'
+export * from './hr.js'

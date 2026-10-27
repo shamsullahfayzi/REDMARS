@@ -1,3 +1,4 @@
+import { fixtureDepartment } from './scoped-fixtures';
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -78,7 +79,7 @@ describe('Chief complaint and templates (e2e)', () => {
       data: {
         facilityId: inFacility,
         patientId: patient.id,
-        departmentId: opdId,
+        departmentId: await fixtureDepartment(prisma, inFacility, opdId),
         visitNo: `${PREFIX}V${counter}`,
         type: 'opd_consult',
         status: options.status ?? 'in_progress',

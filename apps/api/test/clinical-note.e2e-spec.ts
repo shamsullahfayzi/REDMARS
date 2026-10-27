@@ -1,3 +1,4 @@
+import { fixtureDepartment } from './scoped-fixtures';
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -109,7 +110,7 @@ describe('Clinical note (e2e)', () => {
       data: {
         facilityId: inFacility,
         patientId: patient.id,
-        departmentId: opdId,
+        departmentId: await fixtureDepartment(prisma, inFacility, opdId),
         visitNo: `${PREFIX}V${counter}`,
         type: 'opd_consult',
         status: options.status ?? 'in_progress',
@@ -492,7 +493,7 @@ describe('Clinical note (e2e)', () => {
     await putNote(visitId, { noteType: 'mse', content: { mood: 'Low.' } }).expect(200);
 
     // Every other clinical spec in this suite asserts the admin CAN read. Not this one.
-    // Farhat is a psychiatric hospital in a small community.
+    // Axon is a psychiatric hospital in a small community.
     await listNotes(visitId, 'admin').expect(403);
     await putNote(
       visitId,

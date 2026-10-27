@@ -17,7 +17,7 @@ import { parseCsv } from '../src/modules/drug/csv';
  * facility's formulary: it inserts a row only when the facility stocks both generics,
  * and expands one rule across every strength on hand (Sertraline 50mg AND 100mg both
  * pair with Venlafaxine). A generic the facility does not stock — e.g. an MAOI at
- * Farhat — produces no rows; that pair sits dormant in the CSV until such a drug is
+ * Axon — produces no rows; that pair sits dormant in the CSV until such a drug is
  * added, which is correct: no MAOI stocked means no MAOI interaction is possible.
  *
  * The pair is stored in a canonical id order (drugAId < drugBId) so the unique
@@ -42,7 +42,7 @@ interface Rule {
 }
 
 async function main() {
-  const facilityCode = process.env.SEED_FACILITY_CODE ?? 'FARHAT';
+  const facilityCode = process.env.SEED_FACILITY_CODE ?? 'AXON';
   const facility = await prisma.facility.findUnique({ where: { code: facilityCode } });
   if (!facility) {
     throw new Error(

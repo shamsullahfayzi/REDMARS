@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX finance_bill_receipt_id_facility_id_key ON finance_bill(receipt_id,facility_id);

@@ -30,7 +30,7 @@ export type VisitType = z.infer<typeof visitTypeSchema>
  * What the reception desk may actually start — every type EXCEPT `ipd`.
  *
  * Admission to a ward is not a dropdown option at the front desk: it needs a bed, a
- * ward, and the `ipd` module, which is off at Farhat. Keeping `ipd` out of create means
+ * ward, and the `ipd` module, which is off at Axon. Keeping `ipd` out of create means
  * Phase 8 widens this list deliberately instead of inheriting the capability by
  * accident, and a client that sends it gets a 400 rather than a half-formed admission.
  */
@@ -252,7 +252,12 @@ export type ChangeVisitStatusRequest = z.infer<typeof changeVisitStatusRequestSc
  * complaint list is over-modelling, and the coded conclusion is the Diagnosis.
  */
 export const updateComplaintRequestSchema = z.object({
-  chiefComplaint: z.string().trim().max(500).nullish().transform((v) => (v ? v : null)),
+  chiefComplaint: z
+    .string()
+    .trim()
+    .max(500)
+    .nullish()
+    .transform((v) => (v ? v : null)),
 })
 export type UpdateComplaintRequest = z.infer<typeof updateComplaintRequestSchema>
 
@@ -286,6 +291,7 @@ export type RefundSummary = z.infer<typeof refundSummarySchema>
 export const cancelVisitResponseSchema = z.object({
   visit: visitSummarySchema,
   refund: refundSummarySchema.nullable(),
+  refunds: z.array(refundSummarySchema).default([]),
 })
 export type CancelVisitResponse = z.infer<typeof cancelVisitResponseSchema>
 

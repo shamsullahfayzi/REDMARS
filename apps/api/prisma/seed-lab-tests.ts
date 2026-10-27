@@ -7,7 +7,7 @@ import { parseCsv } from '../src/modules/drug/csv';
  * Seeds a CURATED starter lab test menu (~264 tests, ~284 reference-range rows) — the
  * old Medi-Pro export had no dedicated lab test table (only 164 free-text billing
  * lines under grp=LAB), so this is built from standard clinical reference ranges, not
- * migrated data. Farhat's own 164 real test names were cross-checked in so the local
+ * migrated data. Axon's own 164 real test names were cross-checked in so the local
  * menu is well covered; ranges lean adult/general-population and skip pediatric and
  * cycle-phase/gestational-week breakdowns for v1 (textValue notes flag where a range
  * genuinely varies). A pathologist/lab lead MUST review this before real use — same
@@ -38,7 +38,7 @@ function toNum(raw: string): number | null {
 }
 
 async function main() {
-  const facilityCode = process.env.SEED_FACILITY_CODE ?? 'FARHAT';
+  const facilityCode = process.env.SEED_FACILITY_CODE ?? 'AXON';
   const facility = await prisma.facility.findUnique({ where: { code: facilityCode } });
   if (!facility) {
     throw new Error(

@@ -21,6 +21,7 @@ export interface AuthContextValue {
   sessionEndedReason: SessionEndedReason | null
   login: (username: string, password: string) => Promise<void>
   logout: () => void
+  refreshIdentity: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

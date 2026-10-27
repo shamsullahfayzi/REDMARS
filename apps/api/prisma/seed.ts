@@ -27,17 +27,17 @@ import {
  * script. See seedAdminUser for why this one cannot wait for that.
  *
  * One DB per hospital, so there is exactly one facility here. Parameterising it
- * per deployment is Phase 7 work; for now these constants describe Farhat.
+ * per deployment is Phase 7 work; for now these constants describe Axon.
  */
 
 const prisma = new PrismaClient();
 
 const FACILITY = {
-  code: 'FARHAT',
-  name: 'Farhat Hospital',
-  nameLocalPrs: 'شفاخانه فرحت',
-  nameLocalPs: 'د فرحت روغتون',
-  // From Farhat's own printed bill footer — the address and contact that head/foot the
+  code: 'AXON',
+  name: 'Axon Nura Psychiatric and Addiction Treatment Specialty Hospital',
+  nameLocalPrs: 'شفاخانه تخصصی روانی و تداوی اعتیاد اکسون نورا',
+  nameLocalPs: 'د اکسون نورا د رواني او روږدو درملنې تخصصي روغتون',
+  // From Axon's own printed bill footer — the address and contact that head/foot the
   // invoice. Real values so the printed bill looks like the one the hospital hands out.
   address: 'Kolola Pushta Bus Stop, Kabul, Afghanistan',
   phone: '+93 788 991 144',
@@ -86,7 +86,7 @@ const DEPARTMENTS: Array<{
   },
   // The rest of these (task: Medi-Pro migration) come from the grp codes actually
   // used on the old system's service list — a real multi-specialty OPD roster, not
-  // just Farhat's psych focus. DepartmentType only has 7 buckets, so most specialty
+  // just Axon's psych focus. DepartmentType only has 7 buckets, so most specialty
   // clinics land under `opd` (they ARE outpatient clinics); imaging modalities
   // (ultrasound, doppler) fold into RAD rather than getting their own type.
   {
@@ -213,8 +213,8 @@ async function seedFacility() {
   return facility;
 }
 
-// Which optional modules a fresh Farhat install has on. OPD is not here — it is the
-// core and is never toggleable (see the ModuleKey enum). Farhat runs a lab and a
+// Which optional modules a fresh Axon install has on. OPD is not here — it is the
+// core and is never toggleable (see the ModuleKey enum). Axon runs a lab and a
 // pharmacy alongside its OPD, so those two ship on; the rest are off until licensed
 // and an admin flips them (task 2.12). Enabling here is only the recorded flag — the
 // ModuleGuard (2.13) is what turns a disabled module into a 403.

@@ -168,7 +168,7 @@ const LETTER_VARIANTS: Record<string, string[]> = {
  * a deliberately loose net; the scoring below is what makes it precise.
  *
  * This is bounded by TAKE and is the right shape for a register of a few thousand. When
- * Farhat outgrows that, the upgrade is a stored normalised column with an index on it,
+ * Axon outgrows that, the upgrade is a stored normalised column with an index on it,
  * not a wider net.
  */
 function firstLetterVariants(normalisedName: string): string[] {
@@ -202,7 +202,7 @@ export class PatientService {
     // so. Deliberately overridable: a household can genuinely share one phone, and a
     // registration system that cannot be argued with gets worked around instead.
     if (!input.acknowledgeDuplicate) {
-      const matches = await this.findDuplicates(facilityId, input);
+      const matches = await this.findDuplicates(facilityId, input, tx);
       const blocking = matches.filter((match) => match.confidence === 'high');
       if (blocking.length > 0) {
         throw new ConflictException({
@@ -347,12 +347,13 @@ export class PatientService {
   async findDuplicates(
     facilityId: string,
     input: { firstName: string; lastName?: string | null; phone?: string | null },
+    tx: AuditedTx = this.prisma.db,
   ): Promise<DuplicateMatch[]> {
     const phone = normalisePhone(input.phone);
     const firstName = normaliseName(input.firstName);
     const lastName = input.lastName ? normaliseName(input.lastName) : '';
 
-    const candidates = await this.prisma.db.patient.findMany({
+    const candidates = await tx.patient.findMany({
       where: {
         facilityId,
         deletedAt: null,

@@ -23,14 +23,14 @@ import { hash } from '@node-rs/argon2';
  *
  * Run: pnpm --filter api exec ts-node -P tsconfig.seed.json scripts/load-test.ts
  * Env: LOAD_TEST_BASE_URL (default http://localhost:3000), LOAD_TEST_PATIENTS (default 40),
- *      LOAD_TEST_PASSWORD (default below), SEED_FACILITY_CODE (default FARHAT)
+ *      LOAD_TEST_PASSWORD (default below), SEED_FACILITY_CODE (default AXON)
  */
 
 const prisma = new PrismaClient();
 
 const BASE_URL = process.env.LOAD_TEST_BASE_URL ?? 'http://localhost:3000';
 const PATIENT_COUNT = Number(process.env.LOAD_TEST_PATIENTS ?? 40);
-const PASSWORD = process.env.LOAD_TEST_PASSWORD ?? 'LoadTest#Farhat2026';
+const PASSWORD = process.env.LOAD_TEST_PASSWORD ?? 'LoadTest#Axon2026';
 const REQUEST_TIMEOUT_MS = 15_000;
 
 // ---------------------------------------------------------------------------
@@ -59,7 +59,7 @@ interface Fixtures {
 }
 
 async function bootstrap(): Promise<Fixtures> {
-  const facilityCode = process.env.SEED_FACILITY_CODE ?? 'FARHAT';
+  const facilityCode = process.env.SEED_FACILITY_CODE ?? 'AXON';
   const facility = await prisma.facility.findUnique({ where: { code: facilityCode } });
   if (!facility) {
     throw new Error(`Facility '${facilityCode}' not found. Run the main seed first.`);

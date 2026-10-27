@@ -25,7 +25,7 @@ const prisma = new PrismaClient();
 const TRUE_VALUES = new Set(['true', '1', 'yes', 'y']);
 
 async function main() {
-  const facilityCode = process.env.SEED_FACILITY_CODE ?? 'FARHAT';
+  const facilityCode = process.env.SEED_FACILITY_CODE ?? 'AXON';
   const facility = await prisma.facility.findUnique({ where: { code: facilityCode } });
   if (!facility) {
     throw new Error(

@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils'
  * count in the header is the number of calls to make rather than the number of rows.
  *
  * IT IS NOT THE APPOINTMENT BOOK. Task 3.10 knows who booked; this knows who was TOLD to
- * come back, which at Farhat is most of them and overlaps the book hardly at all.
+ * come back, which at Axon is most of them and overlaps the book hardly at all.
  *
  * Two ways it is used, and the date range serves both: forward from today, which is the
  * clinic's diary, and BACKWARD over a window that has passed with `onlyMissed` on, which is

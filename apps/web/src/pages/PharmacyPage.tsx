@@ -1,3 +1,4 @@
+import { moneyDecimal, parseMoneyInput } from '@redmars/shared'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Pill, Search, TriangleAlert } from 'lucide-react'
@@ -279,10 +280,10 @@ function BillForm({ prescriptionId, items }: { prescriptionId: string; items: Ph
 
   const qtyOf = (item: PharmacyDrugLine) => item.quantity ?? 1
   const lineTotal = (item: PharmacyDrugLine) => {
-    const price = Number(prices[item.id])
-    return Number.isFinite(price) ? price * qtyOf(item) : 0
+    const price = parseMoneyInput(prices[item.id])
+    return price ? price.mul(String(qtyOf(item))) : moneyDecimal('0')
   }
-  const billTotal = items.reduce((sum, item) => sum + lineTotal(item), 0)
+  const billTotal = items.reduce((sum, item) => sum.add(lineTotal(item)), moneyDecimal('0'))
   const allPriced = items.every((item) => moneySchema.safeParse(prices[item.id]).success)
 
   function submit() {

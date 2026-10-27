@@ -42,88 +42,88 @@ export class LabResultService {
     itemId: string,
     input: SaveLabResultRequest,
   ): Promise<SaveLabResultResponse> {
-    const item = await this.prisma.db.labOrderItem.findFirst({
-      where: { id: itemId, labOrder: { facilityId } },
-      select: {
-        id: true,
-        status: true,
-        testId: true,
-        test: { select: { unit: true } },
-        result: { select: { verifiedAt: true } },
-        labOrder: {
-          select: {
-            visit: {
-              select: {
-                patient: {
-                  select: {
-                    gender: true,
-                    dateOfBirth: true,
-                    estimatedAgeYears: true,
-                    estimatedAgeMonths: true,
-                    ageRecordedAt: true,
+    return this.prisma.db.$transaction(async (tx) => {
+      const item = await tx.labOrderItem.findFirst({
+        where: { id: itemId, labOrder: { facilityId } },
+        select: {
+          id: true,
+          status: true,
+          testId: true,
+          test: { select: { unit: true } },
+          result: { select: { verifiedAt: true } },
+          labOrder: {
+            select: {
+              visit: {
+                select: {
+                  patient: {
+                    select: {
+                      gender: true,
+                      dateOfBirth: true,
+                      estimatedAgeYears: true,
+                      estimatedAgeMonths: true,
+                      ageRecordedAt: true,
+                    },
                   },
                 },
               },
             },
           },
         },
-      },
-    });
-    if (!item) throw new NotFoundException('Lab test not found');
+      });
+      if (!item) throw new NotFoundException('Lab test not found');
 
-    // A sample has to exist before it can produce a number.
-    if (item.status !== 'sample_collected' && item.status !== 'in_progress') {
-      if (item.status === 'resulted' || item.status === 'verified') {
-        // resulted is re-enterable; verified is not — that is amendment's job.
-        if (item.result?.verifiedAt) {
+      // A sample has to exist before it can produce a number.
+      if (item.status !== 'sample_collected' && item.status !== 'in_progress') {
+        if (item.status === 'resulted' || item.status === 'verified') {
+          // resulted is re-enterable; verified is not — that is amendment's job.
+          if (item.result?.verifiedAt) {
+            throw new BadRequestException({
+              message: 'This result is verified. Amending it is a separate action.',
+              code: 'already_verified',
+            });
+          }
+        } else {
           throw new BadRequestException({
-            message: 'This result is verified. Amending it is a separate action.',
-            code: 'already_verified',
+            message: 'A result can only be entered once the sample has been collected.',
+            code: 'no_sample',
           });
         }
-      } else {
-        throw new BadRequestException({
-          message: 'A result can only be entered once the sample has been collected.',
-          code: 'no_sample',
+      }
+
+      const patient = item.labOrder.visit.patient;
+
+      // The flag. Only a numeric value is measured against a band; a text result carries none.
+      let flag: string | null = null;
+      let isAbnormal = false;
+      let band: Band = { low: null, high: null, text: null };
+
+      if (input.valueNumeric != null) {
+        const ageYears = currentAgeYears({
+          dateOfBirth: patient.dateOfBirth?.toISOString().slice(0, 10) ?? null,
+          estimatedAgeYears: patient.estimatedAgeYears,
+          estimatedAgeMonths: patient.estimatedAgeMonths,
+          ageRecordedAt: patient.ageRecordedAt?.toISOString() ?? null,
         });
+        band = await bandFor({ db: tx }, item.testId, patient.gender, ageYears);
+        const value = new Prisma.Decimal(input.valueNumeric);
+        if (band.low != null && value.lessThan(band.low)) {
+          flag = 'L';
+          isAbnormal = true;
+        } else if (band.high != null && value.greaterThan(band.high)) {
+          flag = 'H';
+          isAbnormal = true;
+        }
+      } else if (input.valueText != null) {
+        // A text band ("Negative") makes anything else abnormal, case-insensitively.
+        band = await bandFor({ db: tx }, item.testId, patient.gender, null);
+        if (band.text != null) {
+          isAbnormal = input.valueText.trim().toLowerCase() !== band.text.trim().toLowerCase();
+        }
       }
-    }
 
-    const patient = item.labOrder.visit.patient;
+      const unit = input.valueNumeric != null ? (input.unit ?? item.test.unit ?? null) : null;
+      const now = new Date();
 
-    // The flag. Only a numeric value is measured against a band; a text result carries none.
-    let flag: string | null = null;
-    let isAbnormal = false;
-    let band: Band = { low: null, high: null, text: null };
-
-    if (input.valueNumeric != null) {
-      const ageYears = currentAgeYears({
-        dateOfBirth: patient.dateOfBirth?.toISOString().slice(0, 10) ?? null,
-        estimatedAgeYears: patient.estimatedAgeYears,
-        estimatedAgeMonths: patient.estimatedAgeMonths,
-        ageRecordedAt: patient.ageRecordedAt?.toISOString() ?? null,
-      });
-      band = await bandFor(this.prisma, item.testId, patient.gender, ageYears);
-      const value = new Prisma.Decimal(input.valueNumeric);
-      if (band.low != null && value.lessThan(band.low)) {
-        flag = 'L';
-        isAbnormal = true;
-      } else if (band.high != null && value.greaterThan(band.high)) {
-        flag = 'H';
-        isAbnormal = true;
-      }
-    } else if (input.valueText != null) {
-      // A text band ("Negative") makes anything else abnormal, case-insensitively.
-      band = await bandFor(this.prisma, item.testId, patient.gender, null);
-      if (band.text != null) {
-        isAbnormal = input.valueText.trim().toLowerCase() !== band.text.trim().toLowerCase();
-      }
-    }
-
-    const unit = input.valueNumeric != null ? (input.unit ?? item.test.unit ?? null) : null;
-    const now = new Date();
-
-    await this.prisma.db.$transaction(async (tx) => {
       await tx.labResult.upsert({
         where: { labOrderItemId: itemId },
         create: {
@@ -131,6 +131,10 @@ export class LabResultService {
           valueNumeric: input.valueNumeric ?? null,
           valueText: input.valueText ?? null,
           unit,
+          referenceLow: band.low,
+          referenceHigh: band.high,
+          referenceText: band.text,
+          referenceCapturedAt: now,
           flag,
           isAbnormal,
           comment: input.comment ?? null,
@@ -141,6 +145,10 @@ export class LabResultService {
           valueNumeric: input.valueNumeric ?? null,
           valueText: input.valueText ?? null,
           unit,
+          referenceLow: band.low,
+          referenceHigh: band.high,
+          referenceText: band.text,
+          referenceCapturedAt: now,
           flag,
           isAbnormal,
           comment: input.comment ?? null,
@@ -152,23 +160,23 @@ export class LabResultService {
         },
       });
       await tx.labOrderItem.update({ where: { id: itemId }, data: { status: 'resulted' } });
-    });
 
-    const result: LabResult = {
-      itemId,
-      status: 'resulted',
-      valueNumeric: input.valueNumeric ?? null,
-      valueText: input.valueText ?? null,
-      unit,
-      flag,
-      isAbnormal,
-      comment: input.comment ?? null,
-      enteredAt: now.toISOString(),
-      referenceLow: band.low?.toString() ?? null,
-      referenceHigh: band.high?.toString() ?? null,
-      referenceText: band.text,
-    };
-    return { result };
+      const result: LabResult = {
+        itemId,
+        status: 'resulted',
+        valueNumeric: input.valueNumeric ?? null,
+        valueText: input.valueText ?? null,
+        unit,
+        flag,
+        isAbnormal,
+        comment: input.comment ?? null,
+        enteredAt: now.toISOString(),
+        referenceLow: band.low?.toString() ?? null,
+        referenceHigh: band.high?.toString() ?? null,
+        referenceText: band.text,
+      };
+      return { result };
+    });
   }
 
   /**
@@ -184,28 +192,29 @@ export class LabResultService {
     userId: string,
     input: VerifyResultRequest,
   ): Promise<VerifyResultResponse> {
-    const itemIds = [...new Set(input.itemIds)];
+    return this.prisma.db.$transaction(async (tx) => {
+      const itemIds = [...new Set(input.itemIds)];
 
-    const items = await this.prisma.db.labOrderItem.findMany({
-      where: { id: { in: itemIds }, labOrder: { facilityId } },
-      select: { id: true, status: true },
-    });
-    if (items.length !== itemIds.length) {
-      throw new BadRequestException({
-        message: 'One of those results is not on this facility’s orders.',
-        code: 'unknown_item',
+      const items = await tx.labOrderItem.findMany({
+        where: { id: { in: itemIds }, labOrder: { facilityId } },
+        select: { id: true, status: true },
       });
-    }
-    const notResulted = items.filter((item) => item.status !== 'resulted');
-    if (notResulted.length > 0) {
-      throw new BadRequestException({
-        message: 'Only a result that has been entered can be verified.',
-        code: 'not_verifiable',
-      });
-    }
+      if (items.length !== itemIds.length) {
+        throw new BadRequestException({
+          message: 'One of those results is not on this facility’s orders.',
+          code: 'unknown_item',
+        });
+      }
+      const notResulted = items.filter((item) => item.status !== 'resulted');
+      if (notResulted.length > 0) {
+        throw new BadRequestException({
+          message: 'Only a result that has been entered can be verified.',
+          code: 'not_verifiable',
+        });
+      }
 
-    const now = new Date();
-    await this.prisma.db.$transaction(async (tx) => {
+      const now = new Date();
+
       const stillResulted = await tx.labOrderItem.count({
         where: { id: { in: itemIds }, status: 'resulted' },
       });
@@ -222,15 +231,15 @@ export class LabResultService {
         });
         await tx.labOrderItem.update({ where: { id }, data: { status: 'verified' } });
       }
-    });
 
-    return {
-      items: itemIds.map((itemId) => ({
-        itemId,
-        status: 'verified' as const,
-        verifiedAt: now.toISOString(),
-      })),
-    };
+      return {
+        items: itemIds.map((itemId) => ({
+          itemId,
+          status: 'verified' as const,
+          verifiedAt: now.toISOString(),
+        })),
+      };
+    });
   }
 
   /**
@@ -239,8 +248,8 @@ export class LabResultService {
    * Every non-cancelled test on the visit, in the order it was written, each carrying WHERE it
    * is in the pipeline. The value, its flag and the band it was judged against appear only for
    * a VERIFIED result: before the sign-off a number is provisional, and this screen is where a
-   * doctor decides, so it shows status but not an unverified value. The band is recomputed from
-   * the patient here (it is not stored on the result) so the report can print "normal 70–110".
+   * doctor decides, so it shows status but not an unverified value. The reference band
+   * is the snapshot captured at entry; later catalog edits cannot rewrite the report.
    */
   async forVisit(facilityId: string, visitId: string): Promise<VisitLabResultsResponse> {
     const visit = await this.prisma.db.visit.findFirst({
@@ -279,16 +288,12 @@ export class LabResultService {
             isAbnormal: true,
             comment: true,
             verifiedAt: true,
+            referenceLow: true,
+            referenceHigh: true,
+            referenceText: true,
           },
         },
       },
-    });
-
-    const ageYears = currentAgeYears({
-      dateOfBirth: visit.patient.dateOfBirth?.toISOString().slice(0, 10) ?? null,
-      estimatedAgeYears: visit.patient.estimatedAgeYears,
-      estimatedAgeMonths: visit.patient.estimatedAgeMonths,
-      ageRecordedAt: visit.patient.ageRecordedAt?.toISOString() ?? null,
     });
 
     const items: VisitLabResultItem[] = [];
@@ -319,14 +324,6 @@ export class LabResultService {
         continue;
       }
       const numeric = row.result.valueNumeric != null;
-      // The band is recomputed for display; a numeric result uses the patient's age band, a
-      // text result only its text band.
-      const band = await bandFor(
-        this.prisma,
-        row.testId,
-        visit.patient.gender,
-        numeric ? ageYears : null,
-      );
       items.push({
         ...base,
         value: row.result.valueNumeric?.toString() ?? row.result.valueText ?? '',
@@ -334,9 +331,9 @@ export class LabResultService {
         unit: row.result.unit,
         flag: row.result.flag,
         isAbnormal: row.result.isAbnormal,
-        referenceLow: band.low?.toString() ?? null,
-        referenceHigh: band.high?.toString() ?? null,
-        referenceText: band.text,
+        referenceLow: row.result.referenceLow?.toString() ?? null,
+        referenceHigh: row.result.referenceHigh?.toString() ?? null,
+        referenceText: row.result.referenceText,
         verifiedAt: row.result.verifiedAt?.toISOString() ?? null,
         comment: row.result.comment,
       });

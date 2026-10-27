@@ -20,10 +20,13 @@
     "dist"
   ],
   "scripts": {
+    "test": "pnpm build && node --test test/*.test.mjs",
     "build": "tsc -b tsconfig.json tsconfig.esm.json && node scripts/write-type-markers.mjs",
     "dev": "node scripts/write-type-markers.mjs && tsc -b tsconfig.json tsconfig.esm.json --watch --preserveWatchOutput"
   },
   "dependencies": {
+    "decimal.js": "10.6.0",
+    "jalaali-js": "2.0.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

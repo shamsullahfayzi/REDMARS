@@ -3,7 +3,7 @@ import { z } from 'zod'
 /**
  * Task 4.3 — vitals.
  *
- * Farhat has no nurse taking observations, so the doctor records these, and they are
+ * Axon has no nurse taking observations, so the doctor records these, and they are
  * optional: a psychiatric follow-up where nothing physical is measured is a complete
  * consultation. Nothing here may be required, which is why every field is nullable and
  * the only rule about presence is that a reading must contain at least ONE measurement.

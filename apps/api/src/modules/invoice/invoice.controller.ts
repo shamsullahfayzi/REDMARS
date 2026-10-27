@@ -37,7 +37,7 @@ import { PaymentService } from './payment.service';
  * Task 6.1 — the invoice register and one bill in full.
  *
  * No @RequiresModule: the same reasoning as the reception desk (3.6). Billing-as-a-module
- * gates panels and statements, not the act of reading an OPD bill; Farhat has it off, and a
+ * gates panels and statements, not the act of reading an OPD bill; Axon has it off, and a
  * tag here would 403 the desk that raised the invoice in the first place.
  *
  * Task 6b.9 split the gate in two. `list` — the facility-wide register, browsable by day —

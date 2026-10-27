@@ -1,3 +1,4 @@
+import { moneyDecimal, parseMoneyInput } from '@redmars/shared'
 import { type FormEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Layers, Printer } from 'lucide-react'
@@ -73,8 +74,8 @@ export function InvoiceDetailView({
 
   const outstanding = useMemo(() => {
     if (!detail) return null
-    const owed = Number(detail.invoice.total) - Number(detail.invoice.paidAmount)
-    return owed > 0 ? owed.toFixed(2) : null
+    const owed = moneyDecimal(detail.invoice.total).sub(detail.invoice.paidAmount)
+    return owed.gt('0') ? owed.toFixed(2) : null
   }, [detail])
 
   return (
@@ -271,7 +272,7 @@ function VisitBillsPanel({
         <div className="flex gap-2">
           <dt className="text-muted-foreground">{t('visitBills.outstanding')}</dt>
           <dd
-            className={`font-mono ${Number(totals.outstanding) > 0 ? 'text-warning' : 'text-foreground'}`}
+            className={`font-mono ${moneyDecimal(totals.outstanding).gt('0') ? 'text-warning' : 'text-foreground'}`}
             dir="ltr"
           >
             {totals.outstanding} {totals.currency}
@@ -292,7 +293,7 @@ function VisitBillRow({
   onOpen: () => void
 }) {
   const { t } = useTranslation()
-  const owed = Number(bill.outstanding) > 0
+  const owed = moneyDecimal(bill.outstanding).gt('0')
 
   return (
     <li>
@@ -360,7 +361,7 @@ function LabLinePaymentForm({
     })
 
   const chosen = unpaid.filter((item) => selected.has(item.refId!))
-  const totalDue = chosen.reduce((sum, item) => sum + Number(item.total), 0)
+  const totalDue = chosen.reduce((sum, item) => sum.add(item.total), moneyDecimal('0'))
 
   if (unpaid.length === 0) return null
 
@@ -463,7 +464,7 @@ function DiscountForm({
   const apply = useApplyDiscount(invoiceId)
   const ceilingQuery = useDiscountCeiling()
   const maxDiscountPercent = ceilingQuery.data?.maxPercent ?? DISCOUNT_MAX_PERCENT_DEFAULT
-  const hasDiscount = Number(currentDiscount) > 0
+  const hasDiscount = moneyDecimal(currentDiscount).gt('0')
   const [amount, setAmount] = useState(hasDiscount ? currentDiscount : '')
   const [reason, setReason] = useState(currentReason ?? '')
   // Revealed only after the server refuses an over-ceiling discount — then an admin at the
@@ -472,12 +473,12 @@ function DiscountForm({
   const [approverUsername, setApproverUsername] = useState('')
   const [approverPassword, setApproverPassword] = useState('')
 
-  const subtotalNum = Number(subtotal)
-  const ceiling = uncapped ? subtotalNum : (subtotalNum * maxDiscountPercent) / 100
-  const value = Number(amount)
+  const subtotalNum = moneyDecimal(subtotal)
+  const ceiling = uncapped ? subtotalNum : subtotalNum.mul(String(maxDiscountPercent)).div('100')
+  const value = parseMoneyInput(amount)
   // The amount is bounded by the subtotal here, not the ceiling: over-ceiling is allowed to
   // be typed on purpose, because it is what triggers the approval path below.
-  const baseValid = amount.trim() !== '' && value > 0 && value <= subtotalNum && reason.trim().length >= 3
+  const baseValid = value !== null && value.gt('0') && value.lte(subtotalNum) && reason.trim().length >= 3
   const approvalValid =
     !showApproval || (approverUsername.trim() !== '' && approverPassword !== '')
   const valid = baseValid && approvalValid
@@ -670,8 +671,8 @@ function PaymentsPanel({
       <p className="text-sm font-medium text-foreground">{t('refund.trailTitle')}</p>
       <ul className="space-y-1.5 text-sm">
         {payments.map((p) => {
-          const isRefundRow = Number(p.amount) < 0
-          const refundable = canRefund && !p.isReversed && Number(p.amount) > 0
+          const isRefundRow = moneyDecimal(p.amount).lt('0')
+          const refundable = canRefund && !p.isReversed && moneyDecimal(p.amount).gt('0')
           return (
             <li key={p.id} className="space-y-1.5 border-b border-border pb-1.5 last:border-0">
               <div className="flex items-center gap-3">

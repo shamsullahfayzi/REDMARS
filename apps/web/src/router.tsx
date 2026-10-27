@@ -25,11 +25,15 @@ import { PractitionersPage } from '@/pages/PractitionersPage'
 import { TillPage } from '@/pages/TillPage'
 import { QueuePage } from '@/pages/QueuePage'
 import { ReceptionPage } from '@/pages/ReceptionPage'
+import { ReceptionOperationsPage } from '@/pages/ReceptionOperationsPage'
 import { ReportsPage } from '@/pages/ReportsPage'
 import { ServicesPage } from '@/pages/ServicesPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { StartVisitPage } from '@/pages/StartVisitPage'
 import { UsersPage } from '@/pages/UsersPage'
+import { FinancePage } from '@/pages/FinancePage'
+import { CrmPage } from '@/pages/CrmPage'
+import { HrPage } from '@/pages/HrPage'
 
 /**
  * /login is the only route outside the gate. Everything else sits under
@@ -50,6 +54,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           { path: 'reception', element: <ReceptionPage /> },
+          { path: 'reception/operations', element: <ReceptionOperationsPage /> },
           { path: 'queue', element: <QueuePage /> },
           { path: 'appointments', element: <AppointmentsPage /> },
           { path: 'patients', element: <PatientsPage /> },
@@ -80,6 +85,9 @@ export const router = createBrowserRouter([
           { path: 'users', element: <UsersPage /> },
           { path: 'settings', element: <SettingsPage /> },
           { path: 'modules', element: <ModulesPage /> },
+          { path: 'finance', element: <FinancePage /> },
+          { path: 'crm', element: <CrmPage /> },
+          { path: 'hr', element: <HrPage /> },
           { path: 'departments', element: <DepartmentPage /> },
           { path: 'practitioners', element: <PractitionersPage /> },
           { path: 'services', element: <ServicesPage /> },

@@ -11,6 +11,7 @@ import {
   visitBillsResponseSchema,
 } from '@redmars/shared'
 import { apiGet, apiPost } from '@/lib/api'
+import { withCommandKey } from '@/lib/commandKey'
 import { queryClient } from '@/lib/queryClient'
 
 export interface InvoiceListParams {
@@ -71,7 +72,11 @@ export function useVisitBills(visitId: string | null) {
 export function useRecordPayment(invoiceId: string) {
   return useMutation({
     mutationFn: (input: RecordPaymentRequest) =>
-      apiPost(`/invoices/${invoiceId}/payments`, input, recordPaymentResponseSchema),
+      apiPost(
+        `/invoices/${invoiceId}/payments`,
+        withCommandKey(input),
+        recordPaymentResponseSchema,
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
       void queryClient.invalidateQueries({ queryKey: ['visit-bills'] })
@@ -90,7 +95,7 @@ export function useRefundPayment(invoiceId: string) {
     mutationFn: ({ paymentId, input }: { paymentId: string; input: RefundPaymentRequest }) =>
       apiPost(
         `/invoices/${invoiceId}/payments/${paymentId}/refund`,
-        input,
+        withCommandKey(input),
         refundPaymentResponseSchema,
       ),
     onSuccess: () => {

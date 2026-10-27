@@ -1,3 +1,4 @@
+import { fixtureDepartment } from './scoped-fixtures';
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -106,7 +107,7 @@ describe('Prescription (e2e)', () => {
       data: {
         facilityId: inFacility,
         patientId: patient.id,
-        departmentId: opdId,
+        departmentId: await fixtureDepartment(prisma, inFacility, opdId),
         visitNo: `${PREFIX}V${counter}`,
         type: 'opd_consult',
         status: options.status ?? 'in_progress',
@@ -289,7 +290,7 @@ describe('Prescription (e2e)', () => {
   });
 
   /**
-   * Farhat's current sheet fills Qty on every line and the pharmacy dispenses against it,
+   * Axon's current sheet fills Qty on every line and the pharmacy dispenses against it,
    * so the number has to survive the round trip exactly — and an EMPTY box has to arrive as
    * null rather than 0. "Dispense nothing" and "no quantity stated" are different
    * instructions to a pharmacist, and Number('') is 0.
@@ -436,12 +437,12 @@ describe('Prescription (e2e)', () => {
     expect(matchCode('injection', ROUTE_CODES)).toBe('IM');
     expect(matchCode('OD', FREQUENCY_CODES)).toBe('OD');
     expect(matchCode('daily', FREQUENCY_CODES)).toBe('OD');
-    // The BRITISH forms are keywords now that the codes are American, because Farhat's own
+    // The BRITISH forms are keywords now that the codes are American, because Axon's own
     // sheet writes BID. A prescriber trained the other way must still land on the same code.
     expect(matchCode('bd', FREQUENCY_CODES)).toBe('BID');
     expect(matchCode('tds', FREQUENCY_CODES)).toBe('TID');
     expect(matchCode('nocte', FREQUENCY_CODES)).toBe('ON');
-    // Farhat writes these two as one frequency; they are ON and OM here.
+    // Axon writes these two as one frequency; they are ON and OM here.
     expect(matchCode('od night', FREQUENCY_CODES)).toBe('ON');
     expect(matchCode('od morning', FREQUENCY_CODES)).toBe('OM');
 
@@ -601,7 +602,7 @@ describe('Prescription (e2e)', () => {
   it('every print setting has a default, so an unconfigured facility still prints', () => {
     const settings = defaultPrintSettings();
 
-    // Farhat's sheet, as photographed: pre-printed letterhead and route spelled out.
+    // Axon's sheet, as photographed: pre-printed letterhead and route spelled out.
     expect(settings.margins.A4.topMarginMm).toBe(55);
     expect(settings.margins.A4.bottomMarginMm).toBe(14);
     expect(settings.paperSize).toBe('A4');
@@ -656,7 +657,7 @@ describe('Prescription (e2e)', () => {
 
   it('keeps duration open — "until review" is a real answer', async () => {
     const visitId = await stageVisit();
-    // Long-term psychiatric medication is the normal case at Farhat, so a closed duration
+    // Long-term psychiatric medication is the normal case at Axon, so a closed duration
     // list would push the commonest answer into the instructions box.
     const saved = await putRx(visitId, {
       items: [{ ...line(drugs.DUL), duration: 'Until review' }],

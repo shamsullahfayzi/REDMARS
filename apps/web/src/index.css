@@ -168,6 +168,125 @@
     @apply font-sans;
     }
 }
+
+/*
+ * The signed-in home is the only neumorphic surface. Shadows are deliberately
+ * shallow, while text, focus rings and operational states keep their normal
+ * high-contrast treatment for accessibility in a hospital workspace.
+ */
+.home-neumorphic {
+  --home-surface: oklch(0.955 0.012 235);
+  --home-highlight: oklch(1 0 0 / 88%);
+  --home-shadow: oklch(0.68 0.025 240 / 28%);
+  --home-module-accent: var(--primary);
+  background:
+    radial-gradient(circle at 8% 6%, oklch(1 0 0 / 75%), transparent 31rem),
+    var(--home-surface);
+}
+
+.dark .home-neumorphic {
+  --home-surface: oklch(0.19 0.014 250);
+  --home-highlight: oklch(0.29 0.018 245 / 68%);
+  --home-shadow: oklch(0.08 0.015 255 / 72%);
+  background:
+    radial-gradient(circle at 8% 6%, oklch(0.29 0.018 245 / 55%), transparent 31rem),
+    var(--home-surface);
+}
+
+.home-neo-raised,
+.home-neo-summary,
+.home-neo-module {
+  background: color-mix(in oklab, var(--home-surface) 96%, white 4%);
+  border: 1px solid color-mix(in oklab, var(--home-highlight) 65%, transparent);
+  box-shadow:
+    10px 10px 22px var(--home-shadow),
+    -10px -10px 22px var(--home-highlight);
+}
+
+.home-neo-hero {
+  min-height: 18rem;
+}
+
+.home-neo-inset,
+.home-neo-icon {
+  background: color-mix(in oklab, var(--home-surface) 98%, black 2%);
+  box-shadow:
+    inset 4px 4px 9px var(--home-shadow),
+    inset -4px -4px 9px var(--home-highlight);
+}
+
+.home-neo-inset > * {
+  border-color: transparent;
+  background: transparent;
+}
+
+.home-neo-icon {
+  color: var(--home-module-accent);
+}
+
+.home-neo-summary,
+.home-neo-module {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.home-neo-module:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--home-module-accent) 25%, transparent);
+  box-shadow:
+    13px 13px 26px var(--home-shadow),
+    -13px -13px 26px var(--home-highlight);
+}
+
+.home-neo-module:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 3px 3px 8px var(--home-shadow),
+    inset -3px -3px 8px var(--home-highlight);
+}
+
+.home-neo-tone-clinical {
+  --home-module-accent: var(--success);
+}
+
+.home-neo-tone-administration {
+  --home-module-accent: var(--info);
+}
+
+.home-neo-orb {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(1px);
+}
+
+.home-neo-orb-primary {
+  inset-block-start: -5rem;
+  inset-inline-end: -4rem;
+  width: 16rem;
+  height: 16rem;
+  background: color-mix(in oklab, var(--primary) 13%, transparent);
+  box-shadow:
+    inset 10px 10px 22px color-mix(in oklab, var(--primary) 12%, transparent),
+    -9px -9px 20px var(--home-highlight);
+}
+
+.home-neo-orb-secondary {
+  inset-block-end: -7rem;
+  inset-inline-start: 42%;
+  width: 13rem;
+  height: 13rem;
+  background: color-mix(in oklab, var(--success) 10%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-neo-summary,
+  .home-neo-module {
+    transition: none;
+  }
+}
 /*
  * Printing a receipt (task 3.6).
  *
@@ -179,6 +298,41 @@
  * cannot reach from where it renders.
  */
 @media print {
+  .reception-print-forms {
+    display: block !important;
+  }
+
+  .reception-form-sheet {
+    display: none !important;
+    color: #000;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 12pt;
+    line-height: 1.8;
+    padding: 12mm;
+  }
+
+  :root[data-print-target='registration'] .registration-sheet,
+  :root[data-print-target='consent'] .consent-sheet,
+  :root[data-print-target='downtime'] .downtime-sheet {
+    display: block !important;
+  }
+
+  :root[data-print-target='registration'] body > div main > *:not(:has(.registration-sheet)),
+  :root[data-print-target='consent'] body > div main > *:not(:has(.consent-sheet)),
+  :root[data-print-target='downtime'] body > div main > *:not(:has(.downtime-sheet)) {
+    display: none !important;
+  }
+
+  .reception-form-sheet h1 {
+    border-bottom: 2px solid #000;
+    font-size: 18pt;
+    margin-bottom: 10mm;
+    padding-bottom: 3mm;
+  }
+
+  .reception-form-sheet .signature-line {
+    margin-top: 20mm;
+  }
   :root,
   .dark {
     /* A dark-mode receipt would print a black page. Force the light tokens. */
@@ -209,7 +363,7 @@
   }
 
   /*
-   * The out-patient bill prints A5 LANDSCAPE — Farhat's request, to save paper against the
+   * The out-patient bill prints A5 LANDSCAPE — Axon's request, to save paper against the
    * A4 the browser defaults to. A named page so this size applies only to the bill; the
    * prescription sheet keeps the printer's own default and is not dragged onto A5.
    */
@@ -385,4 +539,8 @@
     padding: 4mm;
     break-inside: avoid;
   }
+}
+
+.reception-print-forms {
+  display: none;
 }

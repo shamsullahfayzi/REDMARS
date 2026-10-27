@@ -91,7 +91,7 @@ export function ConsultPage() {
   const contextQuery = useConsultContext(visitId)
   const [tab, setTab] = useState<TabKey>('vitals')
   // Task: doctor picks the OUTPUT PAPER at print time, not a facility setting buried in an
-  // admin screen. The facility default (Farhat: A4) is only the picker's opening value —
+  // admin screen. The facility default (Axon: A4) is only the picker's opening value —
   // this is a per-print, unsaved choice, because the same visit's follow-up copy might go
   // on a different pad than the original.
   const [paperSize, setPaperSize] = useState<PaperSize>(() => defaultPrintSettings().paperSize)
@@ -167,7 +167,7 @@ export function ConsultPage() {
           Kept here rather than on a route of its own because everything it needs is already
           in this screen's cache, which makes F4 a save followed by window.print() with no
           navigation, no second round of fetches and no spinner between the doctor and the
-          page. Settings come from the shared defaults — Farhat's sheet — until the admin
+          page. Settings come from the shared defaults — Axon's sheet — until the admin
           screen that writes them per facility exists.
         */}
         <PrescriptionSheet context={context} settings={{ ...defaultPrintSettings(), paperSize }} />

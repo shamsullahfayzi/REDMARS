@@ -64,6 +64,7 @@ export type LabChargesQuery = z.infer<typeof labChargesQuerySchema>
  * and how; the amount is the server's sum of those lines, never a number the browser sends.
  */
 export const payLabChargesRequestSchema = z.object({
+  idempotencyKey: z.uuid().optional(),
   itemIds: z.array(z.uuid()).min(1).max(50),
   method: paymentMethodSchema,
   reference: z.string().trim().max(100).optional(),

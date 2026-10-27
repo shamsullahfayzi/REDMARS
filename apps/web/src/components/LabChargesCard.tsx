@@ -1,3 +1,4 @@
+import { moneyDecimal } from '@redmars/shared'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Wallet } from 'lucide-react'
@@ -69,7 +70,7 @@ function ChargeOrder({
     })
 
   const chosen = unpaid.filter((item) => selected.has(item.itemId))
-  const totalDue = chosen.reduce((sum, item) => sum + Number(item.price), 0)
+  const totalDue = chosen.reduce((sum, item) => sum.add(item.price), moneyDecimal('0'))
 
   return (
     <div className="space-y-3 rounded-lg border border-border p-3">

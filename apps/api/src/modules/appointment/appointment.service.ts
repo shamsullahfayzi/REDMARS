@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -10,6 +11,7 @@ import type {
   AppointmentSummary,
   CloseAppointmentRequest,
   CreateAppointmentRequest,
+  RescheduleAppointment,
 } from '@redmars/shared';
 import { OPEN_APPOINTMENT_STATUSES } from '@redmars/shared';
 import { PrismaService, type AuditedTx } from '../../prisma/prisma.service';
@@ -18,6 +20,7 @@ import {
   facilityDayBounds,
   facilityDayBoundsFor,
 } from '../../common/facility-time';
+import { idempotentCommand } from '../../common/idempotent-command';
 
 const appointmentSelect = {
   id: true,
@@ -26,6 +29,7 @@ const appointmentSelect = {
   departmentId: true,
   practitionerId: true,
   scheduledAt: true,
+  endsAt: true,
   reason: true,
   createdAt: true,
   patient: { select: { mrn: true, prefix: true, firstName: true, lastName: true, phone: true } },
@@ -41,6 +45,7 @@ type AppointmentRow = {
   departmentId: string;
   practitionerId: string | null;
   scheduledAt: Date;
+  endsAt: Date | null;
   reason: string | null;
   createdAt: Date;
   patient: {
@@ -73,14 +78,26 @@ export class AppointmentService {
     userId: string,
     input: CreateAppointmentRequest,
   ): Promise<AppointmentSummary> {
-    const patient = await this.prisma.db.patient.findFirst({
-      where: { id: input.patientId, facilityId },
+    return this.prisma.db.$transaction((tx) => this.createIn(tx, facilityId, userId, input));
+  }
+
+  async createIn(
+    tx: AuditedTx,
+    facilityId: string,
+    userId: string,
+    input: CreateAppointmentRequest,
+    source?: { crmLinkId: string; crmLeadId: string | null },
+  ): Promise<AppointmentSummary> {
+    // Serializes booking commands with the same facility under the audited SSI transaction.
+    await tx.$queryRaw`SELECT id FROM facility WHERE id=${facilityId} FOR UPDATE`;
+    const patient = await tx.patient.findFirst({
+      where: { id: input.patientId, facilityId, deletedAt: null, isDeceased: false },
       select: { id: true },
     });
     // 404 rather than 403 — the same rule every other patient read follows.
     if (!patient) throw new NotFoundException('Patient not found');
 
-    const department = await this.prisma.db.department.findFirst({
+    const department = await tx.department.findFirst({
       where: { id: input.departmentId, facilityId },
       select: { isActive: true },
     });
@@ -93,15 +110,20 @@ export class AppointmentService {
      * "whoever is on that day"); a caller who IS a practitioner has theirs filled in
      * automatically and may not name a different one.
      */
-    const ownPractitionerId = await this.practitionerIdOf(facilityId, userId);
+    const ownPractitionerId = (
+      await tx.practitioner.findFirst({
+        where: { facilityId, userId, deletedAt: null },
+        select: { id: true },
+      })
+    )?.id;
     if (ownPractitionerId && input.practitionerId && input.practitionerId !== ownPractitionerId) {
       throw new ForbiddenException('A doctor may only book a follow-up with themselves.');
     }
     const practitionerId = ownPractitionerId ?? input.practitionerId ?? null;
 
     if (practitionerId) {
-      const practitioner = await this.prisma.db.practitioner.findFirst({
-        where: { id: practitionerId, facilityId },
+      const practitioner = await tx.practitioner.findFirst({
+        where: { id: practitionerId, facilityId, deletedAt: null },
         select: {
           isActive: true,
           departments: {
@@ -126,14 +148,47 @@ export class AppointmentService {
       throw new BadRequestException('That date has already passed.');
     }
 
-    const created = await this.prisma.db.appointment.create({
+    const scheduledAt = input.scheduledAt ? new Date(input.scheduledAt) : start;
+    const endsAt =
+      input.scheduledAt && input.durationMinutes
+        ? new Date(scheduledAt.getTime() + input.durationMinutes * 60000)
+        : null;
+    if (
+      endsAt &&
+      (!practitionerId ||
+        scheduledAt.getTime() <= Date.now() ||
+        facilityDateString(scheduledAt) !== input.scheduledOn ||
+        facilityDateString(new Date(endsAt.getTime() - 1)) !== input.scheduledOn)
+    )
+      throw new BadRequestException('Choose a future time and duration within the selected day.');
+    const bounds = facilityDayBoundsFor(input.scheduledOn);
+    const candidates = await tx.appointment.findMany({
+      where: {
+        facilityId,
+        status: { in: ['booked', 'arrived', 'fulfilled'] },
+        OR: [{ patientId: input.patientId }, ...(practitionerId ? [{ practitionerId }] : [])],
+        scheduledAt: { gte: bounds.start, lt: bounds.end },
+      },
+      select: { scheduledAt: true, endsAt: true },
+    });
+    if (
+      candidates.some((a) =>
+        endsAt ? !a.endsAt || (a.scheduledAt < endsAt && a.endsAt > scheduledAt) : !!a.endsAt,
+      )
+    )
+      throw new ConflictException(
+        'The provider or patient already has a booking in this interval. Date-only bookings must be reviewed before adding timed appointments.',
+      );
+    const created = await tx.appointment.create({
       data: {
         facilityId,
         createdBy: userId,
         patientId: input.patientId,
         departmentId: input.departmentId,
         practitionerId,
-        scheduledAt: start,
+        scheduledAt,
+        endsAt,
+        ...source,
         reason: input.reason ?? null,
         status: 'booked',
       },
@@ -177,7 +232,65 @@ export class AppointmentService {
     id: string,
     input: CloseAppointmentRequest,
   ): Promise<AppointmentSummary> {
-    const current = await this.prisma.db.appointment.findFirst({
+    return this.prisma.db.$transaction((tx) => this.closeIn(tx, facilityId, id, input));
+  }
+
+  async reschedule(facilityId: string, userId: string, id: string, input: RescheduleAppointment) {
+    return this.prisma.db.$transaction((tx) =>
+      idempotentCommand(
+        tx,
+        {
+          facilityId,
+          userId,
+          operation: `appointment.reschedule:${id}`,
+          key: input.idempotencyKey,
+          input,
+        },
+        async () => {
+          await tx.$queryRaw`SELECT id FROM appointment WHERE id=${id} AND facility_id=${facilityId} FOR UPDATE`;
+          const current = await tx.appointment.findFirst({
+            where: { id, facilityId },
+            select: { patientId: true, status: true, crmLinkId: true, crmLeadId: true },
+          });
+          if (!current) throw new NotFoundException('Appointment not found');
+          if (!(OPEN_APPOINTMENT_STATUSES as readonly string[]).includes(current.status))
+            throw new ConflictException('Only an open appointment can be rescheduled.');
+
+          // Release the old interval inside this transaction before checking the
+          // replacement. Any validation failure rolls the cancellation back.
+          const previous = await this.closeIn(tx, facilityId, id, {
+            status: 'cancelled',
+            reason: `Rescheduled to ${input.scheduledOn}: ${input.reason}`,
+          });
+          const replacement = await this.createIn(
+            tx,
+            facilityId,
+            userId,
+            {
+              patientId: current.patientId,
+              departmentId: input.departmentId,
+              practitionerId: input.practitionerId,
+              scheduledOn: input.scheduledOn,
+              scheduledAt: input.scheduledAt,
+              durationMinutes: input.durationMinutes,
+              reason: input.appointmentReason || null,
+            },
+            current.crmLinkId
+              ? { crmLinkId: current.crmLinkId, crmLeadId: current.crmLeadId }
+              : undefined,
+          );
+          return { previous, replacement };
+        },
+      ),
+    );
+  }
+  async closeIn(
+    tx: AuditedTx,
+    facilityId: string,
+    id: string,
+    input: CloseAppointmentRequest,
+  ): Promise<AppointmentSummary> {
+    const current = await tx.appointment.findFirst({
       where: { id, facilityId },
       select: { status: true, reason: true },
     });
@@ -201,9 +314,14 @@ export class AppointmentService {
         : closingNote
       : undefined;
 
-    const updated = await this.prisma.db.appointment.update({
-      where: { id },
+    const changed = await tx.appointment.updateMany({
+      where: { id, facilityId, status: current.status, visit: null },
       data: { status: input.status, ...(reason === undefined ? {} : { reason }) },
+    });
+    if (changed.count !== 1)
+      throw new ConflictException('Appointment changed; reload before cancelling.');
+    const updated = await tx.appointment.findUniqueOrThrow({
+      where: { id },
       select: appointmentSelect,
     });
     return this.toSummary(updated);
@@ -240,10 +358,17 @@ export class AppointmentService {
     if (candidates.length !== 1) return null;
 
     const appointmentId = candidates[0].id;
-    await tx.appointment.update({
-      where: { id: appointmentId },
+    const changed = await tx.appointment.updateMany({
+      where: {
+        id: appointmentId,
+        facilityId,
+        status: { in: [...OPEN_APPOINTMENT_STATUSES] },
+        visit: null,
+      },
       data: { status: 'fulfilled' },
     });
+    if (changed.count !== 1)
+      throw new ConflictException('Appointment changed during arrival; retry check-in.');
     // Visit.appointmentId is @unique, so the link is one-to-one by construction: a
     // second visit can never claim the same booking.
     await tx.visit.update({ where: { id: visitId }, data: { appointmentId } });
@@ -273,6 +398,8 @@ export class AppointmentService {
         ? fullName([row.practitioner.firstName, row.practitioner.lastName])
         : null,
       scheduledOn: facilityDateString(row.scheduledAt),
+      scheduledAt: row.scheduledAt.toISOString(),
+      endsAt: row.endsAt?.toISOString() ?? null,
       reason: row.reason,
       visitId: row.visit?.id ?? null,
       visitNo: row.visit?.visitNo ?? null,

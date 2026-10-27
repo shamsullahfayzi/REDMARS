@@ -511,72 +511,72 @@ export class VisitService {
     id: string,
     input: CancelVisitRequest,
   ): Promise<CancelVisitResponse> {
-    const visit = await this.prisma.db.visit.findFirst({
-      where: { id, facilityId },
-      select: { id: true, status: true, startedAt: true },
-    });
-    if (!visit) throw new NotFoundException('Visit not found');
-
-    if (visit.status === 'cancelled') {
-      throw new BadRequestException('That visit is already cancelled.');
-    }
-    if (!VISIT_STATUS_TRANSITIONS[visit.status].includes('cancelled')) {
-      throw new BadRequestException({
-        message: `A ${visit.status} visit cannot be cancelled.`,
-        code: 'illegal_transition',
-        from: visit.status,
-      });
-    }
-
-    // An unconditional grant is the admin's; 'R5' is everyone else's, and it is the
-    // conditions the guard said it could not check that get checked here.
-    const timeBoxed = permissions.get('visit.cancel') === 'R5';
-    if (timeBoxed) {
-      const { start, end } = facilityDayBounds();
-      const startedToday =
-        visit.startedAt.getTime() >= start.getTime() && visit.startedAt.getTime() < end.getTime();
-      if (!startedToday) {
-        throw new ForbiddenException({
-          message: 'Only today’s visits can be cancelled here. Ask an administrator.',
-          code: 'outside_r5_window',
-        });
-      }
-      if (visit.status !== 'arrived' && visit.status !== 'planned') {
-        throw new ForbiddenException({
-          message: 'The doctor has already started this visit. Ask an administrator.',
-          code: 'next_step_occurred',
-        });
-      }
-    }
-
-    // Everything the invoice needs, read before the transaction so the money question is
-    // settled before anything is written.
-    const invoices = await this.prisma.db.invoice.findMany({
-      where: { visitId: id, status: { not: 'cancelled' } },
-      select: {
-        id: true,
-        invoiceNo: true,
-        currency: true,
-        payments: {
-          where: { isReversed: false },
-          select: { id: true, amount: true, method: true },
-        },
-      },
-    });
-
-    const refundable = invoices.flatMap((invoice) => invoice.payments);
-    const total = refundable.reduce(
-      (sum, payment) => sum.add(payment.amount),
-      new Prisma.Decimal(0),
-    );
-
-    // Money only leaves the till if the caller may make it leave. Checked here rather
-    // than on the route, because a visit that was never paid for needs no such grant.
-    if (total.greaterThan(0) && !permissions.has('payment.refund')) {
-      throw new ForbiddenException('Missing permission: payment.refund');
-    }
-
     return this.prisma.db.$transaction(async (tx) => {
+      const visit = await tx.visit.findFirst({
+        where: { id, facilityId },
+        select: { id: true, status: true, startedAt: true },
+      });
+      if (!visit) throw new NotFoundException('Visit not found');
+
+      if (visit.status === 'cancelled') {
+        throw new BadRequestException('That visit is already cancelled.');
+      }
+      if (!VISIT_STATUS_TRANSITIONS[visit.status].includes('cancelled')) {
+        throw new BadRequestException({
+          message: `A ${visit.status} visit cannot be cancelled.`,
+          code: 'illegal_transition',
+          from: visit.status,
+        });
+      }
+
+      // An unconditional grant is the admin's; 'R5' is everyone else's, and it is the
+      // conditions the guard said it could not check that get checked here.
+      const timeBoxed = permissions.get('visit.cancel') === 'R5';
+      if (timeBoxed) {
+        const { start, end } = facilityDayBounds();
+        const startedToday =
+          visit.startedAt.getTime() >= start.getTime() && visit.startedAt.getTime() < end.getTime();
+        if (!startedToday) {
+          throw new ForbiddenException({
+            message: 'Only today’s visits can be cancelled here. Ask an administrator.',
+            code: 'outside_r5_window',
+          });
+        }
+        if (visit.status !== 'arrived' && visit.status !== 'planned') {
+          throw new ForbiddenException({
+            message: 'The doctor has already started this visit. Ask an administrator.',
+            code: 'next_step_occurred',
+          });
+        }
+      }
+
+      // Everything the invoice needs, read before the transaction so the money question is
+      // settled before anything is written.
+      const invoices = await tx.invoice.findMany({
+        where: { visitId: id, status: { not: 'cancelled' } },
+        select: {
+          id: true,
+          invoiceNo: true,
+          currency: true,
+          payments: {
+            where: { isReversed: false, amount: { gt: 0 } },
+            select: { id: true, amount: true, method: true, receivedAt: true },
+          },
+        },
+      });
+
+      const refundable = invoices.flatMap((invoice) => invoice.payments);
+      const total = refundable.reduce(
+        (sum, payment) => sum.add(payment.amount),
+        new Prisma.Decimal(0),
+      );
+
+      // Money only leaves the till if the caller may make it leave. Checked here rather
+      // than on the route, because a visit that was never paid for needs no such grant.
+      if (total.greaterThan(0) && !permissions.has('payment.refund')) {
+        throw new ForbiddenException('Missing permission: payment.refund');
+      }
+
       const updated = await tx.visit.update({
         // The status in the WHERE is the same optimistic concurrency task 3.9 uses: a
         // colleague may have moved this visit since it was read.
@@ -593,9 +593,19 @@ export class VisitService {
         select: visitSummarySelect,
       });
 
-      let refund: CancelVisitResponse['refund'] = null;
+      const refunds: NonNullable<CancelVisitResponse['refund']>[] = [];
       for (const invoice of invoices) {
+        const invoiceTotal = invoice.payments.reduce(
+          (sum, payment) => sum.add(payment.amount),
+          new Prisma.Decimal(0),
+        );
         for (const payment of invoice.payments) {
+          if (permissions.get('payment.refund') === 'R5') {
+            const { start, end } = facilityDayBounds();
+            if (payment.receivedAt < start || payment.receivedAt >= end)
+              throw new ForbiddenException('Only today’s payments can be refunded here.');
+          }
+          const receipt = await this.sequence.next(facilityId, 'receipt_no', undefined, tx);
           // Marked, not deleted: the original still says money came in, which it did.
           await tx.payment.update({ where: { id: payment.id }, data: { isReversed: true } });
           // And the money going back out is its own row, with its own author and time.
@@ -605,6 +615,7 @@ export class VisitService {
               amount: payment.amount.negated(),
               method: payment.method,
               receivedBy: userId,
+              receiptNo: receipt.formatted,
               reference: input.reason.slice(0, 60),
             },
           });
@@ -615,19 +626,23 @@ export class VisitService {
           data: { status: 'cancelled', paidAmount: 0 },
         });
 
-        if (invoice.payments.length > 0 && refund === null) {
-          refund = {
+        if (invoice.payments.length > 0) {
+          refunds.push({
             invoiceId: invoice.id,
             invoiceNo: invoice.invoiceNo,
             // Positive: this is what the receptionist counts out of the drawer, not a
             // signed ledger entry.
-            refunded: total.toFixed(2),
+            refunded: invoiceTotal.toFixed(2),
             currency: invoice.currency,
-          };
+          });
         }
       }
 
-      return { visit: this.toSummary(updated), refund };
+      return {
+        visit: this.toSummary(updated),
+        refund: refunds.length === 1 ? refunds[0] : null,
+        refunds,
+      };
     });
   }
 

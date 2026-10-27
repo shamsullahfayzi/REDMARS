@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { Gender } from '@prisma/client';
 import type {
   HistoryDiagnosis,
   HistoryLabResult,
@@ -9,9 +8,8 @@ import type {
   HistoryVisit,
   PatientHistoryResponse,
 } from '@redmars/shared';
-import { HISTORY_VISIT_LIMIT, currentAgeYears } from '@redmars/shared';
+import { HISTORY_VISIT_LIMIT } from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
-import { bandFor } from '../lab-order/reference-band';
 
 /**
  * Everything the panel shows, in ONE query with the relations included.
@@ -78,6 +76,9 @@ const historySelect = {
               flag: true,
               isAbnormal: true,
               verifiedAt: true,
+              referenceLow: true,
+              referenceHigh: true,
+              referenceText: true,
             },
           },
         },
@@ -99,15 +100,7 @@ export class HistoryService {
     patientId: string,
     query: HistoryQuery,
   ): Promise<PatientHistoryResponse> {
-    const patient = await this.requirePatient(facilityId, patientId);
-    // The same age the bench and the read-back use (lab-result.service.ts) — a band picked
-    // for a 40-year-old should not shift because a visit is being re-read a year later.
-    const ageYears = currentAgeYears({
-      dateOfBirth: patient.dateOfBirth?.toISOString().slice(0, 10) ?? null,
-      estimatedAgeYears: patient.estimatedAgeYears,
-      estimatedAgeMonths: patient.estimatedAgeMonths,
-      ageRecordedAt: patient.ageRecordedAt?.toISOString() ?? null,
-    });
+    await this.requirePatient(facilityId, patientId);
 
     // Computed here rather than sent by the browser. A shared hospital workstation's clock
     // is frequently wrong, and "the last twelve months" that silently means fourteen is the
@@ -136,11 +129,7 @@ export class HistoryService {
 
     const truncated = rows.length > HISTORY_VISIT_LIMIT;
 
-    const visits = await Promise.all(
-      rows
-        .slice(0, HISTORY_VISIT_LIMIT)
-        .map((row) => this.toHistoryVisit(row, patient.gender, ageYears)),
-    );
+    const visits = rows.slice(0, HISTORY_VISIT_LIMIT).map((row) => this.toHistoryVisit(row));
 
     return {
       patientId,
@@ -152,28 +141,18 @@ export class HistoryService {
     };
   }
 
-  private async requirePatient(facilityId: string, patientId: string): Promise<PatientRow> {
+  private async requirePatient(facilityId: string, patientId: string): Promise<void> {
     const patient = await this.prisma.db.patient.findFirst({
       where: { id: patientId, facilityId },
       select: {
         id: true,
-        gender: true,
-        dateOfBirth: true,
-        estimatedAgeYears: true,
-        estimatedAgeMonths: true,
-        ageRecordedAt: true,
       },
     });
     // 404, not 403 — whether a patient exists in another facility is not this one's to learn.
     if (!patient) throw new NotFoundException('Patient not found');
-    return patient;
   }
 
-  private async toHistoryVisit(
-    row: HistoryRow,
-    gender: Gender,
-    ageYears: number | null,
-  ): Promise<HistoryVisit> {
+  private toHistoryVisit(row: HistoryRow): HistoryVisit {
     return {
       id: row.id,
       visitNo: row.visitNo,
@@ -193,7 +172,7 @@ export class HistoryService {
         isPrimary: dx.isPrimary,
       })),
       prescription: this.toHistoryPrescription(row.prescriptions),
-      labResults: await this.toHistoryLabResults(row.labOrders, gender, ageYears),
+      labResults: this.toHistoryLabResults(row.labOrders),
     };
   }
 
@@ -221,11 +200,7 @@ export class HistoryService {
    * (lab-result.service.ts#forVisit): a value, its flag and the band it was judged against
    * appear only once signed off; anything earlier in the pipeline shows its status alone.
    */
-  private async toHistoryLabResults(
-    labOrders: HistoryRow['labOrders'],
-    gender: Gender,
-    ageYears: number | null,
-  ): Promise<HistoryLabResult[]> {
+  private toHistoryLabResults(labOrders: HistoryRow['labOrders']): HistoryLabResult[] {
     const items = labOrders.flatMap((order) => order.items);
     const results: HistoryLabResult[] = [];
     for (const item of items) {
@@ -247,7 +222,6 @@ export class HistoryService {
         continue;
       }
       const numeric = item.result.valueNumeric != null;
-      const band = await bandFor(this.prisma, item.testId, gender, numeric ? ageYears : null);
       results.push({
         testName: item.testNameAtTime,
         status: item.status,
@@ -256,9 +230,9 @@ export class HistoryService {
         unit: item.result.unit,
         flag: item.result.flag,
         isAbnormal: item.result.isAbnormal,
-        referenceLow: band.low?.toString() ?? null,
-        referenceHigh: band.high?.toString() ?? null,
-        referenceText: band.text,
+        referenceLow: item.result.referenceLow?.toString() ?? null,
+        referenceHigh: item.result.referenceHigh?.toString() ?? null,
+        referenceText: item.result.referenceText,
         verifiedAt: item.result.verifiedAt?.toISOString() ?? null,
       });
     }
@@ -312,16 +286,10 @@ type HistoryRow = {
         flag: string | null;
         isAbnormal: boolean;
         verifiedAt: Date | null;
+        referenceLow: Prisma.Decimal | null;
+        referenceHigh: Prisma.Decimal | null;
+        referenceText: string | null;
       } | null;
     }[];
   }[];
-};
-
-type PatientRow = {
-  id: string;
-  gender: Gender;
-  dateOfBirth: Date | null;
-  estimatedAgeYears: number | null;
-  estimatedAgeMonths: number | null;
-  ageRecordedAt: Date | null;
 };

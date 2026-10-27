@@ -5,6 +5,7 @@ import {
   type ModuleKey,
 } from '@redmars/shared'
 import { apiGet, apiPatch } from '@/lib/api'
+import { useAuth } from '@/auth/authContext'
 
 const MODULES_KEY = ['facility-modules']
 
@@ -19,6 +20,7 @@ export function useFacilityModules() {
 /** Flip one module on or off, then refresh the list. */
 export function useSetFacilityModule() {
   const queryClient = useQueryClient()
+  const { refreshIdentity } = useAuth()
   return useMutation({
     mutationFn: (vars: { module: ModuleKey; enabled: boolean }) =>
       apiPatch(
@@ -26,6 +28,12 @@ export function useSetFacilityModule() {
         { enabled: vars.enabled },
         facilityModuleSummarySchema,
       ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: MODULES_KEY }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: MODULES_KEY }),
+        queryClient.invalidateQueries({ queryKey: ['crm'] }),
+        refreshIdentity(),
+      ])
+    },
   })
 }

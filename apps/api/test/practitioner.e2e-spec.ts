@@ -24,6 +24,7 @@ import { AppModule } from './../src/app.module';
 const prisma = new PrismaClient();
 const PREFIX = 'e2e_prac_';
 const PASSWORD = 'e2e-test-password-not-a-secret';
+const NEW_DOCTOR_PASSWORD = 'new-doctor-password-123';
 const SPEC_CODE = `${PREFIX}PSYCH`;
 
 describe('Practitioner master data (e2e)', () => {
@@ -185,6 +186,82 @@ describe('Practitioner master data (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ code: `${PREFIX}DR1`, firstName: 'Clash', lastName: 'Code', departmentIds: [] })
       .expect(409));
+
+  it('creates a Doctor login for an existing unlinked practitioner', async () => {
+    const practitioner = await prisma.practitioner.create({
+      data: {
+        facilityId,
+        code: `${PREFIX}ACCOUNT`,
+        firstName: 'Existing',
+        lastName: 'Doctor',
+        departments: { create: { departmentId: opdId } },
+      },
+    });
+    createdIds.push(practitioner.id);
+
+    const response = await request(server)
+      .post(`/practitioners/${practitioner.id}/account`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        username: `${PREFIX}new_doctor`,
+        password: NEW_DOCTOR_PASSWORD,
+      })
+      .expect(201);
+    const body = response.body as { roles: string[]; userId: string };
+    expect(body.roles).toContain('doctor');
+
+    const linked = await prisma.practitioner.findUniqueOrThrow({
+      where: { id: practitioner.id },
+    });
+    expect(linked.userId).toBe(body.userId);
+    expect((await login(`${PREFIX}new_doctor`, NEW_DOCTOR_PASSWORD)).length).toBeGreaterThan(0);
+  });
+
+  it('creates only one account when two requests claim the same practitioner', async () => {
+    const practitioner = await prisma.practitioner.create({
+      data: { facilityId, code: `${PREFIX}RACE`, firstName: 'Concurrent', lastName: 'Doctor' },
+    });
+    createdIds.push(practitioner.id);
+    const usernames = [`${PREFIX}race_a`, `${PREFIX}race_b`];
+    const responses = await Promise.all(
+      usernames.map((username) =>
+        request(server)
+          .post(`/practitioners/${practitioner.id}/account`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ username, password: NEW_DOCTOR_PASSWORD }),
+      ),
+    );
+    expect(responses.map((response) => response.status).sort()).toEqual([201, 409]);
+    const users = await prisma.appUser.findMany({
+      where: { facilityId, username: { in: usernames } },
+    });
+    expect(users).toHaveLength(1);
+    const linked = await prisma.practitioner.findUniqueOrThrow({ where: { id: practitioner.id } });
+    expect(linked.userId).toBe(users[0].id);
+  });
+
+  it('grants Doctor access to an account already linked to a practitioner', async () => {
+    const existingUserId = await seedActor('existing_account', 'management');
+    const practitioner = await prisma.practitioner.create({
+      data: {
+        facilityId,
+        code: `${PREFIX}GRANT`,
+        firstName: 'Linked',
+        lastName: 'Doctor',
+        userId: existingUserId,
+      },
+    });
+    createdIds.push(practitioner.id);
+
+    const response = await request(server)
+      .post(`/practitioners/${practitioner.id}/doctor-role`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+    expect((response.body as { roles: string[] }).roles).toEqual(
+      expect.arrayContaining(['management', 'doctor']),
+    );
+  });
 
   it('denies a non-admin the create endpoint', () =>
     request(server)

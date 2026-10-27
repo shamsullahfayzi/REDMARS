@@ -1,3 +1,4 @@
+import { fixtureDepartment } from './scoped-fixtures';
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -117,8 +118,8 @@ describe('Consult context (e2e)', () => {
       data: {
         facilityId: inFacility,
         patientId: patient.id,
-        departmentId: opdId,
-        practitionerId: drOpdId,
+        departmentId: await fixtureDepartment(prisma, inFacility, opdId),
+        practitionerId: inFacility === facilityId ? drOpdId : null,
         visitNo: `${PREFIX}V${counter}`,
         type: 'opd_consult',
         status: options.status ?? 'arrived',

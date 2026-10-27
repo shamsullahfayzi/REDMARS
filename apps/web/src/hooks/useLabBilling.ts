@@ -5,6 +5,7 @@ import {
   type PayLabChargesRequest,
 } from '@redmars/shared'
 import { apiGet, apiPost } from '@/lib/api'
+import { withCommandKey } from '@/lib/commandKey'
 
 /**
  * A patient's outstanding lab charges, for the reception window. Unpaid orders only by
@@ -13,8 +14,7 @@ import { apiGet, apiPost } from '@/lib/api'
 export function useLabCharges(patientId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: ['lab-charges', patientId],
-    queryFn: () =>
-      apiGet(`/lab-charges?patientId=${patientId}`, labChargesResponseSchema),
+    queryFn: () => apiGet(`/lab-charges?patientId=${patientId}`, labChargesResponseSchema),
     enabled: enabled && !!patientId,
     staleTime: 0,
   })
@@ -36,7 +36,7 @@ export function usePayLabCharges(patientId: string | undefined, invoiceId?: stri
   const client = useQueryClient()
   return useMutation({
     mutationFn: (body: PayLabChargesRequest) =>
-      apiPost('/lab-charges/pay', body, payLabChargesResponseSchema),
+      apiPost('/lab-charges/pay', withCommandKey(body), payLabChargesResponseSchema),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['lab-charges', patientId] })
       void client.invalidateQueries({ queryKey: ['lab-queue'] })

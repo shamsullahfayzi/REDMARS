@@ -58,8 +58,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
     //
     // No path is special-cased. A rule that needs a list of URLs to stay quiet
     // is a rule that will be wrong about the next URL.
-    const detail = exception instanceof Error ? exception.stack : String(exception);
-    const line = `${request.method} ${request.url} -> ${status}`;
+    const crmRequest = request.path === '/crm' || request.path.startsWith('/crm/');
+    // CRM searches contain names and phones; Prisma errors may include submitted
+    // contact values. Log the route and error type, never those payloads.
+    const path = crmRequest ? request.path : request.url;
+    const safeMessage = crmRequest
+      ? `CRM request failed (${exception instanceof Error ? exception.name : 'UnknownError'})`
+      : exception instanceof Error
+        ? exception.message
+        : String(exception);
+    const detail = crmRequest
+      ? undefined
+      : exception instanceof Error
+        ? exception.stack
+        : String(exception);
+    const line = `${request.method} ${path} -> ${status}`;
 
     // A bare 500 rather than HttpStatus.INTERNAL_SERVER_ERROR: this is a range
     // test for "5xx", not a comparison against one enum member, and writing it
@@ -76,9 +89,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
             facilityId: request.auth?.facilityId ?? null,
             userId: request.auth?.userId ?? null,
             method: request.method,
-            path: request.url,
+            path,
             statusCode: status,
-            message: exception instanceof Error ? exception.message : String(exception),
+            message: safeMessage,
             stack: detail ?? null,
             ipAddress: request.ip ?? null,
           },

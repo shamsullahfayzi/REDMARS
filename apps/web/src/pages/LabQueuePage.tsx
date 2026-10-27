@@ -37,7 +37,7 @@ import { cn } from '@/lib/utils'
  * One question: what do I work next. So it is ordered by arrival (longest wait first, like
  * the visit queue) and grouped by patient, because a sample is drawn once per person even
  * when the doctor asked for four tests. The fact that gates the next step — is this paid —
- * is the loudest thing on each group after the name: Farhat collects at the window before a
+ * is the loudest thing on each group after the name: Axon collects at the window before a
  * sample is taken, and a bench that cannot see who has paid draws blood it should not.
  *
  * It re-reads itself every ten seconds and says when it has stopped, for the same reason the

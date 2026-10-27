@@ -20,7 +20,7 @@ import { ReceptionService } from './reception.service';
  * Task 3.6 — the reception desk. One screen, one save.
  *
  * No @RequiresModule. The `billing` module gates the apparatus that comes later — panels,
- * insurance claims, statements — not the act of charging for an OPD consultation. Farhat
+ * insurance claims, statements — not the act of charging for an OPD consultation. Axon
  * has `billing` off in the seed, and a module tag here would 403 every registration at
  * the first customer, which is the opposite of what the toggle is for.
  */
