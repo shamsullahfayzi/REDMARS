@@ -1,0 +1,684 @@
+=== PDF PAGE 1 ===
+                                                        Contents
+
+A.    Valid IP Addresses ............................................................................... 1
+B.    Next Greater Element                ........................................................................... 2
+C.    Solve Sudoku           ...................................................................................... 3
+D.    Valid Starting City            ............................................................................... 5
+E.    Smallest Substring Containing ............................................................... 6
+F.    Two    -Edge    -Connected Graph              ................................................................. 7
+G.    Rectangle Mania             .................................................................................. 8
+H.    Underscorify Substring ......................................................................... 9
+I.    Minimum Passes of Matrix ................................................................. 10
+J.    A* Algorithm           .................................................................................... 12
+
+=== PDF PAGE 2 ===
+    A. Valid IP Addresses
+
+You're given    numbers of length 12 or smaller, containing only digits. Write a program that
+display all the possible IP addresses that can be created by inserting three dots (.) in the given
+numbers. An IP address is a sequence of four positive integers that are separated by .s, where
+each individual integer is within the range 0−255, inclusive. An IP address isn't valid if any of
+the individual integers contains leading 0s. For example, "192.168.0.1" is a valid IP address,
+but "192.168.00.1" and "192.168.0.01" aren't, because they contain "00" and "01", respectively.
+Another example of a valid IP            address is "99.1.1.10"; conversely, "991.1.1.0" isn't valid,
+because "991" is greater than 255. Your program should return the IP addresses in no particular
+order. If no valid IP addresses can be created from the given numbers, your program should
+return an empty list.
+
+Input format:
+
+Each individual test case contains numbers of length 12 or smaller
+
+Output format:
+
+Your program should return the IP addresses in no particular order. If no valid IP addresses can
+be created from the given numbers, your program should return an empty list.
+
+ Input                                                     Output
+ 1921680                                                   1.9.216.80
+                                                           1.92.16.80
+                                                           1.92.168.0
+                                                           19.2.16.80
+                                                           19.2.168.0
+                                                           19.21.6.80
+                                                           19.21.68.0
+                                                           19.216.8.0
+                                                           192.1.6.80
+                                                           192.1.68.0
+                                                           192.16.8.0
+Note: The IP addresses could be ordered differently.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                         1
+
+
+=== PDF PAGE 3 ===
+    B. Next Greater Element
+Write a program that takes an array of integers and displays a new array containing, at each
+index, the next element in the input array that's greater than the element at that index in the
+input array. In other words, your program should return a new array where outputArray[i] is
+the next element in the input array that's greater than inputArray[i]. If there's no such next
+greater element for a particular index, the value at that index in the output array should be                    -1.
+For example,      given array = [1, 2], your         program     should return [2,      -1]. Additionally, your
+program should treat the input array as a circular array. A circular array wraps around itself as
+if it were connected end-to-end. So, the next index after the last index in a circular array is the
+first index. This means that, for our problem, given array = [0, 0, 5, 0, 0, 3, 0, 0], the next
+greater element after 3 is 5, since the array is circular.
+
+Input format:
+
+Each individual test case contains comma-separated integer values representing the array of
+integers.
+
+Output format:
+
+displays a new comma-separated values containing, at each index, the next element in the
+input array that's greater than the element at that index in the input array.
+
+ Input                                                     Output
+ 2,5,-3,-4,6,7,2                                           5,6,6,6,7,-1,5
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                         2
+
+
+=== PDF PAGE 4 ===
+    C.            Solve Sudoku
+You're given a two-dimensional array that represents a 9x9 partially filled Sudoku board. Write
+a program that returns the solved Sudoku board. Sudoku is a famous number-placement puzzle
+in which you need to fill a 9x9 grid with integers in the range of 1−9. Each 9x9 Sudoku board
+is split into 9 3x3 sub grids, as seen in the illustration below, and starts out partially filled
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The objective is to fill the grid such that each row, column, and 3x3                    sub grids contains the
+numbers 1-9 exactly once. In other words, no row may contain the same digit more than once,
+no column may contain the same digit more than once, and none of the 9 3x3                         sub grids may
+contain the same digit more than once. Your input for this problem will always be a partially
+filled 9x9 two-dimensional array that represents a solvable Sudoku puzzle. Every element in
+the array will be an integer in the range of 0−9, wh          ere a 0 represents an empty square that must
+be filled by your algorithm. Note that you may modify the input array and that there will always
+be exactly one solution to each input Sudoku board.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                         3
+
+
+=== PDF PAGE 5 ===
+Input format:
+
+You're given a two-dimensional array that represents a 9x9 partially filled Sudoku board
+where each row is comma-separated values integers in the range of 0−9, where a 0 represents
+an empty square that must be filled by your algorithm.
+
+Output format:
+
+display the solved Sudoku board as shown in the below table.
+
+ Input                                                       Output
+ 7,8,0,4,0,0,1,2,0                                           7,8,5,4,3,9,1,2,6
+ 6,0,0,0,7,5,0,0,9                                           6,1,2,8,7,5,3,4,9
+ 0,0,0,6,0,1,0,7,8                                           4,9,3,6,2,1,5,7,8
+ 0,0,7,0,4,0,2,6,0                                           8,5,7,9,4,3,2,6,1
+ 0,0,1,0,5,0,9,3,0                                           2,6,1,7,5,8,9,3,4
+ 9,0,4,0,6,0,0,0,5                                           9,3,4,1,6,2,7,8,5
+ 0,7,0,3,0,0,0,1,2                                           5,7,8,3,9,4,6,1,2
+ 1,2,0,0,0,7,4,0,0                                           1,2,6,5,8,7,4,9,3
+ 0,4,9,2,0,6,0,0,7                                           3,4,9,2,1,6,8,5,7
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                           4
+
+
+=== PDF PAGE 6 ===
+    D.             Valid Starting City
+Imagine you have a set of cities that are laid out in a circle, connected by a circular road that
+runs clockwise. Each city has a gas station that provides gallons of fuel, and each city is some
+distance away from the next city. You have a car that can drive some number of miles per gallon
+of fuel, and your goal is to pick a starting city such that you can fill up your car with that city's
+fuel, drive to the next city, refill up your car with that city's fuel, drive to the next city, and so
+on and so forth until you return back to the starting city with 0 or more gallons of fuel left.                     This
+city is called a valid starting city, and it's guaranteed that there will always be exactly one valid
+starting city.
+
+For the actual problem, you'll be given an array of distances such that city i is distances[i] away
+from city i+1. Since the cities are connected via a circular road, the last city is connected to the
+first city. In other words, the last distance in the distances array is equal to the distance from
+the last city to the first city. You'll also be given an array of fuel available at each city, where
+fuel[i] is equal to the fuel available at city i. The total amount of fuel available (from all cities
+combined) is exactly enough to travel to all cities. Your fuel tank always starts out empty, and
+you're given a positive integer value for the number of miles that your car can travel per gallon
+of fuel (miles per gallon, or MPG). You can assume that you will alway                       s be given at least two
+cities.
+
+Write a program that returns the index of the valid starting city.
+
+Input format:
+
+The first line of individual input is a comma-separated numeric value which represent the
+distance array. The next line is again a comma-separated numeric value that shows the fuel
+values and the last line is an integer value which is miles per gallon, or MPG.
+
+Output format:
+Your program should display the index of the valid starting city.
+
+ Input                                                        Output
+ 5,25,15,10,15                                                4
+ 1,2,1,0,3
+ 10
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                            5
+
+
+=== PDF PAGE 7 ===
+    E. Smallest Substring Containing
+You're given two non-empty strings: a big string and a small string. Write a program that returns
+the smallest substring in the big string that contains all of the small string's characters.
+
+Note that:
+
+    •    The substring can contain other characters not found in the small string.
+    •    The characters in the substring don’t have to be in the same order as they appear in
+         the small string.
+    •    If the small string has duplicate characters, the substring has to contain those duplicate
+         characters (it can also contain more, but not fewer).
+
+You can assume that there will only be one relevant smallest substring.
+
+Input format:
+The first line of each individual input is a string which represent the big string and the next
+line is also another string that shows the small string.
+
+Output format:
+
+Your program displays the smallest substring in the big string that contains all of the small
+string’s characters.
+
+ Input                                                      Output
+ abcd$ef$axb$c$                                             f$axb$
+ $$abf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                          6
+
+
+=== PDF PAGE 8 ===
+    F. Two-Edge-Connected Graph
+You're given a list of edges, representing an unweighted and undirected graph. Write a program
+that returns a Boolean representing whether the given graph is two-edge-connected. A graph is
+connected if, for every pair of vertices in the graph, there's a path of one or more edges
+connecting the given vertices. A graph that isn't connected is said to be disconnected. A graph
+is two-edge-connected if, for every one of its edges, the edge's removal from the graph doesn't
+cause the graph to become disconnected.              If the removal of any single edge disconnects the
+graph, then it isn't two-edge-connected. If the given graph is already disconnected, then it also
+isn't two-edge-connected. An empty graph is considered two-edge-connected.
+
+The input list is what's called an adjacency list, and it represents a graph. The number of vertices
+in the graph is equal to the length of edges, where each index i in edges contains vertex i's
+outbound edges, in no particular order. Each outbound edge is represented by a positive integer
+that denotes an index (a destination vertex) in the list that this vertex is connected to. Note that
+these edges  are undirected, meaning  that you  can travel  from a particular vertex to  its
+destination and from the destination back to that vertex. Since these edges are undirected, if
+vertex i has an outbound edge to vertex j, then vertex j is guaranteed to have an outbound edge
+to vertex i. For example, an undirected graph with two vertices and one edge would be
+represented by the following adjacency list edges = [[1], [0]].
+
+Note that the input graph will never contain parallel edges (edges that share the same source
+and destination vertices).
+
+Input format:
+
+The first line of each individual input contains an integer value K which represent the number
+of vertices in the graph. Each K line is an adjacency list which is the outbound edges of a
+particular vertex.
+
+Output format:
+
+Your program should return true if the given graphs is two-edge-connected.
+
+ Input                                                     Output
+ 4                                                         false
+ 1
+ 0,2,3
+ 1, 3
+ 1,2
+
+
+
+
+
+
+
+
+
+
+                                                         7
+
+
+=== PDF PAGE 9 ===
+    G.            Rectangle Mania
+Write a program that takes in a list of Cartesian coordinates (i.e., (x, y) coordinates) and returns
+the number of rectangles formed by these coordinates. A rectangle must have its four corners
+amongst the coordinates in order to be counted, and we only care about rectangles with sides
+parallel to the x and y axes (i.e., with horizontal and vertical sides--no diagonal sides). You can
+also assume that no coordinate will be farther than 100 units from the origin.
+
+Input format:
+
+The first line of each individual input contains an integer value K which represent the number
+of cartesian coordinates. Each K line is a coordinates x,y which separated by a comma.
+
+Input format:
+
+Your program should display the number of rectangles formed by these coordinates.
+
+ Input                                                     Output
+ 8                                                         6
+ 0,0
+ 0,1
+ 1,1
+ 1,0
+ 2,1
+ 2,0
+ 3,1
+ 3,0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                         8
+
+
+=== PDF PAGE 10 ===
+    H.             Underscorify Substring
+Write a program that takes in two strings: a main string and a potential substring of the main
+string. The    program      should return a version of the main string with every instance of the
+substring in it wrapped between underscores.                If two or more instances of the substring in the
+main string overlap each other or sit side by side, the underscores relevant to these substrings
+should only appear on the far left of the leftmost substring and on the far right of the rightmost
+substring. If the main string doesn't contain the other string at all, the                 program should display
+the main string intact.
+
+Input format:
+
+Each induvial test case contains two lines, the first line is the main string and the second line
+is the potential substring of the main string.
+
+Output format:
+
+Display a string with every instance of the substring in it wrapped between                      underscores.
+
+ Input                                                        Output
+ testthis is a testtest to see if testestest it works         _test_this is a _testtest_to see if _testestest_ it works
+ test
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                            9
+
+
+=== PDF PAGE 11 ===
+    I.   Minimum Passes of Matrix
+Write a program that takes in an integer matrix of potentially unequal height and width and
+display the minimum number of passes required to convert all negative integers in the matrix
+to positive integers. A negative integer in the matrix can only be converted to a positive integer
+if one or more of its adjacent elements is positive. An adjacent element is an element that is to
+the left, to the right, above, or below the current element in the matrix. Converti                      ng a negative
+to a positive simply involves multiplying it by              -1.
+
+Note that the 0 value is neither positive nor negative, meaning that a 0 can't convert an
+adjacent negative to a positive.
+
+A single pass through the matrix involves converting all the negative integers that can be
+converted at a particular point in time. For example, consider the following input matrix:
+
+[
+
+         [0, -2, -1],
+
+         [-5, 2, 0],
+
+         [-6, -2, 0],
+
+]
+
+After a first pass, only 3 values can be converted to positives:
+
+[
+
+         [0, 2, -1],
+
+         [5, 2, 0],
+
+         [-6, 2, 0],
+
+]
+
+After a second pass, the remaining negative values can all be converted to positives:
+
+[
+
+         [0, 2, 1],
+
+         [5, 2, 0],
+
+         [6, 2, 0],
+
+]
+
+Note that the input matrix will always contain at least one element. If the negative integers in
+the input matrix can't all be converted to positives, regardless of how many passes are run, your
+program should return -1.
+
+
+
+                                                           10
+
+
+=== PDF PAGE 12 ===
+Input format:
+
+The first line of each induvial input contains an integer value K which represent the number of
+rows in the matrix. Each K line is comma-separated values which indicate the matrix’s row.
+
+Output format:
+
+Your program should display the minimum number of passes required to convert all negative
+integers in the matrix to positive integers.
+
+ Input                                                      Output
+ 3                                                          3
+ 0,-1,-3,2,0
+ 1,-2,-5,-1,-3
+ 3,0,0,-4,-1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                         11
+
+
+=== PDF PAGE 13 ===
+    J. A* Algorithm
+You're given a two-dimensional array containing 0s and ls, where each 0 represents a free space
+and each l represents an obstacle (a space that cannot be passed through). You can think of this
+array as a grid-shaped graph. You're also given four integers startRow, startCol, endRow, and
+endCol, representing the positions of a start node and an end node in the graph.
+
+Write a program that finds the shortest path between the start node and the end node using the
+A* search algorithm and display it.
+
+The shortest path should be returned as an array of node positions, where each node position is
+an array of two elements: the [row, col] of the respective node in the graph. The output array
+should contain the start node's position, the end node's position, and all of the positions of the
+remaining nodes in the shortest path. and these node positions should be ordered from start
+node to end node.
+
+Input format:
+
+The first line of each induvial input contains the startRow, stratCol, endRow, endCol and an
+integer value K which represent the number of rows in the array. Each K line is comma-
+separated values which indicate the array’s row.
+
+Output format:
+
+Display the shortest path between the start node and the end node using the A* search algorithm
+and display it.
+
+ Input                                                     Output
+ 0                                                         0,1
+ 1                                                         0,0
+ 4                                                         1,0
+ 3                                                         2,0
+ 5                                                         2,1
+ 0,0,0,0,0                                                 3,1
+ 0,1,1,1,0                                                 4,1
+ 0,0,0,0,0                                                 4,2
+ 1,0,1,1,1                                                 4,3
+ 0,0,0,0,0
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                        12

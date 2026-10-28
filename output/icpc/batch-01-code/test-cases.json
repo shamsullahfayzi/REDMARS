@@ -1,0 +1,380 @@
+[
+  {
+    "id": "01",
+    "stem": "01-one-integer-c-fast-i-o-setup",
+    "tests": [
+      [
+        "42\n",
+        "42\n"
+      ],
+      [
+        "",
+        ""
+      ],
+      [
+        "-7\n",
+        "-7\n"
+      ]
+    ]
+  },
+  {
+    "id": "02",
+    "stem": "02-one-string-token",
+    "tests": [
+      [
+        "Kabul\n",
+        "Kabul\n"
+      ],
+      [
+        "",
+        ""
+      ],
+      [
+        "  ICPC  \n",
+        "ICPC\n"
+      ]
+    ]
+  },
+  {
+    "id": "03",
+    "stem": "03-several-space-separated-integers",
+    "tests": [
+      [
+        "8 -3 10\n",
+        "15\n"
+      ],
+      [
+        "8\n-3  10\n",
+        "15\n"
+      ],
+      [
+        "0 0 0",
+        "0\n"
+      ]
+    ]
+  },
+  {
+    "id": "04",
+    "stem": "04-a-pair-integer-word",
+    "tests": [
+      [
+        "17 Farid\n",
+        "Farid 17\n"
+      ],
+      [
+        "2\nAli\n",
+        "Ali 2\n"
+      ]
+    ]
+  },
+  {
+    "id": "05",
+    "stem": "05-fixed-case-count-specified-in-the-statement",
+    "tests": [
+      [
+        "2 5\n9 1\n",
+        "7\n10\n"
+      ],
+      [
+        "0 0\n-5 2\n",
+        "0\n-3\n"
+      ]
+    ]
+  },
+  {
+    "id": "06",
+    "stem": "06-leading-test-count-variable-sized-cases",
+    "tests": [
+      [
+        "2\n3\n4 5 6\n0\n",
+        "15\n0\n"
+      ],
+      [
+        "0\n",
+        ""
+      ],
+      [
+        "1\n2 -3 8",
+        "5\n"
+      ]
+    ]
+  },
+  {
+    "id": "07",
+    "stem": "07-read-complete-records-until-eof",
+    "tests": [
+      [
+        "2 3\n-1 8\n",
+        "5\n7\n"
+      ],
+      [
+        "",
+        ""
+      ],
+      [
+        "4\n6",
+        "10\n"
+      ]
+    ]
+  },
+  {
+    "id": "08",
+    "stem": "08-read-until-a-sentinel-record",
+    "tests": [
+      [
+        "3 2\n0 4\n0 0\n",
+        "5\n4\n"
+      ],
+      [
+        "0 0\n",
+        ""
+      ],
+      [
+        "2 3\n",
+        "5\n"
+      ]
+    ]
+  },
+  {
+    "id": "09",
+    "stem": "09-each-line-has-its-own-number-of-integers",
+    "tests": [
+      [
+        "4 8 -1\n\n5\n",
+        "3 11\n0 0\n1 5\n"
+      ],
+      [
+        "  1\t2  \n",
+        "2 3\n"
+      ],
+      [
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "10",
+    "stem": "10-a-whole-string-including-spaces",
+    "tests": [
+      [
+        "  Kabul team  \n",
+        "[  Kabul team  ]\n"
+      ],
+      [
+        "\n",
+        "[]\n"
+      ],
+      [
+        "abc",
+        "[abc]\n"
+      ],
+      [
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "11",
+    "stem": "11-a-count-followed-by-exactly-that-many-lines",
+    "tests": [
+      [
+        "3\nHello Kabul\n\nA B\n",
+        "11\n0\n3\n"
+      ],
+      [
+        "0\n",
+        ""
+      ],
+      [
+        "1\n  x\n",
+        "3\n"
+      ]
+    ]
+  },
+  {
+    "id": "12",
+    "stem": "12-blank-lines-delimit-cases-eof-closes-the-last",
+    "tests": [
+      [
+        "1 2\n\n3\n4\n",
+        "3\n7\n"
+      ],
+      [
+        "\n \n0\n\n\n",
+        "0\n"
+      ],
+      [
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "13",
+    "stem": "13-comma-separated-integers-optional-spaces",
+    "tests": [
+      [
+        "2, 5,-3, 0\n",
+        "4\n"
+      ],
+      [
+        "0\n",
+        "0\n"
+      ],
+      [
+        "\n",
+        "0\n"
+      ],
+      [
+        " -4 , 7\n",
+        "3\n"
+      ]
+    ]
+  },
+  {
+    "id": "14",
+    "stem": "14-name-value-records-and-fixed-decimal-output",
+    "tests": [
+      [
+        "tea:12.5 rice:3\n",
+        "   tea:  12.50\n  rice:   3.00\n"
+      ],
+      [
+        "x:0\n",
+        "     x:   0.00\n"
+      ],
+      [
+        "longname:4.25",
+        "longname:   4.25\n"
+      ]
+    ]
+  },
+  {
+    "id": "15",
+    "stem": "15-arrow-colon-comma-route-record",
+    "tests": [
+      [
+        "a->b:5,10\n",
+        "a b 30.00\n"
+      ],
+      [
+        "x->y:1.5,3\n",
+        "x y 30.00\n"
+      ],
+      [
+        "a->a:2,60",
+        "a a 2.00\n"
+      ]
+    ]
+  },
+  {
+    "id": "16",
+    "stem": "16-rectangular-character-grid-compact-or-spaced",
+    "tests": [
+      [
+        "2 3\n.#.\n# . #\n",
+        "3\n"
+      ],
+      [
+        "1 1\n#\n",
+        "1\n"
+      ],
+      [
+        "2 2\n00\n0 1\n",
+        "0\n"
+      ]
+    ]
+  },
+  {
+    "id": "17",
+    "stem": "17-integer-matrix-with-explicit-height-and-width",
+    "tests": [
+      [
+        "2 3\n10 -2 0\n4 5 6\n",
+        "23\n"
+      ],
+      [
+        "1 1\n-9\n",
+        "-9\n"
+      ],
+      [
+        "2 2\n1 2 3 4",
+        "10\n"
+      ]
+    ]
+  },
+  {
+    "id": "18",
+    "stem": "18-csv-matrix-with-row-count-width-inferred",
+    "tests": [
+      [
+        "2\n0,-1,3\n4,0,-2\n",
+        "2 3\n"
+      ],
+      [
+        "1\n-1\n",
+        "1 1\n"
+      ],
+      [
+        "2\n1,2\n3,4\n",
+        "2 2\n"
+      ]
+    ]
+  },
+  {
+    "id": "19",
+    "stem": "19-weighted-edge-list-undirected-adjacency",
+    "tests": [
+      [
+        "3 2\n1 2 7\n2 3 4\n",
+        "1\n"
+      ],
+      [
+        "1 0\n",
+        "0\n"
+      ],
+      [
+        "3 2\n1 2 8\n1 3 9\n",
+        "2\n"
+      ]
+    ]
+  },
+  {
+    "id": "20",
+    "stem": "20-tree-input-n-vertices-exactly-n-1-edges",
+    "tests": [
+      [
+        "4\n0 1\n1 2\n1 3\n",
+        "1\n"
+      ],
+      [
+        "1\n",
+        "0\n"
+      ],
+      [
+        "2\n0 1\n",
+        "1\n"
+      ]
+    ]
+  },
+  {
+    "id": "21",
+    "stem": "21-one-adjacency-list-line-per-vertex",
+    "tests": [
+      [
+        "3\n1\n0\n\n",
+        "2\n"
+      ],
+      [
+        "0\n",
+        "0\n"
+      ],
+      [
+        "3\n1,2\n0\n0\n",
+        "4\n"
+      ]
+    ]
+  }
+]

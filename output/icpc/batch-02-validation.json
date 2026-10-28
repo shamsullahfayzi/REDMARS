@@ -1,0 +1,88 @@
+{
+  "page_count": 6,
+  "page_numbers": [
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "cpp_fragments": 22,
+  "python_snippets": 5,
+  "python_assertion_statements": 26,
+  "python_result": "all passed",
+  "cpp_compiled": false,
+  "pdf_code_blocks_matched": 27,
+  "layout": [
+    {
+      "page": 7,
+      "column_bottoms": [
+        94.99,
+        57.79
+      ]
+    },
+    {
+      "page": 8,
+      "column_bottoms": [
+        135.69,
+        67.59
+      ]
+    },
+    {
+      "page": 9,
+      "column_bottoms": [
+        158.49,
+        108.59
+      ]
+    },
+    {
+      "page": 10,
+      "column_bottoms": [
+        39.39,
+        149.39
+      ]
+    },
+    {
+      "page": 11,
+      "column_bottoms": [
+        38.99,
+        59.59
+      ]
+    },
+    {
+      "page": 12,
+      "column_bottoms": [
+        84.89,
+        121.79
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "snippet": "py-sequences",
+      "assertions": 6,
+      "passed": true
+    },
+    {
+      "snippet": "py-mappings",
+      "assertions": 5,
+      "passed": true
+    },
+    {
+      "snippet": "py-collections",
+      "assertions": 5,
+      "passed": true
+    },
+    {
+      "snippet": "py-heap-bisect",
+      "assertions": 5,
+      "passed": true
+    },
+    {
+      "snippet": "py-iteration",
+      "assertions": 5,
+      "passed": true
+    }
+  ]
+}
