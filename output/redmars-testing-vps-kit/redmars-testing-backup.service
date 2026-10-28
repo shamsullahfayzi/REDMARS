@@ -1,0 +1,11 @@
+[Unit]
+Description=Nightly REDMARS testing database backup
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/opt/redmars-testing/backup-testing.sh

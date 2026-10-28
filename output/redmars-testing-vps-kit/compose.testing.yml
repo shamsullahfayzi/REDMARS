@@ -1,0 +1,76 @@
+name: redmars-testing
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Run generate-env.sh first}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run generate-env.sh first}
+      POSTGRES_DB: redmars_testing
+      TZ: Asia/Kabul
+    volumes:
+      - testing_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging: &logs
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+  api:
+    image: redmars-testing-api:${RELEASE_TAG:?Run generate-env.sh first}
+    build:
+      context: /opt/redmars/app
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/redmars_testing?schema=public&connection_limit=20&pool_timeout=20
+      JWT_SECRET: ${JWT_SECRET:?Run generate-env.sh first}
+      JWT_ACCESS_TTL_SECONDS: '900'
+      JWT_REFRESH_TTL_DAYS: '1'
+      CORS_ORIGIN: https://${WEB_DOMAIN:?Run generate-env.sh first}
+      TZ: Asia/Kabul
+      ALLOW_TEST_BOOTSTRAP: YES_TEST_ONLY
+    depends_on:
+      postgres: {condition: service_healthy}
+    volumes:
+      - /opt/redmars-testing/bootstrap-testing.cjs:/ops/bootstrap-testing.cjs:ro
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    logging: *logs
+  web:
+    image: redmars-testing-web:${RELEASE_TAG:?Run generate-env.sh first}
+    build:
+      context: /opt/redmars/app
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: https://${API_DOMAIN:?Run generate-env.sh first}
+    restart: unless-stopped
+    logging: *logs
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ['80:80', '443:443']
+    environment:
+      WEB_DOMAIN: ${WEB_DOMAIN:?Run generate-env.sh first}
+      API_DOMAIN: ${API_DOMAIN:?Run generate-env.sh first}
+      ACME_EMAIL: ${ACME_EMAIL:?Run generate-env.sh first}
+    volumes:
+      - /opt/redmars-testing/Caddyfile.testing:/etc/caddy/Caddyfile:ro
+      - testing_caddy_data:/data
+      - testing_caddy_config:/config
+    depends_on:
+      api: {condition: service_healthy}
+      web: {condition: service_started}
+    logging: *logs
+volumes:
+  testing_pgdata:
+  testing_caddy_data:
+  testing_caddy_config:

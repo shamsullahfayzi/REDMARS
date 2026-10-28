@@ -1,0 +1,11 @@
+[Unit]
+Description=REDMARS testing backup at 02:00 Kabul time
+
+[Timer]
+OnCalendar=*-*-* 02:00:00 Asia/Kabul
+Persistent=true
+AccuracySec=1min
+Unit=redmars-testing-backup.service
+
+[Install]
+WantedBy=timers.target

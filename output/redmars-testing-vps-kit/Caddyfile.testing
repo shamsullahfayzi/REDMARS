@@ -1,0 +1,13 @@
+{
+    email {$ACME_EMAIL}
+}
+{$WEB_DOMAIN} {
+    header X-Robots-Tag "noindex, nofollow"
+    reverse_proxy web:80
+    log
+}
+{$API_DOMAIN} {
+    header X-Robots-Tag "noindex, nofollow"
+    reverse_proxy api:3000
+    log
+}

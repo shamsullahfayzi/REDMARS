@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ $EUID -ne 0 ]]; then
+  echo 'Run with sudo (the configuration file is root-only).' >&2
+  exit 1
+fi
+exec docker compose --project-name redmars-testing \
+  --env-file /etc/redmars-testing/stack.env \
+  -f /opt/redmars-testing/compose.testing.yml "$@"
