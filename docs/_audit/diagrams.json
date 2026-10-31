@@ -1,0 +1,78 @@
+[
+  {
+    "file": "docs/01-system-overview.md",
+    "code": "flowchart LR\n  Staff[Staff browser: React and Vite build] --> TLS[Caddy HTTPS]\n  TLS --> Web[Static web service]\n  TLS --> API[NestJS API: JWT, permissions, module guards]\n  API --> DB[(PostgreSQL 16: hospital database)]\n  API --> Outbox[IntegrationEvent and receipt consumers]\n  Outbox --> DB\n  Staff --> Print[Browser print dialog and local printer]\n  DB --> Dump[Nightly pg_dump: host systemd testing kit]\n  Dump --> Local[Local backup files and checksums]\n  Local -. optional Restic .-> Remote[Encrypted offsite repository]"
+  },
+  {
+    "file": "docs/01-system-overview.md",
+    "code": "erDiagram\n  Facility ||--o{ Patient : registers\n  Patient ||--o{ Visit : attends\n  Department ||--o{ Visit : receives\n  Practitioner o|--o{ Visit : treats\n  Visit ||--o{ Vitals : records\n  Visit ||--o{ Diagnosis : records\n  Visit ||--o{ ClinicalNote : records\n  Visit ||--o{ Prescription : prescribes\n  Visit ||--o{ LabOrder : requests\n  Visit o|--o{ Invoice : bills\n  Invoice ||--o{ Payment : settles\n  AppUser o|--o| Employee : linked_identity\n  AppUser o|--o| Practitioner : linked_clinician\n  Position ||--o{ Employee : employed_as\n  AppUser ||--o{ UserRole : holds\n  Role ||--o{ UserRole : grants"
+  },
+  {
+    "file": "docs/02-initial-setup-runbook.md",
+    "code": "flowchart TD\n  Facility[Facility and bootstrap Administrator] --> HR[Enable HR]\n  Facility --> Dept[Active Department]\n  HR --> Position[Active Position: isClinical true]\n  Dept --> Employee[Employee: active employment]\n  Position --> Employee\n  Employee --> Account[Create linked account: select Doctor]\n  Account --> User[AppUser and Doctor UserRole]\n  Account --> Profile[Practitioner: code equals employee number]\n  Dept --> Membership[PractitionerDepartment]\n  Profile --> Membership\n  Dept --> Service[Service and consultation fee]\n  Membership --> Checkin[Receptionist check-in]\n  Service --> Checkin\n  Checkin --> Visit[Visit assigned to practitioner]\n  User --> Queue[Doctor My consultations and Queue]\n  Visit --> Queue"
+  },
+  {
+    "file": "docs/04-workflows.md",
+    "code": "sequenceDiagram\n  participant R as Receptionist\n  participant A as API and database\n  participant D as Doctor\n  participant L as Lab technician\n  participant P as Pharmacist\n  R->>A: Check-in patient, visit, services and payment\n  A-->>R: Saved visit and paid reception invoice\n  D->>A: Start visit and save clinical sections\n  D->>A: Lab order and prescription as needed\n  R->>A: Settle selected priced lab lines\n  L->>A: Collect, enter and verify results\n  D->>A: Read verified results\n  P->>A: Bill prescription item prices\n  R->>A: Settle pharmacy invoice\n  P->>A: Confirm medicine handover\n  D->>A: Record return plan / book appointment\n  D->>A: Save and complete visit"
+  },
+  {
+    "file": "docs/04-workflows.md",
+    "code": "stateDiagram-v2\n  [*] --> pending: reception submits care request\n  pending --> approved: different authorized reviewer\n  pending --> rejected: reviewer provides reason\n  pending --> cancelled\n  approved --> completed: coordination completed\n  approved --> cancelled"
+  },
+  {
+    "file": "docs/04-workflows.md",
+    "code": "stateDiagram-v2\n  [*] --> ordered\n  ordered --> sample_collected: eligible paid items collected\n  sample_collected --> resulted: result recorded\n  resulted --> verified: technician verifies"
+  },
+  {
+    "file": "docs/04-workflows.md",
+    "code": "sequenceDiagram\n  participant Desk as Reception or Pharmacy\n  participant HMIS as Invoice and Payment\n  participant GL as Finance event consumer and ledger\n  participant F as Accountant / Finance manager\n  Desk->>HMIS: Create charge / settlement / controlled refund\n  HMIS->>GL: Transactional integration event\n  F->>GL: Synchronize eligible events\n  GL-->>F: Posted entries or pending error\n  F->>GL: Compare AR/AP/cash controls and reports\n  F->>GL: Close period only when checks pass"
+  },
+  {
+    "file": "docs/roles/auditor.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  },
+  {
+    "file": "docs/roles/payroll-officer.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  },
+  {
+    "file": "docs/roles/accountant.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  },
+  {
+    "file": "docs/roles/finance-manager.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  },
+  {
+    "file": "docs/roles/admin.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  },
+  {
+    "file": "docs/roles/receptionist.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  },
+  {
+    "file": "docs/roles/nurse.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  },
+  {
+    "file": "docs/roles/doctor.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  },
+  {
+    "file": "docs/roles/lab-tech.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  },
+  {
+    "file": "docs/roles/pharmacist.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  },
+  {
+    "file": "docs/roles/management.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  },
+  {
+    "file": "docs/roles/call-center.md",
+    "code": "stateDiagram-v2\n  [*] --> arrived: reception check-in\n  arrived --> in_progress: authorized clinician starts\n  in_progress --> on_hold: authorized hold\n  on_hold --> in_progress: resume\n  in_progress --> completed: finish care"
+  }
+]

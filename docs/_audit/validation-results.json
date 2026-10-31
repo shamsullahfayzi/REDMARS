@@ -1,0 +1,57 @@
+{
+  "date": "2026-10-31",
+  "checks": [
+    {
+      "name": "Required documents",
+      "status": "PASS",
+      "detail": "9 main/inventory files and 12 role files"
+    },
+    {
+      "name": "Citations and internal file links",
+      "status": "PASS",
+      "detail": "11163 source citations; 226 local links; heading fragments require reader review"
+    },
+    {
+      "name": "Twelve-section role template",
+      "status": "PASS",
+      "detail": "All role files checked"
+    },
+    {
+      "name": "Every inventoried interactive location in a role action table",
+      "status": "PASS",
+      "detail": "1172 action IDs; 414 button sites; repeated runtime rows not counted individually"
+    },
+    {
+      "name": "Every permission in generated matrix",
+      "status": "PASS",
+      "detail": "135 permission rows; 12 role columns"
+    },
+    {
+      "name": "HTTP metadata coverage",
+      "status": "PASS",
+      "detail": "319 HTTP handlers public or permission-decorated; semantic authorization not tested"
+    },
+    {
+      "name": "Navigation role names exist",
+      "status": "PASS",
+      "detail": "Unknown nav roles: "
+    },
+    {
+      "name": "Inspected application sources unchanged",
+      "status": "PASS",
+      "detail": "SHA-256 compared for all 422 inspected source files"
+    },
+    {
+      "name": "Code fence balance",
+      "status": "PASS",
+      "detail": "All generated Markdown fences checked"
+    },
+    {
+      "name": "Mermaid parser",
+      "status": "PASS",
+      "detail": "19 diagrams parsed with Mermaid 11.12.0; visual layout not verified"
+    }
+  ],
+  "errors": [],
+  "diagrams": 19
+}
