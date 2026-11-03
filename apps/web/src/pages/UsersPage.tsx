@@ -387,7 +387,7 @@ function DoctorAccountsCard({ users }: { users: UserSummary[] }) {
               type="password"
               autoComplete="new-password"
             />
-            <Button disabled={createAccount.isPending}>{t('users.doctors.createButton')}</Button>
+            <Button type="submit" disabled={createAccount.isPending}>{t('users.doctors.createButton')}</Button>
           </form>
         )}
 

@@ -885,7 +885,7 @@ function MultiPayment({
               : 'Check amounts'}{' '}
             AFN
           </p>
-          <Button disabled={busy || !entries.length || !valid}>
+          <Button type="submit" disabled={busy || !entries.length || !valid}>
             Prepare payment draft
           </Button>
         </form>
@@ -1118,7 +1118,7 @@ function ReceiptForm({
           >
             Add line
           </Button>
-          <Button disabled={busy}>Save received goods</Button>
+          <Button type="submit" disabled={busy}>Save received goods</Button>
         </div>
       </form>
     </Card>

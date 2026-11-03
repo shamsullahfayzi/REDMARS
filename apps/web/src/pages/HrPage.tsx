@@ -361,7 +361,7 @@ function Employees() {
               <Field label="Base salary (AFN)">
                 <Input name="salary" type="number" min="0" />
               </Field>
-              <Button className="w-full" disabled={save.isPending}>
+              <Button type="submit" className="w-full" disabled={save.isPending}>
                 Create employee
               </Button>
               <ErrorText error={save.error} />
@@ -519,7 +519,7 @@ function EmployeeDetail({
           accept="application/pdf,image/jpeg,image/png"
           required
         />
-        <Button size="sm">Upload</Button>
+        <Button type="submit" size="sm">Upload</Button>
       </form>
       <div className="space-y-1">
         {employee.documents?.map((d) => (
@@ -575,7 +575,7 @@ function EmployeeDetail({
               <option value="payroll_officer">Payroll officer</option>
               <option value="accountant">Accountant</option>
             </Select>
-            <Button size="sm">Create linked account</Button>
+            <Button type="submit" size="sm">Create linked account</Button>
           </form>
         )}
       </div>
@@ -612,7 +612,7 @@ function EmployeeDetail({
           <input type="checkbox" name="blocks" /> Blocks clinical work after
           expiry
         </label>
-        <Button size="sm">Save credential</Button>
+        <Button type="submit" size="sm">Save credential</Button>
       </form>
       {employee.status !== "exited" && (
         <Button
@@ -908,7 +908,7 @@ function Leave({ canApprove }: { canApprove: boolean }) {
           <Field label="Reason">
             <Input name="reason" />
           </Field>
-          <Button className="w-full">Submit request</Button>
+          <Button type="submit" className="w-full">Submit request</Button>
           <ErrorText error={create.error} />
         </form>
       </Card>
@@ -1105,7 +1105,7 @@ function Roster({ canEdit }: { canEdit: boolean }) {
               <Input name="roleOnShift" placeholder="on_call" />
             </Field>
             <div className="self-end">
-              <Button className="w-full">Assign</Button>
+              <Button type="submit" className="w-full">Assign</Button>
             </div>
           </form>
           <ErrorText error={create.error} />
@@ -1242,7 +1242,7 @@ function HrSettings() {
               defaultValue={config.data?.maxConsecutiveNightShifts ?? 3}
             />
           </Field>
-          <Button>Save controls</Button>
+          <Button type="submit">Save controls</Button>
           <ErrorText error={saveConfig.error} />
         </form>
       </Card>
@@ -1299,7 +1299,7 @@ function HrSettings() {
           <Field label="Required role (optional)">
             <Input name="roleOnShift" placeholder="on_call" />
           </Field>
-          <Button disabled={!config.data}>Add coverage rule</Button>
+          <Button type="submit" disabled={!config.data}>Add coverage rule</Button>
         </form>
       </Card>
       <Card className="p-5">
@@ -1333,7 +1333,7 @@ function HrSettings() {
           <label className="flex gap-2 text-sm">
             <input type="checkbox" name="clinical" /> Clinical position
           </label>
-          <Button>Add position</Button>
+          <Button type="submit">Add position</Button>
         </form>
       </Card>
       <Card className="p-5">
@@ -1370,7 +1370,7 @@ function HrSettings() {
           <label className="flex gap-2 text-sm">
             <input type="checkbox" name="attachment" /> Requires attachment
           </label>
-          <Button>Add leave type</Button>
+          <Button type="submit">Add leave type</Button>
         </form>
       </Card>
       <Card className="p-5">
@@ -1407,7 +1407,7 @@ function HrSettings() {
             <Input name="endsAt" type="time" required />
           </Field>
           <Input name="color" placeholder="Color, for example #2563eb" />
-          <Button>Add shift</Button>
+          <Button type="submit">Add shift</Button>
           <ErrorText error={add.error} />
         </form>
       </Card>

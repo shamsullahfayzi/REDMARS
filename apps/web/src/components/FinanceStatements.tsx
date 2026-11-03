@@ -836,7 +836,7 @@ function CashEditor({
               onChange={(e) => setReason(e.target.value)}
             />
           </label>
-          <Button disabled={busy}>Save classification</Button>
+          <Button type="submit" disabled={busy}>Save classification</Button>
         </form>
       )}
     </Block>
@@ -1298,7 +1298,7 @@ function CustomReports({
               >
                 Add report row
               </Button>
-              <Button disabled={busy}>Save layout version</Button>
+              <Button type="submit" disabled={busy}>Save layout version</Button>
             </div>
           </form>
         </Block>

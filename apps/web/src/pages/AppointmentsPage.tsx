@@ -277,7 +277,7 @@ function AppointmentRow({
               <Select name="departmentId" defaultValue={appointment.departmentId} required>{departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</Select>
               <Input name="scheduledOn" type="date" required />
               <Input name="reason" required placeholder="Reason for rescheduling" />
-              <Button size="sm" disabled={reschedule.isPending}>Save new appointment</Button>
+              <Button type="submit" size="sm" disabled={reschedule.isPending}>Save new appointment</Button>
               {reschedule.isError && <p className="text-xs text-destructive">Could not reschedule appointment.</p>}
             </form>}
             {close.isError && (
