@@ -32,7 +32,7 @@
 <tr><td>HIGH</td><td>6</td><td>D-02 to D-07</td></tr>
 <tr><td>MEDIUM</td><td>9</td><td>D-08 to D-16</td></tr>
 <tr><td>LOW / QUESTION</td><td>9</td><td>D-17 to D-25</td></tr>
-<tr><td>New from the local build</td><td>19</td><td>D-26 to D-44 (Section 5)</td></tr></table>
+<tr><td>New from the local build</td><td>22</td><td>D-26 to D-47 (Section 5)</td></tr></table>
 
 <h1>2. Defects seen on the testing instance</h1>
 <table>
@@ -192,7 +192,22 @@
 <tr><td class="id">D-42</td><td><span class="sev s4">LOW</span></td><td><b>Date fields are pre-filled and appended to.</b> The roster From/To boxes were pre-filled, and typing into them produced “1405-08-101405-08-10”; no error was shown and the roster stayed empty until the text was replaced. <span class="pill v">SEEN</span></td><td>Select the content on focus, or validate and show a message.</td></tr>
 <tr><td class="id">D-43</td><td><span class="sev s4">LOW</span></td><td><b>Appointments are booked from the patient record, not from the Appointments page.</b> The Appointments page has no “New appointment” control; booking (“Book a follow-up”, a date, not a time) is on the patient record. First-time users may not find it. <span class="pill v">SEEN</span></td><td>Add a “Book” link on the Appointments page.</td></tr>
 <tr><td class="id">D-44</td><td><span class="sev s4">LOW</span></td><td><b>Possible confusion between “Cancelled” and “Rescheduled”.</b> Rescheduling keeps the old booking marked Cancelled with the note “Rescheduled to …” and adds a new Booked row. That matches the design (history is kept) but will inflate cancellation counts in reports unless they exclude rescheduled rows. <span class="pill v">SEEN</span></td><td>Check the no-show/cancellation counts in Reports.</td></tr>
+<tr><td class="id">D-45</td><td><span class="sev s3">MEDIUM</span></td><td><b>Nurse has no menu entry for consultation, vitals or allergies.</b> The nurse role holds the permissions to record vitals, complaints and allergies, but those screens live only on the consultation page (<code>/consult/&lt;visit&gt;</code>), and the menu link to it is shown to doctors only. The nurse menu is Dashboard, Reception operations, Queue, Appointments, Patients, Human resources. The route itself opens for a nurse when typed. The nurse's patient page shows only “Other numbers”. Whether a queue row links into the consultation for a nurse was not confirmed because the queue was empty. <span class="pill v">SEEN</span> <span class="pill m">PARTLY CONFIRMED</span></td><td>Decide how nurses reach vitals and allergies, then add the menu or queue link and document it.</td></tr>
+<tr><td class="id">D-46</td><td><span class="sev s4">LOW</span></td><td><b>Finance page can stay on “Loading finance…”.</b> After signing in as the finance manager the page showed only “Loading finance…” until it was reloaded. Seen once. <span class="pill v">SEEN</span></td><td>Check the query that loads on first render; show an error after a timeout.</td></tr>
+<tr><td class="id">D-47</td><td><span class="sev s3">MEDIUM</span></td><td><b>Payroll setup has three hidden prerequisites.</b> (1) A finance manager must save a tax schedule first (the “Load Afghan preset” button then “Save tax schedule” works). (2) A department cost centre must exist under Suppliers &amp; payables → Expense mapping before a payroll employee can be saved. (3) Payroll employees are entered again by hand and are not taken from HR employees. <span class="pill v">SEEN</span></td><td>Add to the setup checklist; consider importing from HR.</td></tr>
 </table>
+
+<h2>Verified on the local build: finance and nurse checks</h2>
+<table><tr><th>Step</th><th>Who</th><th>Result</th></tr>
+<tr><td>Add supplier (reference, 30-day terms)</td><td>Finance manager</td><td>Passed; form clears on save</td></tr>
+<tr><td>Prepare supplier bill 5,000 AFN to expense 5500; due date derived from terms (1405-09-12)</td><td>Finance manager</td><td>Passed; draft journal credit 2000 Supplier payables, debit 5500</td></tr>
+<tr><td>Post own draft</td><td>Finance manager</td><td>Post button is disabled for the person who prepared it (separate-poster rule holds)</td></tr>
+<tr><td>Open Payroll, Fixed assets, Cash &amp; bank, Expenses, Financial reports, Ledger, Revenue/AR/tills, Accounts &amp; periods</td><td>Finance manager</td><td>All render; chart of accounts loads; Budgets tab not read</td></tr>
+<tr><td>Load Afghan tax preset and save</td><td>Finance manager</td><td>Passed (“Saved successfully”)</td></tr>
+<tr><td>Receivables with an unposted invoice and a posted payment</td><td>Finance manager</td><td>Shows −600.00 (credit) until the invoice draft is posted; expected</td></tr>
+<tr><td>Sign in as nurse; Queue, Patients</td><td>Nurse</td><td>Passed; see D-45</td></tr>
+<tr><td>Post the supplier bill as a second person; payroll run; fixed asset; budgets; bank statement matching; pharmacy handover; management reports; CRM calls/tasks/contacts; credentials; admission requests and beds (inpatient module is off locally)</td><td>Various</td><td><b>Not run</b></td></tr></table>
+
 
 <h2>Verified on the local build: remaining flows</h2>
 <table><tr><th>Step</th><th>Who</th><th>Result</th></tr>
