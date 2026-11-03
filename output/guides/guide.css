@@ -1,0 +1,37 @@
+@page { size: A4; margin: 22mm 18mm 22mm 18mm;
+  @bottom-left { content: "REDMARS HMIS · Documentation"; font: 8pt "Segoe UI", Arial, sans-serif; color: #6b7a7a; }
+  @bottom-right { content: "Page " counter(page); font: 8pt "Segoe UI", Arial, sans-serif; color: #6b7a7a; } }
+@page :first { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+
+:root { --ink:#1c2626; --muted:#5b6b6b; --brand:#0f6b63; --brand-dark:#0a4a45; --tint:#e8f3f1; --line:#cfdcda; --warn:#8a5a00; --warn-bg:#fff4dc; --bad:#8f2d2d; --bad-bg:#fbe9e9; --ok-bg:#e6f4ea; }
+* { box-sizing: border-box; }
+body { font: 10pt/1.5 "Segoe UI", Arial, sans-serif; color: var(--ink); margin: 0; }
+h1 { font-size: 20pt; color: var(--brand-dark); border-bottom: 2px solid var(--brand); padding-bottom: 4pt; margin: 0 0 10pt; page-break-before: always; }
+h1.first { page-break-before: avoid; }
+h2 { font-size: 13pt; color: var(--brand); margin: 16pt 0 5pt; page-break-after: avoid; }
+h3 { font-size: 10.5pt; color: var(--brand-dark); margin: 11pt 0 3pt; page-break-after: avoid; }
+p { margin: 0 0 6pt; }
+ul, ol { margin: 0 0 7pt; padding-left: 18pt; } li { margin-bottom: 2pt; }
+table { width: 100%; border-collapse: collapse; margin: 6pt 0 10pt; font-size: 8.8pt; page-break-inside: auto; }
+th { background: var(--brand-dark); color: #fff; text-align: left; padding: 4pt 5pt; font-weight: 600; }
+td { border-bottom: 1px solid var(--line); padding: 4pt 5pt; vertical-align: top; }
+tr { page-break-inside: avoid; } tbody tr:nth-child(even) td { background: #f6faf9; }
+code { font: 8.6pt Consolas, monospace; background: var(--tint); padding: 0 3pt; border-radius: 2pt; }
+.cover { height: 297mm; background: linear-gradient(160deg, #0a4a45 0%, #0f6b63 60%, #1a8a7e 100%); color: #fff; padding: 70mm 22mm 20mm; page-break-after: always; }
+.cover .tag { letter-spacing: 3pt; font-size: 9pt; opacity: .8; text-transform: uppercase; }
+.cover h1 { color: #fff; border: 0; font-size: 34pt; line-height: 1.1; margin: 8pt 0 10pt; page-break-before: avoid; }
+.cover .sub { font-size: 13pt; opacity: .92; max-width: 140mm; }
+.cover .meta { position: absolute; bottom: 24mm; left: 22mm; font-size: 9pt; opacity: .85; line-height: 1.7; }
+.callout { border-left: 4px solid var(--brand); background: var(--tint); padding: 6pt 9pt; margin: 7pt 0 10pt; page-break-inside: avoid; }
+.callout.warn { border-color: var(--warn); background: var(--warn-bg); }
+.callout.bad { border-color: var(--bad); background: var(--bad-bg); }
+.callout b.t { display: block; margin-bottom: 2pt; }
+.pill { display: inline-block; font-size: 7.6pt; font-weight: 700; padding: 0 5pt; border-radius: 8pt; color: #fff; white-space: nowrap; }
+.v { background: #1b7f4b; } .o { background: #2d6aa3; } .m { background: var(--warn); } .x { background: var(--bad); } .r { background: #6a4aa3; }
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; margin: 8pt 0 12pt; page-break-inside: avoid; }
+.flow .box { flex: 1 1 0; min-width: 28mm; border: 1.5px solid var(--brand); background: #fff; border-radius: 5pt; padding: 5pt 5pt; font-size: 8pt; text-align: center; }
+.flow .box b { display: block; color: var(--brand-dark); font-size: 8.5pt; margin-bottom: 2pt; }
+.flow .box i { display: block; color: var(--muted); font-style: normal; font-size: 7.4pt; margin-top: 2pt; }
+.flow .arr { flex: 0 0 9pt; align-self: center; text-align: center; color: var(--brand); font-weight: 700; }
+.toc li { margin-bottom: 3pt; } .toc { list-style: none; padding: 0; }
+.small { font-size: 8.5pt; color: var(--muted); }

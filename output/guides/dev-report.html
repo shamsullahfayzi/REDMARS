@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>REDMARS HMIS – Items for the Development Team</title>
+<link rel="stylesheet" href="guide.css">
+<style>td.id{white-space:nowrap;font-weight:700;color:#0a4a45} .sev{display:inline-block;font-size:7.6pt;font-weight:700;padding:0 5pt;border-radius:8pt;color:#fff}.s1{background:#8f2d2d}.s2{background:#b36b00}.s3{background:#2d6aa3}.s4{background:#6b7a7a}</style></head><body>
+
+<div class="cover">
+  <div class="tag">Implementation deliverable · Document D</div>
+  <h1>Items for the Development Team</h1>
+  <div class="sub">Defects, gaps and open questions found while documenting REDMARS HMIS for Axon Nura Psychiatric and Addiction Treatment Hospital</div>
+  <div class="meta">Audience: development team, project owner<br>Prepared: 3 November 2026<br>Basis: testing instance (admin account) and source code review<br>Status: v1.0 — for triage</div>
+</div>
+
+<h1 class="first">1. How to read this document</h1>
+<p>Each item has an ID, a severity, what was seen, how it was seen, and a suggested action. Nothing here has been fixed. Items were found by (a) using the screens of the testing instance as the testing administrator and (b) reading the source code. They are <b>not</b> a full security audit or full test.</p>
+<table>
+<tr><th style="width:18%">Severity</th><th>Meaning</th></tr>
+<tr><td><span class="sev s1">BLOCKER</span></td><td>Stops a required set-up or daily task. Fix before go-live.</td></tr>
+<tr><td><span class="sev s2">HIGH</span></td><td>Likely to cause wrong data, confusion or a safety/finance risk.</td></tr>
+<tr><td><span class="sev s3">MEDIUM</span></td><td>Inconsistency or gap with a workaround.</td></tr>
+<tr><td><span class="sev s4">LOW / QUESTION</span></td><td>Polish, wording, or a question for the hospital or the team.</td></tr>
+</table>
+<table>
+<tr><th style="width:18%">Evidence label</th><th>Meaning</th></tr>
+<tr><td><span class="pill v">SEEN</span></td><td>Observed on the testing instance.</td></tr>
+<tr><td><span class="pill o">CODE</span></td><td>Read in the source code; not reproduced live.</td></tr>
+<tr><td><span class="pill m">UNCONFIRMED</span></td><td>Suspicion only; needs the team to check.</td></tr>
+</table>
+
+<h2>Summary</h2>
+<table><tr><th>Severity</th><th>Count</th><th>IDs</th></tr>
+<tr><td>BLOCKER</td><td>1</td><td>D-01 (fixed locally)</td></tr>
+<tr><td>HIGH</td><td>6</td><td>D-02 to D-07</td></tr>
+<tr><td>MEDIUM</td><td>9</td><td>D-08 to D-16</td></tr>
+<tr><td>LOW / QUESTION</td><td>9</td><td>D-17 to D-25</td></tr>
+<tr><td>New from the local build</td><td>19</td><td>D-26 to D-44 (Section 5)</td></tr></table>
+
+<h1>2. Defects seen on the testing instance</h1>
+<table>
+<tr><th style="width:7%">ID</th><th style="width:11%">Severity</th><th>Finding</th><th style="width:30%">Suggested action</th></tr>
+
+<tr><td class="id">D-01</td><td><span class="sev s1">BLOCKER</span><br><span class="pill v">ROOT CAUSE FOUND · FIXED LOCALLY</span></td>
+<td><b>HR settings “Add” forms saved nothing and showed no error.</b> At <code>Human resources → Settings</code>, <b>Add position</b>, <b>Add leave type</b> and <b>Add shift</b> did nothing on the testing instance. <span class="pill v">SEEN</span><br>
+<b>Root cause:</b> the shared <code>Button</code> (<code>apps/web/src/components/ui/button.tsx</code>) is built on the Base UI library, which gives every button <code>type="button"</code> unless told otherwise. Many forms use a bare <code>&lt;Button&gt;</code> and so never submit. Confirmed on the local build: before the fix the button type was “button” and no request was sent; after adding <code>type="submit"</code> the form sent <code>POST /hr/positions</code> and <code>POST /hr/leave-types</code> and both returned 201. The API itself was fine (a direct call also returned 201). <span class="pill o">CODE</span> <span class="pill v">SEEN</span><br>
+<b>Impact:</b> no positions, so no employees, no clinical logins, no leave or roster.<br>
+<b>Scope:</b> an automated scan of every form found <b>28 affected buttons in 6 files</b>: HrPage (11), ReceptionOperationsPage (11: submit request, waitlist, add bed, contact consent, document upload, coverage, deposit, reminder, handover, close till, downtime marker), FinancePayables (2), FinanceStatements (2), AppointmentsPage (1: save rescheduled appointment), UsersPage (1: create account).</td>
+<td><b>Done in the working tree (not committed or deployed):</b> added <code>type="submit"</code> to the 28 buttons; web typecheck and build pass. <b>Still to do:</b> redeploy to the testing server and re-test; add a guard so this cannot return (D-26).</td></tr>
+
+<tr><td class="id">D-02</td><td><span class="sev s2">HIGH</span></td>
+<td><b>The HR settings forms swallow errors.</b> In <code>apps/web/src/pages/HrPage.tsx</code> the <code>add</code> mutation (about line 1169) and <code>saveConfig</code> mutation have only <code>onSuccess</code>; there is no <code>onError</code> or visible error state. Any server rejection (validation, permission, duplicate) looks like “nothing happened”. <span class="pill o">CODE</span><br>
+<b>Impact:</b> this is not the cause of D-01, but it would hide any future server rejection (validation, permission, duplicate).</td>
+<td>Show the server's error message on every mutation. Check other pages for the same pattern.</td></tr>
+
+<tr><td class="id">D-03</td><td><span class="sev s4">WITHDRAWN</span></td>
+<td><b>Practitioner saved with “Departments: None”.</b> Seen on the testing server after ticking a department box through the browser-automation tool. On the local build the same tool failed in the same way on the Users form (“Assign at least one role”) until the boxes were clicked with a real mouse event, after which the form worked. This was a testing-tool artefact, not an application fault, and is withdrawn. <span class="pill v">SEEN</span></td>
+<td>None. Re-check by hand on the testing server if wanted.</td></tr>
+
+<tr><td class="id">D-04</td><td><span class="sev s2">HIGH</span></td>
+<td><b>Clinical-staff login path is only reachable through HR, which is blocked by D-01.</b> The generic Users form offers only Auditor, Payroll officer, Accountant, Finance manager, Administrator, Receptionist, Management, Call center. Doctor, nurse, lab technician and pharmacist accounts must come from an employee record (the Users service rejects clinical roles with a message). <span class="pill v">SEEN</span> <span class="pill o">CODE</span><br>
+<b>Impact:</b> while D-01 was open, a hospital could not create any clinical user.</td>
+<td>Fix D-01. Consider a clear message on the Users form explaining where clinical accounts are created (a short note exists only in the Doctor access panel).</td></tr>
+
+<tr><td class="id">D-05</td><td><span class="sev s2">HIGH</span></td>
+<td><b>Finance cutover blocker (already known to the project).</b> Unpaid invoices from before go-live cannot be loaded individually; a general opening journal can balance while the AR comparison differs, and period close refuses it. Accountant/approver and cutover date still pending. <span class="pill o">CODE</span> (docs/finance-roadmap-assessment.md)</td>
+<td>Build the controlled legacy-receivable migration and receipt workflow before production cutover.</td></tr>
+
+<tr><td class="id">D-06</td><td><span class="sev s2">HIGH</span></td>
+<td><b>HR employee and attendance data do not reach payroll.</b> Finance payroll employees are separate from HR employees; the link is still an open task and payroll uses manually adjusted attendance. <span class="pill o">CODE</span> (docs/hr-roadmap-assessment.md)<br>
+<b>Impact:</b> duplicate data entry and risk of salary mismatch.</td>
+<td>Decide whether HR becomes the payroll master (hospital decision), then add the explicit link.</td></tr>
+
+<tr><td class="id">D-07</td><td><span class="sev s2">HIGH</span></td>
+<td><b>Shared testing credentials.</b> The testing administrator password was passed in plain text in chat and is a simple pattern. <span class="pill v">SEEN</span><br>
+<b>Impact:</b> if the same instance later holds real data, the account is weak and already shared.</td>
+<td>Rotate the password and use a unique one per environment. Do not put real patient data on this instance.</td></tr>
+</table>
+
+<h1>3. Gaps and inconsistencies</h1>
+<table>
+<tr><th style="width:7%">ID</th><th style="width:11%">Severity</th><th>Finding</th><th style="width:30%">Suggested action</th></tr>
+
+<tr><td class="id">D-08</td><td><span class="sev s3">MEDIUM</span></td>
+<td><b>Two of four departments not saved when submitted one second apart.</b> Adding IPD, EMR, LAB and PHM with about 1 s between submits saved IPD and LAB only; EMR and PHM were missing, then saved when retried with 3 s gaps. <span class="pill v">SEEN</span> May be an automation timing effect; the form gave no feedback either way.</td>
+<td>Check for a double-submit or stale-state problem; show success/failure feedback.</td></tr>
+
+<tr><td class="id">D-09</td><td><span class="sev s3">MEDIUM</span></td>
+<td><b>Departments cannot be renamed or edited, only deactivated.</b> The testing instance's first department is misspelled (“Information Technlogy”) and cannot be corrected on screen. <span class="pill v">SEEN</span></td>
+<td>Add edit for name, local names and type, or document the workaround.</td></tr>
+
+<tr><td class="id">D-10</td><td><span class="sev s3">MEDIUM</span></td>
+<td><b>No screen to create or edit roles and permissions.</b> There are 12 fixed roles; no route for role management exists in the API. <span class="pill o">CODE</span> Also no roles for lab supervisor, chief physician, nursing manager or department head, and no emergency “break-glass” access.</td>
+<td>Decide if roles must be configurable; otherwise document that role changes are a software change. Design the missing roles with the hospital (the permission matrix already lists lab supervisor and break-glass as open questions).</td></tr>
+
+<tr><td class="id">D-11</td><td><span class="sev s3">MEDIUM</span></td>
+<td><b>Screens not found for three administrator tasks.</b> (a) Entering public holidays (API exists, no form on the HR Settings tab); (b) changing the roles of an existing user (<code>role.assign</code> exists, no control on the Users list); (c) listing user accounts with no employee record (an “orphans” API route exists). <span class="pill v">SEEN</span> <span class="pill o">CODE</span></td>
+<td>Confirm where each lives; add screens if missing.</td></tr>
+
+<tr><td class="id">D-12</td><td><span class="sev s3">MEDIUM</span></td>
+<td><b>Credential-expiry reminders have a runner but no scheduler.</b> The HR assessment states the daily invocation is not wired. <span class="pill o">CODE</span></td>
+<td>Attach the runner to a scheduled job or add a visible “run now” with a last-run time.</td></tr>
+
+<tr><td class="id">D-13</td><td><span class="sev s3">MEDIUM</span></td>
+<td><b>Lab sample collection grant for nurses is probably a typo.</b> <code>lab.collect_sample</code> gives the nurse rule R9 (“propose catalogue changes”), which does not fit collecting a sample; the source comment says likely R8. <span class="pill o">CODE</span> (<code>apps/api/src/auth/permissions.ts</code>)</td>
+<td>Confirm the intended rule with the hospital and correct the matrix.</td></tr>
+
+<tr><td class="id">D-14</td><td><span class="sev s3">MEDIUM</span></td>
+<td><b>Same technician can enter and verify a lab result.</b> Flagged as open question 1 in the matrix. In a psychiatric hospital drug-level and safety tests deserve a second check. <span class="pill o">CODE</span></td>
+<td>Hospital decision; add a lab supervisor role or a “verifier must differ” rule if wanted.</td></tr>
+
+<tr><td class="id">D-15</td><td><span class="sev s3">MEDIUM</span></td>
+<td><b>Check-in requires payment at once.</b> The reception check-in route requires <code>invoice.create</code> and <code>payment.receive</code> and registers, queues, bills and takes payment in one save. No “bill later”, insurance-pending or emergency-no-payment path was seen on the check-in design. <span class="pill o">CODE</span> Emergency arrivals exist under Reception operations, but how an unpaid emergency patient is handled was not tested.</td>
+<td>Confirm the intended policy for emergency and insured patients; document or extend.</td></tr>
+
+<tr><td class="id">D-16</td><td><span class="sev s3">MEDIUM</span></td>
+<td><b>Modules switched on that have no visible screens.</b> Radiology, Emergency and Inpatient (IPD) are On in Modules, but the menu has no radiology or ward-round screens; IPD and emergency appear only as Reception-operations functions (beds, admission requests, emergency arrival). <span class="pill v">SEEN</span></td>
+<td>Say clearly in the Modules page which functions each switch controls, or hide modules that are not built.</td></tr>
+</table>
+
+<h1>4. Low-priority items and questions</h1>
+<table>
+<tr><th style="width:7%">ID</th><th style="width:11%">Severity</th><th>Finding</th><th style="width:30%">Suggested action</th></tr>
+
+<tr><td class="id">D-17</td><td><span class="sev s4">LOW</span></td>
+<td><b>Stale comment: “The 7 roles”.</b> <code>permissions.ts</code> says 7 roles but defines 12; the Users screen is still missing some of them (D-04). Other comments describe “all 7 roles”. <span class="pill o">CODE</span></td>
+<td>Update comments.</td></tr>
+
+<tr><td class="id">D-18</td><td><span class="sev s4">LOW</span></td>
+<td><b>“All roles” list in the web menu omits Call center.</b> <code>apps/web/src/auth/nav.ts</code> defines <code>ALL_ROLES</code> without <code>call_center</code>, so a call-center user gets no Dashboard or HR link although they hold <code>hr.self.view</code> and <code>hr.leave.request</code>. Their landing page is Follow-ups. <span class="pill o">CODE</span></td>
+<td>Decide whether call-center staff should see their HR self-service (leave); add the role if so.</td></tr>
+
+<tr><td class="id">D-19</td><td><span class="sev s4">LOW</span></td>
+<td><b>Date format hints show year 1404.</b> HR date boxes show a placeholder of 1404-07-05. Today (3 Nov 2026) corresponds to Shamsi year 1405. On the Finance page the three 1404-era entries next to “Today in Kabul” are fixed sample buttons for the converter, not the current date (clarified on the local build). The converter itself opens on 1 Hamal 1404. <span class="pill v">SEEN</span></td>
+<td>Use a current-year placeholder; confirm the “Today in Kabul” values are correct.</td></tr>
+
+<tr><td class="id">D-20</td><td><span class="sev s4">LOW</span></td>
+<td><b>HR detail text is English only.</b> Dari and Pashto exist for menus but the HR workspace copy is English; staff-validated wording is pending (per the HR assessment). <span class="pill o">CODE</span></td>
+<td>Translate and review during UAT.</td></tr>
+
+<tr><td class="id">D-21</td><td><span class="sev s4">QUESTION</span></td>
+<td><b>Login rate limiting.</b> Rate-limit code exists for CRM routes and for password change (5 per window). No limiter was found on <code>POST /auth/login</code>, and no throttler or <code>helmet</code> security-header package is installed. <span class="pill o">CODE</span> <span class="pill m">UNCONFIRMED</span></td>
+<td>Confirm login brute-force protection exists (possibly at the Caddy proxy) and add security headers.</td></tr>
+
+<tr><td class="id">D-22</td><td><span class="sev s4">QUESTION</span></td>
+<td><b>Permission decorators are not uniform.</b> CRM and HR routes carry <code>@RequirePermission</code> on every route; a route scan did not show the decorator on several clinical, finance and invoice routes. They may use class-level or other metadata. <span class="pill m">UNCONFIRMED</span></td>
+<td>Run a check that fails the build if any non-public route has no permission.</td></tr>
+
+<tr><td class="id">D-23</td><td><span class="sev s4">QUESTION</span></td>
+<td><b>Finance “Sync” and period handling not exercised.</b> The books on the testing instance are not initialised and initialisation is permanent for the start date, so billing-to-journal synchronisation was not tested live. <span class="pill m">NOT TESTED</span></td>
+<td>Provide a disposable finance dataset for the testing instance.</td></tr>
+
+<tr><td class="id">D-24</td><td><span class="sev s4">QUESTION</span></td>
+<td><b>Menu text spelling and sample data.</b> “Information Technlogy” (see D-09). The Users form page says “Doctor logins must stay linked to an existing practitioner profile”, while HR guidance says doctor logins are created from the employee; the two instructions read differently. <span class="pill v">SEEN</span></td>
+<td>Align wording.</td></tr>
+
+<tr><td class="id">D-25</td><td><span class="sev s4">QUESTION</span></td>
+<td><b>Instruction file in the repository.</b> <code>AGENTS.md</code> requires reading several roadmap documents before code changes; the roadmap copies are under <code>docs/</code>. No change was made to code or those documents for this review.</td>
+<td>None; for information.</td></tr>
+</table>
+
+<h1>5. Results of running the development build</h1>
+<p>The development version was run locally (API on port 3000, web on 5173, Postgres in Docker) and checked as follows.</p>
+<table><tr><th>Check</th><th>Result</th></tr>
+<tr><td>API health endpoint</td><td>Passed: status ok, database up</td></tr>
+<tr><td>Web login and dashboard</td><td>Passed (signed in with a development test user)</td></tr>
+<tr><td>Database migrations</td><td>51 of 51 applied (the existing dev database had only 17; it was backed up first)</td></tr>
+<tr><td>Seed (roles, permissions)</td><td>Passed: 12 roles, 135 permissions, 334 grants</td></tr>
+<tr><td>Shared package tests</td><td>41 of 41 passed</td></tr>
+<tr><td>API unit tests</td><td>13 of 13 passed</td></tr>
+<tr><td>API end-to-end tests (isolated test database)</td><td>77 suites. <b>All pass once the test database is seeded</b>: 69 passed first time, and the 8 that failed before seeding then passed (175 tests)</td></tr>
+<tr><td>API typecheck</td><td>Passed</td></tr>
+<tr><td>Web typecheck and production build</td><td>Passed (after the button fix)</td></tr>
+<tr><td>API lint</td><td>471 formatting errors (see D-27)</td></tr></table>
+
+<h2>New items from this run</h2>
+<table>
+<tr><th style="width:7%">ID</th><th style="width:11%">Severity</th><th>Finding</th><th style="width:30%">Suggested action</th></tr>
+<tr><td class="id">D-26</td><td><span class="sev s2">HIGH</span></td><td><b>Nothing prevents D-01 from coming back.</b> The 28 buttons were found by a one-off script; any new form button added without <code>type="submit"</code> will silently not submit.</td><td>Add a lint rule or test that fails on a <code>&lt;Button&gt;</code> inside a <code>&lt;form&gt;</code> with no <code>type</code> and no <code>onClick</code>.</td></tr>
+<tr><td class="id">D-27</td><td><span class="sev s3">MEDIUM</span></td><td><b>API lint reports 471 errors</b>, almost all Prettier formatting, plus two unnecessary type assertions in <code>staff.service.ts</code> (lines 719 and 722).</td><td>Run the formatter once in its own commit, then keep lint in CI.</td></tr>
+<tr><td class="id">D-28</td><td><span class="sev s3">MEDIUM</span></td><td><b>Fresh install does not work out of the box.</b> After <code>pnpm install</code>, <code>pnpm seed</code> fails with “@prisma/client has no exported member” until <code>prisma generate</code> is run by hand and the shared package is built. No root script does this.</td><td>Run <code>prisma generate</code> from a <code>postinstall</code> script, build shared before seeding, and document the order.</td></tr>
+<tr><td class="id">D-29</td><td><span class="sev s3">MEDIUM</span></td><td><b>End-to-end tests need a seeded database but nothing says so.</b> On an empty migrated test database 8 suites fail with “No record was found” for a role. They pass after the seed is run against it.</td><td>Seed roles in the e2e setup, or document the step.</td></tr>
+<tr><td class="id">D-30</td><td><span class="sev s3">MEDIUM</span></td><td><b>Local stack conflicts on Windows.</b> The Adminer container cannot start because Windows blocks port 8081 (the template default), and the Caddy container restarts in a loop.</td><td>Choose another default Adminer port; make Caddy optional for local development.</td></tr>
+<tr><td class="id">D-31</td><td><span class="sev s3">MEDIUM</span></td><td><b>Old production-mode containers start with Docker Desktop</b> (<code>restart: unless-stopped</code>) and share the dev database volume. The database password was recorded only inside those containers; no <code>.env</code> existed.</td><td>Document how to recover the local database password; do not share a volume between dev and production-mode stacks.</td></tr>
+<tr><td class="id">D-32</td><td><span class="sev s4">LOW</span></td><td><b>Large web bundle.</b> The production build is one 1.5 MB script (393 KB compressed) and the build warns about it. Slow on a hospital LAN or weak tablet.</td><td>Split by route (dynamic import) for Finance, HR and Reports.</td></tr>
+<tr><td class="id">D-33</td><td><span class="sev s4">LOW</span></td><td><b>Local seed differs from the testing server.</b> The local seed creates 19 departments and names the facility “…Specialty Hospital”; the testing server shows “…Treatment Hospital”. Finance and CRM modules are off by default locally.</td><td>Decide which names and defaults are correct and keep seed and server consistent.</td></tr>
+<tr><td class="id">D-34</td><td><span class="sev s3">MEDIUM</span></td><td><b>Receipts carry another hospital's contact details.</b> The printed bill and receipt show “Kolola Pushta Bus Stop, Kabul” and an email for “farhathsp”, while the heading reads Axon Nura. There is a migration that renamed the Farhat facility to Axon, so the footer text was probably left behind in print settings. <span class="pill v">SEEN</span> (local build, receipt INV-2026-0007)</td><td>Move the receipt address, phone and email into facility settings and set the correct Axon values.</td></tr>
+<tr><td class="id">D-35</td><td><span class="sev s3">MEDIUM</span></td><td><b>A zero-price lab order shows two different payment states.</b> The doctor ordered a panel priced 0.00. Collections lists it as “Unpaid 0.00 AFN” and the bill page says “NOTHING TO PAY” with no way to settle it, while the Lab screen shows the same order as “Paid” and lets the sample be collected. <span class="pill v">SEEN</span></td><td>Treat a zero bill as settled everywhere, or block ordering tests that have no price.</td></tr>
+<tr><td class="id">D-36</td><td><span class="sev s3">MEDIUM</span></td><td><b>Seed catalogue quality.</b> The local database holds 360 services with many at 0.00, several duplicate “OPD” entries, and entries named after people (for example a doctor's name) listed as services; 1,297 drugs, many with no price. At check-in a zero-price service can be sold for free. Pharmacy staff had to type a unit price for the drug before billing. <span class="pill v">SEEN</span></td><td>Clean the catalogue before go-live; consider requiring a price (or an explicit “free” flag) for every billable item.</td></tr>
+<tr><td class="id">D-37</td><td><span class="sev s4">LOW</span></td><td><b>Quantity box pre-fills, then appends.</b> On the prescription sheet the Qty box was filled automatically with 30; typing 30 into it produced 3030. A mistake like that would bill 100 times too many tablets. <span class="pill v">SEEN</span></td><td>Select the box content on focus, or show the calculated quantity as a placeholder.</td></tr>
+<tr><td class="id">D-38</td><td><span class="sev s4">LOW</span></td><td><b>Account creation lists differ.</b> Users → Create a user offers Auditor, Payroll officer, Accountant, Finance manager, Administrator, Receptionist, Management, Call center. HR employee → Create system account offers Doctor, Nurse, Lab technician, Pharmacist, Receptionist, Payroll officer, Accountant. There is no screen path for linking Administrator, Management, Auditor, Finance manager or Call center accounts to an employee record. <span class="pill v">SEEN</span></td><td>Decide whether every account should be tied to an employee, and align the two lists.</td></tr>
+<tr><td class="id">D-39</td><td><span class="sev s3">MEDIUM</span></td><td><b>Call center sees a 3-day recall window; receptionist sees 30 days.</b> The follow-up that the doctor set for 7 days ahead did not appear for the call-center user until the date range was changed by hand (the “Later window” button jumps a whole month). The call center's whole job is this list. <span class="pill v">SEEN</span></td><td>Use the same default window for every role, or let the call center choose “next 30 days”.</td></tr>
+<tr><td class="id">D-40</td><td><span class="sev s3">MEDIUM</span></td><td><b>CRM call workflows are blocked until an administrator confirms an escalation contact.</b> The CRM Tasks and Workspace pages say “An administrator must confirm the staffed escalation contact before call workflows begin”, and service areas and safe-contact instructions show “Not configured”. This setup step is not mentioned anywhere else. <span class="pill v">SEEN</span></td><td>Add it to the setup checklist and the Administrator Guide; consider a banner on the admin dashboard.</td></tr>
+<tr><td class="id">D-41</td><td><span class="sev s4">LOW</span></td><td><b>Settings forms keep their values after saving.</b> After adding a shift type on HR → Settings the code, name and times stayed in the form, so a second click would try to add a duplicate. <span class="pill v">SEEN</span></td><td>Clear the form on success.</td></tr>
+<tr><td class="id">D-42</td><td><span class="sev s4">LOW</span></td><td><b>Date fields are pre-filled and appended to.</b> The roster From/To boxes were pre-filled, and typing into them produced “1405-08-101405-08-10”; no error was shown and the roster stayed empty until the text was replaced. <span class="pill v">SEEN</span></td><td>Select the content on focus, or validate and show a message.</td></tr>
+<tr><td class="id">D-43</td><td><span class="sev s4">LOW</span></td><td><b>Appointments are booked from the patient record, not from the Appointments page.</b> The Appointments page has no “New appointment” control; booking (“Book a follow-up”, a date, not a time) is on the patient record. First-time users may not find it. <span class="pill v">SEEN</span></td><td>Add a “Book” link on the Appointments page.</td></tr>
+<tr><td class="id">D-44</td><td><span class="sev s4">LOW</span></td><td><b>Possible confusion between “Cancelled” and “Rescheduled”.</b> Rescheduling keeps the old booking marked Cancelled with the note “Rescheduled to …” and adds a new Booked row. That matches the design (history is kept) but will inflate cancellation counts in reports unless they exclude rescheduled rows. <span class="pill v">SEEN</span></td><td>Check the no-show/cancellation counts in Reports.</td></tr>
+</table>
+
+<h2>Verified on the local build: remaining flows</h2>
+<table><tr><th>Step</th><th>Who</th><th>Result</th></tr>
+<tr><td>Book a follow-up from the patient record; list under Appointments → Upcoming; Reschedule</td><td>Receptionist</td><td>Passed (Reschedule works after the button fix)</td></tr>
+<tr><td>Doctor's “Come back on” date appears on Follow-ups</td><td>Receptionist</td><td>Passed</td></tr>
+<tr><td>Close the till with counted cash 880 against expected 900</td><td>Receptionist</td><td>Passed: difference −20.00 recorded for second-person approval</td></tr>
+<tr><td>Create a shift handover to a named person</td><td>Receptionist</td><td>Passed</td></tr>
+<tr><td>Receive a 1,000 AFN patient deposit (Patient services)</td><td>Receptionist</td><td>Passed</td></tr>
+<tr><td>Approve the till difference; acknowledge the handover; supervisor audit list</td><td>Administrator</td><td>Passed (approver differs from the requester)</td></tr>
+<tr><td>Turn on Finance and CRM modules</td><td>Administrator</td><td>Passed; menus appeared immediately</td></tr>
+<tr><td>Create call center, accountant, finance manager, payroll officer and auditor accounts</td><td>Administrator</td><td>Passed; each is forced to change its password at first sign-in</td></tr>
+<tr><td>Weekly rest day, shift type, roster assignment and publish (draft → confirmed)</td><td>Administrator</td><td>Passed</td></tr>
+<tr><td>Leave request (Annual, 3 calendar days, 2 workdays with Friday as rest day), approval</td><td>Administrator</td><td>Passed</td></tr>
+<tr><td>Mark attendance</td><td>Administrator</td><td>Passed</td></tr>
+<tr><td>Follow-up response “Coming”</td><td>Call center</td><td>Passed (after widening the date range, D-39)</td></tr>
+<tr><td>New CRM lead with owner and source; lead detail shows patient link, qualification and interaction timeline</td><td>Call center</td><td>Passed</td></tr>
+<tr><td>Initialise books (start 1405-08-01): 24 open periods created</td><td>Finance manager</td><td>Passed</td></tr>
+<tr><td>Hospital invoices and payments arrive as draft journals within seconds</td><td>System → Finance manager</td><td>Passed: 4 drafts (invoice and payment for INV-2026-0007 and INV-2026-0009)</td></tr>
+<tr><td>Post a draft journal</td><td>Finance manager</td><td>Passed: JRN-2026-000001, debit 1000 Cash 600, credit 1100 Patient receivables 600</td></tr>
+<tr><td>Pharmacy handover; nurse vitals and allergy; management reports; payroll run; expenses, suppliers, assets, budgets, bank matching; CRM calls, tasks and contacts; credentials; admission requests and beds</td><td>Various</td><td><b>Not run</b></td></tr></table>
+
+
+<h2>Verified on the local build: the patient journey</h2>
+<p>Each step was run through the screens, not only the API, using a test employee, a test patient and the development users. Test credentials are not recorded here.</p>
+<table><tr><th>Step</th><th>Who</th><th>Result</th></tr>
+<tr><td>Create employee EMP-0001 (Psychiatrist, Outpatient)</td><td>Administrator</td><td>Passed (after the button fix)</td></tr>
+<tr><td>Create linked doctor account</td><td>Administrator</td><td>Passed: “Doctor account and linked practitioner profile created”</td></tr>
+<tr><td>First sign-in with a temporary password</td><td>Doctor</td><td>Passed: forced to change password (12 characters minimum), then sign in again</td></tr>
+<tr><td>Check-in: register patient, start visit, bill, take cash</td><td>Receptionist</td><td>Passed: MRN-000004, receipt INV-2026-0007 (300.00), ID card printable</td></tr>
+<tr><td>Open the consultation, record vitals, complaint, diagnosis F32.0, sertraline prescription, lab order</td><td>Doctor</td><td>Passed; the doctor's list showed the patient, “Start consultation” moved the visit to In progress, “Save &amp; finish” moved it to Completed</td></tr>
+<tr><td>Collect sample, enter result, verify</td><td>Lab technician</td><td>Passed (order was zero priced, see D-35)</td></tr>
+<tr><td>Price and bill the prescription</td><td>Pharmacist</td><td>Passed: INV-2026-0009 (600.00), told to send the patient to reception to pay</td></tr>
+<tr><td>Take payment for the pharmacy bill</td><td>Receptionist (Collections)</td><td>Passed: receipt RCP-2026-0001, bill settled, refund link shown</td></tr>
+<tr><td>Check the till</td><td>Receptionist</td><td>Passed: 2 in, 0 out, cash to count 900.00</td></tr>
+<tr><td>Pharmacy handover, till closing with supervisor approval, appointments, follow-ups, CRM, finance, payroll, leave and roster</td><td>Various</td><td><b>Not run</b></td></tr></table>
+
+<h1>6. What was and was not tested</h1>
+<table>
+<tr><th>Area</th><th>Status</th></tr>
+<tr><td>Departments, specialities, services, drug import, lab test catalogue, practitioner (legacy route)</td><td><span class="pill v">Executed</span> — saved and listed correctly (except D-03, D-08)</td></tr>
+<tr><td>HR positions, leave types, shift types</td><td><span class="pill x">Failed</span> on the testing instance (D-01); <span class="pill v">passed</span> on the local build after the fix (position and leave type; shift type not repeated)</td></tr>
+<tr><td>HR rest-day controls, coverage rules, employees, credentials, attendance, roster, leave workflow</td><td>Not run (needs a position)</td></tr>
+<tr><td>User account creation, password issue, deactivation</td><td>Not run (author may not enter passwords)</td></tr>
+<tr><td>Finance initialisation, journals, payroll, assets, statements</td><td>Not run (permanent start date; accountant decision pending)</td></tr>
+<tr><td>Check-in, queue, consultation, lab, pharmacy, till</td><td>Not run (needs doctor login, employees, patient data)</td></tr>
+<tr><td>CRM, beds, reception operations forms</td><td>Read only</td></tr>
+<tr><td>Behaviour when signed in as each non-admin role</td><td>Not tested; role behaviour is documented from the permission matrix</td></tr></table>
+
+<h2>Test data now on the testing instance</h2>
+<p>Added during this review (all test values, safe to remove if the team resets the database):</p>
+<ul>
+<li>Departments: OPD, IPD, EMR, LAB, PHM (plus the existing ADM-1).</li>
+<li>Speciality PSY (Psychiatry); practitioner DR-001 “Test Psychiatrist”, no login.</li>
+<li>Services CONS-PSY (500 AFN) and CONS-FU (300 AFN).</li>
+<li>Ten drugs (CSV import) and two lab tests (CBC, GLU).</li></ul>
+<p class="small">The temporary Chrome automation used to enter these may itself explain items D-03 and D-08; they should be repeated by hand before being treated as defects.</p>
+</body></html>

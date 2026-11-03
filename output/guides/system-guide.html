@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>REDMARS HMIS – Overall System Guide</title>
+<link rel="stylesheet" href="guide.css"></head><body>
+
+<div class="cover">
+  <div class="tag">Implementation deliverable · Document C</div>
+  <h1>Overall System Guide</h1>
+  <div class="sub">How Clinical, Finance and HR work together in REDMARS HMIS at Axon Nura Psychiatric and Addiction Treatment Hospital</div>
+  <div class="meta">Audience: management, administrators, department heads, all staff<br>Prepared: 3 November 2026<br>Basis: testing instance of the application and its source code<br>Status: v1.0 — for review</div>
+</div>
+
+<h1 class="first">1. About this document</h1>
+<p>This guide explains what the application does, who uses which part, and how information and money move between the Clinical, Finance and HR areas. It is written for the hospital's staff, not for developers. Role-by-role instructions are in the separate Role Guides; set-up instructions are in the Administrator Guide.</p>
+
+<h2>How the facts in this guide were checked</h2>
+<table>
+<tr><th style="width:22%">Label</th><th>Meaning</th></tr>
+<tr><td><span class="pill v">VERIFIED – SCREEN</span></td><td>Seen directly on the testing instance, logged in as the testing administrator.</td></tr>
+<tr><td><span class="pill o">VERIFIED – CODE</span></td><td>Confirmed in the application's source code (permission matrix, menu rules, workflow code) but not executed end-to-end on the testing instance.</td></tr>
+<tr><td><span class="pill m">GAP</span></td><td>Something a hospital would normally expect that the application does not do, or does only manually.</td></tr>
+<tr><td><span class="pill r">RECOMMENDATION</span></td><td>Advice from the author. This is <b>not</b> existing functionality.</td></tr>
+</table>
+
+<div class="callout warn"><b class="t">Important limitation of the testing instance</b>
+At the time of review the testing instance was almost empty: one department (“Information Technlogy”, as typed), two accounts (the testing administrator and one receptionist account), <b>no</b> practitioners, services, drugs, lab tests, patients, employees or positions, and the finance books were <b>not yet initialised</b>. Therefore the patient journey in Section 6 is documented from the screens that exist and from the application's source code. It was <b>not</b> run end-to-end with a real patient record. Where a step could not be observed live it is labelled accordingly.</div>
+
+<h2>Contents</h2>
+<ol class="toc">
+<li>About this document</li><li>The system at a glance</li><li>Roles and who works where</li><li>Clinical — how it works</li><li>Finance — how it works</li><li>The patient journey, step by step</li><li>HR — how it works and how it supports clinical work</li><li>How information moves between departments</li><li>Management oversight</li><li>Dependencies and operating procedures</li><li>Manual steps, gaps and limits</li><li>Rules that apply system-wide</li></ol>
+
+<h1>2. The system at a glance</h1>
+<p>REDMARS HMIS is a web application for a single hospital. The testing instance is configured for <b>Axon Nura Psychiatric and Addiction Treatment Hospital</b> <span class="pill v">VERIFIED – SCREEN</span>.</p>
+<ul>
+<li><b>Languages:</b> English, Dari and Pashto can be selected in the top bar. Detailed HR screens are currently in English only <span class="pill o">VERIFIED – CODE</span> (per the project's own HR assessment).</li>
+<li><b>Currency and calendar:</b> amounts are in Afghan afghani (AFN). Finance and HR use the Shamsi calendar and Kabul time (UTC+04:30).</li>
+<li><b>Everything is permission-controlled:</b> each person sees only the menu items their role allows, and the server re-checks every action.</li>
+<li><b>Nothing clinical is hard-deleted.</b> Mistakes are corrected by marking “entered in error” or adding a new record.</li>
+</ul>
+
+<h2>Modules that can be switched on or off</h2>
+<p>An administrator controls these under <b>Administration → Modules</b>. All were <b>On</b> in the testing instance <span class="pill v">VERIFIED – SCREEN</span>.</p>
+<table><tr><th>Module</th><th>Switchable?</th><th>Covers</th></tr>
+<tr><td>Outpatient (OPD)</td><td>No — always on</td><td>Reception, patients, visits, queue, appointments, consultation, prescriptions, billing at the desk</td></tr>
+<tr><td>Laboratory</td><td>Yes</td><td>Lab orders, sample collection, results, lab test and panel catalogues</td></tr>
+<tr><td>Pharmacy</td><td>Yes</td><td>Pharmacy queue, billing, handover, returns, drug formulary</td></tr>
+<tr><td>Inpatient (IPD), Emergency, Radiology</td><td>Yes</td><td>Listed as modules. Beds, admission requests and emergency arrival exist under Reception operations. No separate radiology or ward screens were visible in the menu.</td></tr>
+<tr><td>Billing</td><td>Yes</td><td>Listed as a module; the desk's OPD billing itself does not depend on it <span class="pill o">VERIFIED – CODE</span></td></tr>
+<tr><td>Reports</td><td>Yes</td><td>Census, wait times, revenue, diagnoses, audit log, error log, patient export</td></tr>
+<tr><td>Finance &amp; accounting</td><td>Yes</td><td>Chart of accounts, journals, payables, payroll, assets, statements</td></tr>
+<tr><td>CRM</td><td>Yes</td><td>Leads, contacts, calls, tasks, CRM appointments</td></tr>
+<tr><td>Human resources</td><td>Yes</td><td>Employees, credentials, attendance, leave, roster</td></tr>
+</table>
+
+<h1>3. Roles and who works where</h1>
+<p>The application has <b>12 roles</b> <span class="pill o">VERIFIED – CODE</span>. A user can hold more than one. Absence of a permission means “denied”.</p>
+<table>
+<tr><th>Role</th><th>Area</th><th>Main workspace(s)</th><th>Cannot do</th></tr>
+<tr><td>Administrator</td><td>All</td><td>Users, Departments, Practitioners, Services, Drugs, Lab catalogue, Settings, Modules, Reports, HR, CRM, Finance</td><td>Write clinical records; read psychiatric notes (rule R2)</td></tr>
+<tr><td>Receptionist / Cashier</td><td>Clinical (front desk)</td><td>Reception, Reception operations, Queue, Appointments, Patients, Follow-ups, Collections, Till</td><td>See clinical notes or diagnoses; browse the full invoice register</td></tr>
+<tr><td>Nurse</td><td>Clinical</td><td>Reception operations (beds), Queue, Appointments, Patients</td><td>Prescribe, diagnose, read psychiatric notes</td></tr>
+<tr><td>Doctor / Consultant</td><td>Clinical</td><td>My consultations, Queue, Appointments, Patients, Follow-ups, Diagnosis codes, Interactions</td><td>Take payments; change prices</td></tr>
+<tr><td>Lab technician</td><td>Clinical</td><td>Lab, Lab tests</td><td>See the wider patient record; browse patients by name</td></tr>
+<tr><td>Pharmacist</td><td>Clinical / money</td><td>Pharmacy, Interactions, Drugs, Invoices (pharmacy bills only), Collections, Till</td><td>See diagnoses or notes; see lab bills</td></tr>
+<tr><td>Management</td><td>Oversight</td><td>Queue, Appointments, Invoices, Collections, Till, Reports, Finance (read), HR (read)</td><td>Patient-level clinical data; take payments</td></tr>
+<tr><td>Call center</td><td>CRM / recall</td><td>CRM, Follow-ups</td><td>Anything clinical</td></tr>
+<tr><td>Accountant</td><td>Finance</td><td>Finance &amp; accounting</td><td>Clinical access; close periods; configure finance</td></tr>
+<tr><td>Finance manager</td><td>Finance</td><td>Finance &amp; accounting, HR (view)</td><td>Clinical access</td></tr>
+<tr><td>Payroll officer</td><td>Finance / HR</td><td>Finance (payroll), HR attendance</td><td>Approve payroll (a separate approver is required)</td></tr>
+<tr><td>Auditor</td><td>Finance</td><td>Finance &amp; accounting (read and export)</td><td>Change anything; clinical access</td></tr>
+</table>
+<div class="callout warn"><b class="t">Observation</b>
+Staff accounts for <b>Doctor, Nurse, Lab technician and Pharmacist</b> are not offered on the Users → “Create a user” form. The form offers only Auditor, Payroll officer, Accountant, Finance manager, Administrator, Receptionist, Management and Call center <span class="pill v">VERIFIED – SCREEN</span>. The application states that doctor logins are created from the HR employee record <span class="pill v">VERIFIED – SCREEN</span>, and the source code states that the generic Users form refuses clinical roles <span class="pill o">VERIFIED – CODE</span>. How a nurse, lab technician or pharmacist account is created was not confirmed on the testing instance. <span class="pill m">GAP</span> Confirm this with the development team before go-live.</div>
+
+<h1>4. Clinical — how it works</h1>
+<h2>Purpose</h2>
+<p>Clinical covers everything that happens to a patient from arrival to discharge from the outpatient visit, including the lab and pharmacy that serve it.</p>
+<h2>Who does what</h2>
+<table><tr><th>Step</th><th>Responsible role</th><th>Screen</th></tr>
+<tr><td>Register patient, start visit, create bill, take payment (one save)</td><td>Receptionist</td><td>Reception</td></tr>
+<tr><td>Book or reschedule appointments</td><td>Receptionist (doctor may also book a follow-up)</td><td>Appointments</td></tr>
+<tr><td>Watch who is waiting; move a visit to in-progress, on hold or completed</td><td>Nurse or doctor (the receptionist can only cancel or reassign)</td><td>Queue</td></tr>
+<tr><td>Record vitals and allergies</td><td>Nurse or doctor</td><td>Patient / consultation</td></tr>
+<tr><td>Chief complaint, diagnosis (ICD code), psychiatric clinical note, prescription, lab order, follow-up</td><td>Doctor (note and diagnosis: doctor only)</td><td>My consultations → consult screen</td></tr>
+<tr><td>Collect sample, enter and verify results</td><td>Lab technician</td><td>Lab</td></tr>
+<tr><td>Bill, hand over or take back medicines</td><td>Pharmacist</td><td>Pharmacy</td></tr>
+<tr><td>Admission/transfer/discharge requests, beds, waitlist, reminders, handovers</td><td>Receptionist requests; nurse or admin maintains beds; doctor or admin approves clinical decisions</td><td>Reception operations</td></tr>
+<tr><td>Phone patients who were told to return</td><td>Call center (receptionist and doctor can see the list)</td><td>Follow-ups</td></tr>
+</table>
+<p><span class="pill o">VERIFIED – CODE</span> for the role assignments above; the screens and their headings were seen on the testing instance <span class="pill v">VERIFIED – SCREEN</span> (all empty).</p>
+
+<h2>Clinical set-up the hospital must provide first</h2>
+<ul><li>Departments, then Practitioners (doctors), then Services with fees. Check-in needs a department and a billable service to produce the bill <span class="pill o">VERIFIED – CODE</span>.</li>
+<li>Drug formulary (manual entry or CSV paste import), lab tests and panels — only if Pharmacy and Laboratory are used.</li></ul>
+
+<h1>5. Finance — how it works</h1>
+<h2>Two separate layers of money</h2>
+<table><tr><th>Layer</th><th>Where</th><th>Who</th><th>What it does</th></tr>
+<tr><td><b>Front-desk money</b></td><td>Invoices, Collections, Till</td><td>Receptionist, pharmacist, admin, management</td><td>Bills patients, receives payments, discounts, refunds, reconciles the day's cash at closing</td></tr>
+<tr><td><b>Hospital accounting</b></td><td>Finance &amp; accounting</td><td>Accountant, finance manager, payroll officer, auditor, management (read), admin</td><td>Chart of accounts, fiscal years and periods, journals, suppliers and bills, bank statements, patient and panel receivables, payroll, fixed assets, reports</td></tr></table>
+<p>Front-desk billing works without the finance books. The two layers meet when finance synchronises clinical billing into accounting journals (<code>Sync</code> action) <span class="pill o">VERIFIED – CODE</span>. The sync was <b>not run</b> on the testing instance because the books were not initialised.</p>
+
+<h2>Front-desk money rules</h2>
+<ul>
+<li>Receptionist and pharmacist can discount up to a ceiling set by the administrator in <b>Settings</b> (“Maximum discount without approval”) <span class="pill v">VERIFIED – SCREEN</span>. Above the ceiling an administrator must approve. Every discount needs a written reason <span class="pill o">VERIFIED – CODE</span>.</li>
+<li>Refunds by the receptionist or pharmacist are allowed only the same day and before the next step has happened; otherwise an administrator is needed (R5).</li>
+<li>Voiding an invoice is administrator-only.</li>
+<li>A lab order's own bill is paid at the reception desk (Collections); the lab will not collect a sample until the desk has been paid <span class="pill v">VERIFIED – SCREEN</span> (Lab page text: “Collect the sample once the desk has been paid”).</li>
+<li>At closing, the receptionist or pharmacist reconciles their own till; administrators and management can see every till.</li></ul>
+
+<h2>Hospital accounting — first-time initialisation</h2>
+<p>The Finance page on the testing instance showed only a Shamsi/Gregorian date converter and an “Initialize the hospital books” form <span class="pill v">VERIFIED – SCREEN</span>. Initialisation asks for a Shamsi start date, creates the AFN chart of accounts and Shamsi fiscal years, and the start date <b>cannot be changed afterwards</b>. Earlier hospital transactions are not imported.</p>
+<div class="callout bad"><b class="t">Known blocker recorded by the project team</b>
+The project's own finance assessment states that unpaid patient and panel invoices from before go-live cannot yet be migrated invoice-by-invoice. A general opening journal can set totals but cannot allocate receivables to individual invoices, and period close refuses that state. The accountant/financial approver and the cutover date were still pending <span class="pill o">VERIFIED – CODE</span> (docs/finance-roadmap-assessment.md, 27 Oct 2026).</div>
+
+<h1>6. The patient journey, step by step</h1>
+<div class="flow">
+<div class="box"><b>1 Register &amp; bill</b>Receptionist<i>Reception</i></div><div class="arr">›</div>
+<div class="box"><b>2 Queue</b>Nurse / Doctor<i>Queue</i></div><div class="arr">›</div>
+<div class="box"><b>3 Consult</b>Doctor<i>Consult screen</i></div><div class="arr">›</div>
+<div class="box"><b>4 Lab / Pharmacy</b>Lab tech / Pharmacist</div><div class="arr">›</div>
+<div class="box"><b>5 Pay</b>Receptionist / Pharmacist<i>Collections, Till</i></div><div class="arr">›</div>
+<div class="box"><b>6 Follow-up</b>Call center<i>Follow-ups</i></div>
+</div>
+
+<table>
+<tr><th style="width:4%">#</th><th style="width:16%">Step</th><th style="width:15%">Responsible</th><th>What happens</th><th style="width:15%">Checked</th></tr>
+<tr><td>1</td><td>Registration and check-in</td><td>Receptionist</td><td>On <b>Reception</b>, the desk searches for an existing patient or registers a new one (possible duplicates are flagged), chooses department and service, and saves. <b>One save</b> registers the patient if new, creates the visit, joins the queue, creates the invoice and records the payment. Registration without a visit has been retired; <code>/patients/new</code> redirects to Reception.</td><td><span class="pill o">CODE</span></td></tr>
+<tr><td>2</td><td>Appointment (optional)</td><td>Receptionist; doctor for follow-ups</td><td>On <b>Appointments</b>, bookings are listed by day or upcoming; they can be closed (cancelled / no-show) or rescheduled (the original booking is kept). Reception operations also has a waitlist for appointment openings.</td><td><span class="pill o">CODE</span> <span class="pill v">SCREEN</span></td></tr>
+<tr><td>3</td><td>Waiting and triage</td><td>Nurse or doctor</td><td><b>Queue</b> lists everyone waiting today, longest wait first, refreshing every 10 seconds, in four states: Arrived, In progress, On hold, Completed. The nurse records vitals and allergies.</td><td><span class="pill v">SCREEN</span></td></tr>
+<tr><td>4</td><td>Consultation</td><td>Doctor</td><td>From <b>My consultations</b> the doctor opens the visit. The doctor can record the chief complaint, vitals, diagnoses (ICD-coded), a clinical note, a prescription (with a drug-interaction check), and a lab order. Patient history is open to the doctor without approval but every read is audited (R1, R3).</td><td><span class="pill o">CODE</span></td></tr>
+<tr><td>5</td><td>Lab (if ordered)</td><td>Receptionist, then lab technician</td><td>The lab order creates its own bill. The receptionist collects it under <b>Collections</b>; after payment the lab technician collects the sample, enters the result and verifies it on <b>Lab</b>. Results appear on the visit for the doctor.</td><td><span class="pill o">CODE</span> <span class="pill v">SCREEN</span></td></tr>
+<tr><td>6</td><td>Pharmacy (if prescribed)</td><td>Pharmacist</td><td>On <b>Pharmacy</b> the pharmacist sees the queue, opens the prescription (sees drugs and allergies only), creates the bill, takes payment, then records handover. A return is possible the same day.</td><td><span class="pill o">CODE</span></td></tr>
+<tr><td>7</td><td>Outstanding balances</td><td>Receptionist, pharmacist, management</td><td><b>Collections</b> lists every unpaid lab or pharmacy bill in one list, filterable by date. Receptionists use it as a worklist; they cannot browse the full invoice register.</td><td><span class="pill v">SCREEN</span></td></tr>
+<tr><td>8</td><td>Daily till closing</td><td>Receptionist / pharmacist; supervisor reviews</td><td><b>Till</b> reconciles the day's cash. Reception operations also holds a till-close record with counted cash, discrepancy and supervisor approval.</td><td><span class="pill v">SCREEN</span> <span class="pill o">CODE</span></td></tr>
+<tr><td>9</td><td>Follow-up recall</td><td>Doctor sets; call center rings</td><td>The doctor decides the return date. <b>Follow-ups</b> lists patients told to come back and who has not. Call center records <i>coming / not coming / note</i>. The list shows only name, phone and date.</td><td><span class="pill o">CODE</span> <span class="pill v">SCREEN</span></td></tr>
+<tr><td>10</td><td>Accounting</td><td>Accountant / finance manager</td><td>Billing, tills and deposits flow into accounting through the finance synchronisation and revenue mappings, then are posted by someone other than the preparer.</td><td><span class="pill o">CODE</span> (not run)</td></tr>
+</table>
+<div class="callout warn"><b class="t">Observations from the check-in design</b>
+(a) Check-in demands payment at registration; the application does not show a “bill later” or insurance-pending path on the check-in screen <span class="pill o">VERIFIED – CODE</span>. Insurance panels are handled in Finance, after the fact. (b) Admission to inpatient care is a <i>request</i> that a doctor or administrator approves; the testing instance had no beds configured.</div>
+
+<h1>7. HR — how it works and how it supports clinical work</h1>
+<p>HR is reached at <b>Administration → Human resources</b> and has six tabs: Employees, Credentials, Attendance, Leave, Roster, Settings <span class="pill v">VERIFIED – SCREEN</span>.</p>
+<table><tr><th>Tab</th><th>Purpose</th><th>Who</th></tr>
+<tr><td>Employees</td><td>Register of staff: name, sex, phone, department, position, employment type, join date (Shamsi), base salary. Exit is non-destructive and disables the linked login.</td><td>Admin creates and edits; finance manager, payroll officer and management view</td></tr>
+<tr><td>Credentials</td><td>Licences and certificates with expiry tracking (90/60/30/0 days) and optional “block clinical work” flag</td><td>Admin</td></tr>
+<tr><td>Attendance</td><td>Daily grid by Shamsi date; export to CSV or Excel</td><td>Admin and payroll officer mark; others view</td></tr>
+<tr><td>Leave</td><td>Request, approve, reject, cancel; balances computed per Shamsi year</td><td>Any staff request; admin approves</td></tr>
+<tr><td>Roster</td><td>Assign shifts, copy previous week, publish</td><td>Admin edits; clinical staff view</td></tr>
+<tr><td>Settings</td><td>Weekly rest days, backdating window, maximum consecutive nights, minimum shift coverage, positions, leave types, shift types</td><td>Admin</td></tr></table>
+<p>All of the above are <span class="pill o">VERIFIED – CODE</span> and the tab layouts and form fields were seen on the testing instance <span class="pill v">VERIFIED – SCREEN</span>; all lists were empty.</p>
+
+<h2>How HR connects to Clinical</h2>
+<ol>
+<li>An administrator creates a <b>clinical position</b> (such as Doctor), then the <b>employee</b>.</li>
+<li>From the employee record the administrator creates the <b>login</b>. For a doctor this also creates the linked practitioner profile and department link automatically, as the Practitioners screen states <span class="pill v">VERIFIED – SCREEN</span>.</li>
+<li>The employee exit action disables the login and ends active sessions.</li>
+<li>The roster's “on duty” calculation is built to be reused by inpatient and emergency modules; no clinical screen showing it was visible in the menu <span class="pill m">GAP</span>.</li></ol>
+
+<h2>How HR connects to Finance</h2>
+<p>Monthly salary processing is <b>not</b> in HR. The HR Settings tab states that salary runs, adjustments, approvals, payments and journals use Finance &amp; accounting so the hospital has one payroll ledger <span class="pill v">VERIFIED – SCREEN</span>.</p>
+<div class="callout warn"><b class="t">Manual integration</b>
+Payroll employees in Finance are set up separately from HR employees; the explicit HR-employee-to-payroll link is still an open item recorded by the project team, and payroll uses manually adjusted attendance <span class="pill o">VERIFIED – CODE</span> (docs/hr-roadmap-assessment.md). Until the link is built, someone must keep salary records in Finance consistent with HR. <span class="pill m">GAP</span></div>
+
+<h1>8. How information moves between departments</h1>
+<table>
+<tr><th>From</th><th>To</th><th>What moves</th><th>Automatic?</th></tr>
+<tr><td>Reception</td><td>Queue / Doctor</td><td>New visit appears in the queue with the doctor's assignment</td><td>Yes</td></tr>
+<tr><td>Reception</td><td>Billing</td><td>Invoice and payment created in the same save as registration</td><td>Yes</td></tr>
+<tr><td>Doctor</td><td>Lab</td><td>Lab order appears in the lab queue and generates a lab bill</td><td>Yes</td></tr>
+<tr><td>Reception</td><td>Lab</td><td>Payment of the lab bill releases sample collection</td><td>Yes (lab screen states this)</td></tr>
+<tr><td>Lab</td><td>Doctor</td><td>Verified results shown on the visit</td><td>Yes</td></tr>
+<tr><td>Doctor</td><td>Pharmacy</td><td>Prescription appears in the pharmacy queue</td><td>Yes</td></tr>
+<tr><td>Doctor</td><td>Call center / Reception</td><td>Follow-up date appears on the recall list</td><td>Yes</td></tr>
+<tr><td>Billing and tills</td><td>Finance books</td><td>Revenue and receipts become journals</td><td>On a finance “Sync” action, then manual posting <span class="pill o">CODE</span></td></tr>
+<tr><td>HR employee</td><td>Users / Practitioners</td><td>Login and doctor profile</td><td>Created from the employee record by an administrator</td></tr>
+<tr><td>HR employee</td><td>Finance payroll</td><td>Salary data</td><td><b>No — manual</b> <span class="pill m">GAP</span></td></tr>
+<tr><td>HR attendance</td><td>Finance payroll</td><td>Days worked</td><td><b>No — manual adjustment</b> <span class="pill m">GAP</span></td></tr>
+<tr><td>CRM</td><td>Patients / Appointments</td><td>A lead can be linked or registered as a patient; CRM can book appointments</td><td>On user action <span class="pill o">CODE</span></td></tr>
+</table>
+
+<h1>9. Management oversight</h1>
+<p>Management has read-only access: Queue, Appointments, Invoices, Collections, Till, Reports, Finance and HR views, the audit log and the error log <span class="pill o">VERIFIED – CODE</span>. Management cannot see patient-level clinical data.</p>
+<table><tr><th>Question</th><th>Where to look</th></tr>
+<tr><td>How many patients today and how long are they waiting?</td><td>Reports → Census; Reports → Wait times; Queue</td></tr>
+<tr><td>How much revenue?</td><td>Reports → Revenue; Invoices; Till; Finance reports</td></tr>
+<tr><td>What are the common diagnoses (counts only)?</td><td>Reports → Diagnoses</td></tr>
+<tr><td>Which lab and pharmacy bills are unpaid?</td><td>Collections</td></tr>
+<tr><td>Who looked at or changed what?</td><td>Reports → Audit log</td></tr>
+<tr><td>Is anything failing technically?</td><td>Reports → Errors</td></tr>
+<tr><td>Are staff credentials expiring or shifts uncovered?</td><td>HR → Credentials; HR → Roster</td></tr></table>
+<p>The Reports page has Today / Yesterday / This month / Last month presets and filters by department and doctor <span class="pill v">VERIFIED – SCREEN</span>. <b>Patient export</b> is administrator-only, requires a reason and is heavily audited (R11) <span class="pill o">VERIFIED – CODE</span>.</p>
+
+<h1>10. Dependencies and operating procedures</h1>
+<h2>What depends on what</h2>
+<table><tr><th>You cannot do…</th><th>Until you have…</th></tr>
+<tr><td>Check in a patient</td><td>A department, a billable service, and a receptionist login</td></tr>
+<tr><td>Assign a doctor to a visit</td><td>A practitioner profile (created from an HR employee with a clinical position)</td></tr>
+<tr><td>Create an HR employee</td><td>A department and a position</td></tr>
+<tr><td>Create a clinical login</td><td>An HR employee record</td></tr>
+<tr><td>Prescribe</td><td>Drugs in the formulary</td></tr>
+<tr><td>Order a lab test</td><td>Lab tests (and optionally panels)</td></tr>
+<tr><td>Use Finance beyond the date converter</td><td>Initialised books (start date, AFN chart, fiscal years)</td></tr>
+<tr><td>Run payroll</td><td>Finance books, payroll configuration and payroll employees</td></tr></table>
+
+<h2>Routine operating procedures <span class="pill r">RECOMMENDATION</span></h2>
+<table><tr><th>When</th><th>Who</th><th>Procedure</th></tr>
+<tr><td>Start of day</td><td>Receptionist</td><td>Review Appointments, Follow-ups and Reception operations alerts; confirm till is open</td></tr>
+<tr><td>Through the day</td><td>Clinical staff</td><td>Work from Queue, Lab and Pharmacy lists; keep visit status current</td></tr>
+<tr><td>End of day</td><td>Receptionist, pharmacist</td><td>Close till; report any discrepancy to the supervisor</td></tr>
+<tr><td>Daily</td><td>Call center</td><td>Work through Follow-ups; record each response</td></tr>
+<tr><td>Weekly</td><td>Administrator</td><td>Publish next week's roster; review credentials nearing expiry; review leave requests</td></tr>
+<tr><td>Monthly</td><td>Payroll officer, finance manager</td><td>Prepare, review and approve payroll with different people</td></tr>
+<tr><td>Monthly</td><td>Accountant, finance manager</td><td>Reconcile, post and close the period</td></tr>
+<tr><td>Monthly</td><td>Management, auditor</td><td>Review revenue, audit log and error log</td></tr></table>
+
+<h1>11. Manual steps, gaps and limits</h1>
+<ol>
+<li><span class="pill m">GAP</span> HR employee and attendance data do not feed payroll automatically.</li>
+<li><span class="pill m">GAP</span> Pre-go-live unpaid invoices cannot yet be migrated individually into the books; period close refuses the mismatch.</li>
+<li><span class="pill m">GAP</span> Credential-expiry reminders have a runner but no automatic daily schedule; someone must trigger it.</li>
+<li><span class="pill m">GAP</span> Account creation for nurse, lab technician and pharmacist roles was not verifiable on the testing instance (Section 3).</li>
+<li><span class="pill m">GAP</span> Source comment for nurse sample collection (R9) is flagged in the code as probably a typo; confirm the intended rule with the hospital.</li>
+<li><span class="pill m">GAP</span> The same lab technician can enter and verify a result; the matrix flags this as an open question.</li>
+<li><span class="pill m">GAP</span> No emergency “break-glass” access exists.</li>
+<li><span class="pill m">GAP</span> No separate roles exist for chief physician, nursing manager, lab supervisor or department head. Do not give these people the Administrator role as a shortcut; ask for a role design first.</li>
+<li><span class="pill m">GAP</span> The menu's “all roles” list omits Call center, so a call-center user may not see the HR link (and cannot request leave from the menu) although the permission exists. Not tested live <span class="pill o">CODE</span>.</li>
+<li>SMS/WhatsApp reminders are stored as outbox records; actual delivery depends on a provider connection that was not seen configured.</li>
+<li>PDF output of finance reports uses the browser's “Save as PDF”.</li>
+<li>Official report formats, tax and donor templates have not been accepted by the hospital's accountant.</li></ol>
+
+<h1>12. Rules that apply system-wide</h1>
+<table><tr><th>Rule</th><th>Plain-language meaning</th></tr>
+<tr><td>R1</td><td>Every clinical read is recorded. Nobody is blocked from a patient in front of them; they are accountable instead.</td></tr>
+<tr><td>R2</td><td>Administrators can read clinical data (recorded) but can never write it. Psychiatric notes are hidden even from administrators.</td></tr>
+<tr><td>R3</td><td>Doctors may read full history without approval, and it is logged.</td></tr>
+<tr><td>R4</td><td>Nothing is hard-deleted; corrections are new records.</td></tr>
+<tr><td>R5</td><td>Cancel, reassign, refund, return and prescription-cancel are allowed same-day and before the next step; later needs an administrator, with a reason.</td></tr>
+<tr><td>R6</td><td>Pharmacist sees drugs and allergies only.</td></tr>
+<tr><td>R7</td><td>Nurse sees vitals, allergies and the drug list, not notes.</td></tr>
+<tr><td>R8</td><td>Reads are limited to the task (reception sees test names and prices, not clinical reasons).</td></tr>
+<tr><td>R9</td><td>Pharmacy and lab may propose catalogue changes; the administrator approves.</td></tr>
+<tr><td>R10</td><td>Discounts above the configured ceiling need administrator approval, with a reason.</td></tr>
+<tr><td>R11</td><td>Bulk export is administrator-only, needs a reason, and is heavily audited.</td></tr>
+<tr><td>R12</td><td>The pharmacist sees only pharmacy bills.</td></tr>
+<tr><td>R13</td><td>Call center sees the recall list and nothing clinical.</td></tr></table>
+<p class="small">Source: the project's roles-and-permissions document and permission matrix. Rules describe design intent; this guide did not test each rule by signing in as each role.</p>
+
+</body></html>

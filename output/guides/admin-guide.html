@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>REDMARS HMIS – Administrator Guide</title>
+<link rel="stylesheet" href="guide.css"></head><body>
+
+<div class="cover">
+  <div class="tag">Implementation deliverable · Document B</div>
+  <h1>Administrator Guide</h1>
+  <div class="sub">Setting up and operating REDMARS HMIS for Axon Nura Psychiatric and Addiction Treatment Hospital</div>
+  <div class="meta">Audience: system administrators and hospital management<br>Prepared: 3 November 2026<br>Basis: testing instance of the application and its source code<br>Status: v1.0 — for review</div>
+</div>
+
+<h1 class="first">1. About this guide</h1>
+<p>This guide tells an administrator what the application offers, what each role may do, and the order in which to set the hospital up. Daily instructions for each job are in the separate Role Guides; how departments work together is in the Overall System Guide.</p>
+
+<table>
+<tr><th style="width:22%">Label</th><th>Meaning</th></tr>
+<tr><td><span class="pill v">VERIFIED – SCREEN</span></td><td>Seen on the testing instance as the testing administrator.</td></tr>
+<tr><td><span class="pill o">VERIFIED – CODE</span></td><td>Confirmed in the application's source code but not executed on the testing instance.</td></tr>
+<tr><td><span class="pill m">GAP</span></td><td>Not available, or only manual.</td></tr>
+<tr><td><span class="pill r">RECOMMENDATION</span></td><td>Advice from the author — <b>not</b> existing functionality.</td></tr>
+</table>
+
+<div class="callout warn"><b class="t">What was and was not tested</b>
+The testing instance was almost empty when reviewed. During this review the following test records were entered through the screens, and each step below says whether it was <b>executed</b> or only <b>read</b>:
+<ul><li><span class="pill v">EXECUTED</span> Departments (OPD, IPD, EMR, LAB, PHM), a speciality (Psychiatry), two consultation services, ten drugs by CSV import, two lab tests, one practitioner profile.</li>
+<li><span class="pill x">FAILED</span> HR positions, leave types and shift types: the Add buttons did nothing and showed no error (see Section 11). Because an employee needs a position, <b>no employee and no clinical login could be created</b>, so the later steps could not be run.</li>
+<li><span class="pill m">NOT RUN</span> Login accounts (the author may not type passwords), finance initialisation (its start date is permanent), beds, CRM settings, and the full patient journey.</li></ul>
+Everything else is described from the screens and the source code. Rehearse the whole sequence once more after the development team fixes the HR problem.</div>
+
+<h2>Contents</h2>
+<ol class="toc"><li>About this guide</li><li>Application overview</li><li>Existing roles and permissions</li><li>Recommended organisational structure</li><li>Recommended setup sequence</li><li>Setup steps in detail</li><li>Entities and relationships</li><li>User account management</li><li>Module configuration</li><li>Operational recommendations</li><li>Known gaps and open decisions</li></ol>
+
+<h1>2. Application overview</h1>
+<p>REDMARS HMIS is a web application for one hospital. The left menu is grouped as <b>Main</b>, <b>Clinical</b> and <b>Administration</b>, and every user sees only what their role allows <span class="pill v">VERIFIED – SCREEN</span>. The top bar shows who is signed in, the language (English, Dari, Pashto), a <b>Change password</b> link and <b>Sign out</b>.</p>
+
+<h2>What the administrator sees</h2>
+<p>The testing administrator's menu contained 24 workspaces <span class="pill v">VERIFIED – SCREEN</span>:</p>
+<table><tr><th>Group</th><th>Workspaces</th></tr>
+<tr><td>Main</td><td>CRM, Dashboard</td></tr>
+<tr><td>Clinical</td><td>Reception operations, Queue, Appointments, Patients, Follow-ups, Diagnosis codes, Interactions, Lab</td></tr>
+<tr><td>Administration</td><td>Human resources, Finance &amp; accounting, Invoices, Collections, Till, Users, Settings, Modules, Departments, Practitioners, Services, Lab tests, Lab panels, Drugs, Reports</td></tr></table>
+<p>The administrator does <b>not</b> see the Reception (check-in) screen, My consultations, Pharmacy, or any clinical writing function: those belong to the receptionist, doctor and pharmacist.</p>
+
+<div class="callout"><b class="t">The administrator is a configurator and supervisor, not a clinician</b>
+Under rule R2 an administrator can read clinical data (every read is recorded) but can never write it, and can never read psychiatric clinical notes. Patient registration, check-in and payment are receptionist functions. <span class="pill o">VERIFIED – CODE</span></div>
+
+<h1>3. Existing roles and permissions</h1>
+<p>There are <b>12 fixed roles</b>. The application has no screen for creating a role or editing its permissions <span class="pill o">VERIFIED – CODE</span> (no role-management route exists in the application). To change what a role may do requires a software change by the development team. Roles are assigned to users; a user can hold several. A permission that is not granted is denied.</p>
+
+<table>
+<tr><th style="width:17%">Role</th><th>Purpose</th><th style="width:35%">Existing permissions in brief</th></tr>
+<tr><td><b>Administrator</b></td><td>Configuration, users, prices, reports, HR, CRM and finance administration</td><td>Create/edit/deactivate users and reset passwords; manage departments, rooms, practitioners, services, prices, drugs, lab tests, panels, settings, modules; approve discounts above the ceiling; void invoices and visits; merge duplicate patients; bulk-export patients (R11); read audit and error logs; HR create/edit/exit employees, documents, credentials, leave approval, roster editing; CRM configure, assign; all finance and payroll permissions. Clinical <i>reads</i> only under R2.</td></tr>
+<tr><td><b>Receptionist / Cashier</b></td><td>Registration, visits, billing and payments</td><td>Create patients, edit demographics, search patients; create visits (check-in); cancel or reassign visits and refund same day (R5); create appointments, cancel, mark no-show; create invoices, receive payments, discount up to the ceiling (R10); collect lab charges; print invoices, prescriptions, lab results; read follow-up list. No clinical record access.</td></tr>
+<tr><td><b>Nurse</b></td><td>Vitals, triage, allergies</td><td>Record vitals and allergies; read vitals, allergies, drug list and templates; change visit status; record chief complaint; manage beds; upload attachments; reads of lab results and prescriptions only in the narrow scope of R7. No diagnoses or clinical notes.</td></tr>
+<tr><td><b>Doctor / Consultant</b></td><td>Full clinical care</td><td>Record diagnoses, clinical notes, vitals, allergies; write and cancel prescriptions (R5); order labs; read full history; create appointments; set follow-ups; personal templates; interaction check; clinical aggregate reports; review reception clinical requests.</td></tr>
+<tr><td><b>Lab technician</b></td><td>Lab queue, samples, results</td><td>Collect sample, enter and verify results, amend by new record (R4), read lab queue and results; propose catalogue changes (R9). The same technician may enter and verify.</td></tr>
+<tr><td><b>Pharmacist</b></td><td>Dispensing and pharmacy till</td><td>Read pharmacy queue, dispense, return medicines same day (R5), create pharmacy invoices and receive payment, discount up to the ceiling; read drugs and allergies; interaction check; read only pharmacy-origin invoices (R12); propose formulary changes (R9).</td></tr>
+<tr><td><b>Management</b></td><td>Read-only oversight</td><td>Reports (operational, financial, clinical counts), audit and error logs, queue, appointments, invoices, lab charges, finance and payroll read, finance export, HR read incl. salary, reception supervision.</td></tr>
+<tr><td><b>Call center</b></td><td>Recall calls and CRM</td><td>Read the follow-up list and record responses; CRM read and write for contacts, leads, interactions, calls, tasks, appointments, patient linking; own leave request and own HR record.</td></tr>
+<tr><td><b>Accountant</b></td><td>Finance records and reconciliation</td><td>Finance read, write, post, reconcile, export; payroll read, write, pay. Cannot configure finance or close periods.</td></tr>
+<tr><td><b>Finance manager</b></td><td>Finance configuration, posting, closing</td><td>All finance and payroll permissions including configure, close, approve payroll; HR employee and attendance view, salary view and edit.</td></tr>
+<tr><td><b>Payroll officer</b></td><td>Prepare payroll and attendance</td><td>Payroll read and write; HR employee, salary and attendance view; mark attendance; finance read. Cannot approve or pay.</td></tr>
+<tr><td><b>Auditor</b></td><td>Read-only finance</td><td>Finance read and export only.</td></tr>
+</table>
+<p class="small">Source: the permission matrix in the application and the project's roles-and-permissions document. Permission summaries are condensed; the matrix contains about 110 individual permission codes. Not every role was signed in and tested.</p>
+
+<h2>Missing or insufficient permissions <span class="pill m">GAP</span></h2>
+<ul>
+<li>No role for <b>lab supervisor</b>, <b>chief physician</b>, <b>nursing manager</b> or <b>department head</b>; the matrix itself flags the lab-supervisor question.</li>
+<li>No <b>emergency “break-glass”</b> access.</li>
+<li>No <b>separate cashier</b> role: the receptionist is the cashier.</li>
+<li>Nobody holds <code>patient.delete</code>, deliberately. Patients cannot be deleted; errors are marked “entered in error”.</li>
+<li>Admin cannot do clinical work and cannot read psychiatric notes. An administrator who also needs to treat patients needs a separate doctor account.</li>
+<li>HR approval (leave, roster, employee changes) sits only with the Administrator role. There is no manager-level approval for a department head.</li></ul>
+
+<h1>4. Recommended organisational structure <span class="pill r">RECOMMENDATION</span></h1>
+<p>Nothing in this section is a feature of the application. It is advice on how to assign the existing roles.</p>
+<table><tr><th>Hospital function</th><th>Role(s) to assign</th><th>Reason</th></tr>
+<tr><td>Hospital administrator / IT</td><td>Administrator (two people, not one)</td><td>The only role that can configure and reset passwords. A second administrator prevents lock-out.</td></tr>
+<tr><td>Medical director, CEO</td><td>Management (+ Doctor account if they treat patients)</td><td>Read-only oversight. Giving them Administrator would also grant configuration powers.</td></tr>
+<tr><td>Front desk and cashier</td><td>Receptionist</td><td>One account per person so each till and refund is attributable.</td></tr>
+<tr><td>Psychiatrists and physicians</td><td>Doctor</td><td>Created from the HR employee record.</td></tr>
+<tr><td>Nurses</td><td>Nurse</td><td>Same.</td></tr>
+<tr><td>Laboratory staff</td><td>Lab technician</td><td>Same.</td></tr>
+<tr><td>Pharmacy staff</td><td>Pharmacist</td><td>Same.</td></tr>
+<tr><td>Recall callers, inquiries</td><td>Call center</td><td>Sees only the recall list and CRM.</td></tr>
+<tr><td>Chief accountant</td><td>Finance manager</td><td>Configures, posts, closes and approves payroll.</td></tr>
+<tr><td>Bookkeeper</td><td>Accountant</td><td>Prepares records; posting and reconciliation.</td></tr>
+<tr><td>HR / payroll clerk</td><td>Payroll officer</td><td>Prepares payroll and attendance. Keep approval with someone else.</td></tr>
+<tr><td>Internal or external auditor</td><td>Auditor</td><td>Read-only.</td></tr></table>
+<p><b>Separation of duties to keep:</b> payroll prepared by one person and approved by another, journals prepared and posted by different people (the application has a separate-preparer posting queue <span class="pill o">VERIFIED – CODE</span>), and no one account shared between staff.</p>
+
+<h1>5. Recommended setup sequence</h1>
+<p>Follow this order. Each step needs the ones above it.</p>
+<table>
+<tr><th style="width:4%">#</th><th style="width:26%">Step</th><th style="width:22%">Where</th><th>Depends on</th></tr>
+<tr><td>1</td><td>Secure the administrator account</td><td>Top bar → Change password</td><td>—</td></tr>
+<tr><td>2</td><td>Decide which modules are on</td><td>Administration → Modules</td><td>—</td></tr>
+<tr><td>3</td><td>Set the discount ceiling</td><td>Administration → Settings</td><td>—</td></tr>
+<tr><td>4</td><td>Create departments</td><td>Administration → Departments</td><td>—</td></tr>
+<tr><td>5</td><td>HR calendar and controls</td><td>Human resources → Settings</td><td>Departments (for coverage rules)</td></tr>
+<tr><td>6</td><td>Positions, leave types, shift types</td><td>Human resources → Settings</td><td>—</td></tr>
+<tr><td>7</td><td>Specialities (optional)</td><td>Administration → Practitioners</td><td>—</td></tr>
+<tr><td>8</td><td>Services and fees</td><td>Administration → Services</td><td>Departments</td></tr>
+<tr><td>9</td><td>Drug formulary</td><td>Administration → Drugs</td><td>—</td></tr>
+<tr><td>10</td><td>Lab tests and panels</td><td>Administration → Lab tests / Lab panels</td><td>Lab module on</td></tr>
+<tr><td>11</td><td>Employees</td><td>Human resources → Employees</td><td>Departments, positions</td></tr>
+<tr><td>12</td><td>Logins for clinical staff</td><td>Employee record → account</td><td>Employees</td></tr>
+<tr><td>13</td><td>Logins for non-clinical staff</td><td>Administration → Users</td><td>—</td></tr>
+<tr><td>14</td><td>Beds and reception set-up (if inpatient used)</td><td>Reception operations</td><td>An inpatient department</td></tr>
+<tr><td>15</td><td>CRM workspace settings (if CRM used)</td><td>CRM → Workspace settings</td><td>CRM module on</td></tr>
+<tr><td>16</td><td>Initialise hospital books</td><td>Finance &amp; accounting</td><td>Accountant's start date decision</td></tr>
+<tr><td>17</td><td>Payroll configuration</td><td>Finance → Payroll</td><td>Books initialised</td></tr>
+<tr><td>18</td><td>Rehearse one patient journey</td><td>Reception, Queue, consult, lab, pharmacy, till</td><td>Steps 4–14</td></tr></table>
+
+<h1>6. Setup steps in detail</h1>
+
+<h2>Step 1 — Secure the administrator account</h2>
+<ol><li>Click <b>Change password</b> in the top bar.</li><li>Set a strong password known only to you. Never write it in documents.</li></ol>
+<p><i>Why:</i> the administrator can see everything non-clinical. <i>Required:</i> current and new password.</p>
+
+<h2>Step 2 — Modules</h2>
+<p><b>Administration → Modules</b> lists Outpatient (always on), Laboratory, Pharmacy, Inpatient (IPD), Emergency, Radiology, Billing, Reports, Finance &amp; accounting, CRM and Human resources, each with an on/off switch <span class="pill v">VERIFIED – SCREEN</span>. Turn off what the hospital will not use: the related menu items disappear and the server refuses those functions.</p>
+<p><i>Depends on this:</i> Lab menu and lab catalogue (Laboratory), Finance, CRM and HR workspaces.</p>
+
+<h2>Step 3 — Discount ceiling</h2>
+<p><b>Administration → Settings → “Maximum discount without approval (%)”</b>, then <b>Save</b> <span class="pill v">VERIFIED – SCREEN</span>. Receptionists and pharmacists may discount up to this percentage themselves; above it an administrator must approve at the till. The design default is 10%. <i>Depends on this:</i> every till discount.</p>
+
+<h2>Step 4 — Departments</h2>
+<ol><li>Open <b>Administration → Departments</b>.</li><li>Under “Add a department” enter <b>Code</b> (for example <code>OPD</code>), choose <b>Type</b> (Outpatient, Inpatient, Emergency, Laboratory, Radiology, Pharmacy, Administration), enter <b>Name</b>, and optionally the <b>Dari</b> and <b>Pashto</b> names.</li><li>Click <b>Add department</b>.</li></ol>
+<p><span class="pill v">EXECUTED</span> Five departments were added this way (OPD Outpatient, IPD Inpatient, EMR Emergency, LAB Laboratory, PHM Pharmacy). Wait for the new row to appear before adding the next one: when two departments were submitted about one second apart, two of the four were not saved. Each department row also has a <b>Show rooms</b> control for the rooms in that unit.</p>
+<p>Departments can be deactivated, not deleted <span class="pill v">VERIFIED – SCREEN</span>. <i>Why:</i> they are required by services, employees, practitioners, queues, reports, roster coverage and IPD beds. Check spelling: the test instance's only department is spelled “Information Technlogy”, and names cannot be edited on screen (only activated or deactivated).</p>
+
+<h2>Step 5–6 — HR calendar, positions, leave types, shifts</h2>
+<p>All under <b>Human resources → Settings</b> <span class="pill v">VERIFIED – SCREEN</span>.</p>
+<table><tr><th>Item</th><th>Fields</th><th>Why</th></tr>
+<tr><td>Weekly rest days</td><td>Tick Sun–Sat</td><td>Needed for attendance and leave day counts. The application assumes no particular rest day; you must choose.</td></tr>
+<tr><td>Leave backdating window (days), maximum consecutive night shifts</td><td>Numbers; <b>Save controls</b></td><td>Limits for late leave entry and a roster warning.</td></tr>
+<tr><td>Positions</td><td>Name, “Clinical position” tick, <b>Add position</b></td><td>Required before any employee. A doctor login needs a clinical position.</td></tr>
+<tr><td>Leave types</td><td>Name, Paid, Requires attachment</td><td>Required before leave can be requested.</td></tr>
+<tr><td>Shift types</td><td>Code, name, start, end</td><td>Required for the roster. Night shifts that cross midnight are handled.</td></tr>
+<tr><td>Minimum shift coverage</td><td>Department, shift, minimum staff, optional role</td><td>Roster warns when staffing falls below the minimum.</td></tr></table>
+<div class="callout bad"><b class="t">Blocker found on the testing instance</b>
+The <b>Positions</b>, <b>Leave types</b> and <b>Shift types</b> forms on this tab did not save when tried several ways (typed values, ticking Clinical, filling the Dari and Pashto titles, pressing Enter, reloading to check). No error message appeared and the lists stayed empty. The <b>Weekly rest days / Save controls</b> form and <b>Minimum shift coverage</b> were not tested. The cause was found afterwards in the source code: the buttons on these forms were not set to submit (a fault shared by 28 buttons across HR, Reception operations, Finance, Appointments and Users). The fix has been made in the development copy and works there, but it has <b>not yet been deployed</b> to the testing server, so on the testing server this blocker remains until the new version is installed. See the development-team document, item D-01.</div>
+<p>The HR Employees tab itself warns: “Create an active clinical position such as Doctor or Psychiatrist before adding the employee.” Public holidays are supported by the application's HR interface in the source code, but no holiday entry form was visible on the Settings tab on the testing instance. <span class="pill m">GAP</span> Confirm where holidays are entered.</p>
+
+<h2>Step 7 — Specialities</h2>
+<p><b>Administration → Practitioners → Specialities</b>: <b>Code</b>, <b>Name</b>, <b>Add speciality</b> <span class="pill v">EXECUTED</span> (“PSY Psychiatry” saved and appeared in the speciality list and drop-down). Optional; used when describing practitioners (for example Psychiatry, Addiction medicine).</p>
+
+<h2>Step 8 — Services and fees</h2>
+<ol><li>Open <b>Administration → Services</b>.</li><li>Choose the <b>Department</b>, enter <b>Code</b>, <b>Name</b> and <b>Fee (AFN)</b>, click <b>Add service</b>.</li></ol>
+<p><span class="pill v">EXECUTED</span> Added “CONS-PSY Psychiatric Consultation, 500 AFN” and “CONS-FU Follow-up Consultation, 300 AFN” under the Outpatient Department; both appeared in the list as Active. These are test values, not real hospital prices.</p>
+<p><i>Why:</i> check-in builds the patient's bill from a service; without a service the receptionist cannot bill the visit <span class="pill o">VERIFIED – CODE</span>. Create at least one consultation service per department that sees patients. Only administrators can change prices.</p>
+
+<h2>Step 9 — Drug formulary</h2>
+<p><b>Administration → Drugs</b> <span class="pill v">VERIFIED – SCREEN</span>:</p>
+<ul><li><b>Add a drug:</b> Code and Generic name are required; Brand name, ATC code, Strength, Form optional. Optional prescribing defaults (route, frequency, duration) pre-fill a prescription. <b>Sell price</b> is the price per unit at dispense; <b>blank means free-issue</b>. Tick <b>Controlled substance</b> where applicable.</li>
+<li><b>Import from CSV:</b> paste rows under the header <code>code,genericName,brandName,strength,form,isControlled,sellPrice</code>; re-importing a code updates it.</li></ul>
+<p><span class="pill v">EXECUTED</span> A pasted CSV of ten test drugs (for example Sertraline, Risperidone, Diazepam as controlled) gave “Imported 10, skipped 0” and all ten appeared in the Formulary list. The import is the quickest way to load a real formulary.</p>
+<p><i>Depends on this:</i> prescribing, the interaction checker, pharmacy billing. Pharmacists may propose changes; the administrator approves (R9) <span class="pill o">VERIFIED – CODE</span>.</p>
+
+<h2>Step 10 — Lab tests and panels</h2>
+<p><b>Administration → Lab tests</b>: fields <b>Code, Name, Name (Dari), Name (Pashto), Specimen, Unit, LOINC code, Price (AFN)</b>, then <b>Add test</b> <span class="pill v">VERIFIED – SCREEN</span>. <span class="pill v">EXECUTED</span> “CBC Complete Blood Count, blood, 150” and “GLU Blood Glucose (Random), blood, mg/dL, 80” were added and listed as Active. <b>Lab panels</b> (grouped tests) and per-test reference ranges were not tried. <i>Depends on this:</i> doctors can only order tests that exist here.</p>
+
+<h2>Step 11 — Employees</h2>
+<ol><li>Open <b>Human resources → Employees</b>.</li><li>Under “New employee” enter first name, father name, last name, sex, phone, <b>Department</b>, <b>Position</b>, employment type (Permanent, Fixed term, Part time, Temporary, Volunteer), joined date (Shamsi) and base salary (AFN).</li><li>Click <b>Create employee</b>. An employee number is issued automatically.</li></ol>
+<p>Employees are never deleted; leaving staff are marked <b>exit</b>, which disables the login and ends active sessions. Base salary is hidden from users without salary permission <span class="pill o">VERIFIED – CODE</span>. The hospital's team recorded 24 real employees to import; no real data was imported into the testing instance.</p>
+
+<h2>Step 12 — Logins for clinical staff</h2>
+<p>Doctor, nurse, lab technician and pharmacist accounts <b>cannot</b> be made from Users: the application refuses clinical roles there and tells you to create the account from the employee record <span class="pill o">VERIFIED – CODE</span>. On the employee record use <b>Create account</b> and enter username, optional email, a temporary password (at least 8 characters) and the roles. For a <b>Doctor</b> the employee must hold a clinical position; the practitioner profile and department link are created automatically.</p>
+<p>The screen path for the account button inside the employee detail could not be confirmed live because no employee existed. <span class="pill m">GAP</span></p>
+<p><span class="pill v">EXECUTED</span> The legacy route below was used to create one test practitioner “DR-001 Test Psychiatrist” (Psychiatry, no login). It saved and showed as Active, but its <b>Departments column showed “None”</b> although the Outpatient Department box had been ticked. Check this when you rehearse; reported to the development team.</p>
+<p>Legacy route: <b>Administration → Practitioners → Add a practitioner</b> creates a practitioner profile with code, speciality, names, licence number, phone, login account (existing user) and departments. The screen advises using the HR record instead.</p>
+
+<h2>Step 13 — Logins for non-clinical staff</h2>
+<p><b>Administration → Users → Create a user</b> <span class="pill v">VERIFIED – SCREEN</span>: Username, Full name, Password, tick Roles (Auditor, Payroll officer, Accountant, Finance manager, Administrator, Receptionist, Management, Call center), <b>Create user</b>. The temporary password must be at least 8 characters and the user must change it at first sign-in.</p>
+<p>The <b>Staff accounts</b> table shows username, full name, roles and status with <b>Issue temporary password</b> and <b>Deactivate</b> per row. Accounts are deactivated, never deleted.</p>
+
+<h2>Step 14 — Beds and reception</h2>
+<p><b>Reception operations → Desk &amp; IPD → Add bed</b> needs an inpatient department; the Bed board starts empty. Beds have status Available, Maintenance, Cleaning. Other tabs: Patient services, Shift control, Downtime <span class="pill v">VERIFIED – SCREEN</span>.</p>
+
+<h2>Step 15 — CRM</h2>
+<p><b>CRM</b> has tabs Leads, Contacts and family, Calls, Tasks &amp; follow-ups, Appointments, and Workspace settings <span class="pill v">VERIFIED – SCREEN</span>. Only the administrator can change workspace settings (<code>crm.configure</code>).</p>
+
+<h2>Step 16–17 — Finance</h2>
+<ol><li>Open <b>Finance &amp; accounting</b>. Before initialisation only a Shamsi↔Gregorian date converter and the <b>“Initialize the hospital books”</b> form appear <span class="pill v">VERIFIED – SCREEN</span>.</li>
+<li>Enter the <b>start date (Shamsi)</b> and click <b>Create AFN chart of accounts</b>. This creates the chart and the Shamsi fiscal years. <b>The start date cannot be changed afterwards.</b></li>
+<li>Agree the start date and approved opening balances with the hospital's accountant first.</li>
+<li>Then configure payroll (finance manager or administrator), revenue mappings, panels and suppliers as needed.</li></ol>
+<div class="callout bad"><b class="t">Do not initialise on production without the accountant</b>
+The start date is permanent, and the project's own assessment records that unpaid invoices from before go-live cannot yet be loaded individually and that the accountant and cutover date were still pending. <span class="pill o">VERIFIED – CODE</span></div>
+
+<h1>7. Entities and relationships</h1>
+<div class="flow">
+<div class="box"><b>Department</b></div><div class="arr">›</div>
+<div class="box"><b>Position</b>clinical or not</div><div class="arr">›</div>
+<div class="box"><b>Employee</b>HR record</div><div class="arr">›</div>
+<div class="box"><b>User login</b>roles</div><div class="arr">›</div>
+<div class="box"><b>Practitioner</b>doctors only</div></div>
+<table><tr><th>Entity</th><th>Linked to</th><th>Rule</th></tr>
+<tr><td>Service (fee)</td><td>Department</td><td>Used at check-in to produce the invoice</td></tr>
+<tr><td>Employee</td><td>Department, position, optional user</td><td>One login per employee; an exited employee cannot receive a login</td></tr>
+<tr><td>User</td><td>Roles</td><td>Clinical roles only via an employee</td></tr>
+<tr><td>Practitioner</td><td>User, departments, speciality</td><td>Shares the employee number with HR when created from HR</td></tr>
+<tr><td>Visit</td><td>Patient, department, practitioner, invoice</td><td>Created at check-in</td></tr>
+<tr><td>Lab order / prescription</td><td>Visit</td><td>Priced from the lab and drug catalogues</td></tr>
+<tr><td>Payroll employee (Finance)</td><td>Separate from HR employee</td><td>No automatic link <span class="pill m">GAP</span></td></tr>
+<tr><td>Bed</td><td>Inpatient department</td><td>Used by admission requests</td></tr></table>
+
+<h1>8. User account management</h1>
+<table><tr><th>Task</th><th>How</th></tr>
+<tr><td>Create a non-clinical user</td><td>Users → Create a user</td></tr>
+<tr><td>Create a clinical user</td><td>HR employee record → account</td></tr>
+<tr><td>Reset a forgotten password</td><td>Users → <b>Issue temporary password</b>; the user must change it at next sign-in</td></tr>
+<tr><td>Disable a user</td><td>Users → <b>Deactivate</b>; for leavers use the employee Exit action instead, which also ends sessions</td></tr>
+<tr><td>Change roles</td><td>Role assignment is an administrator permission (<code>role.assign</code>); where on screen the roles of an existing account are changed was not confirmed. <span class="pill m">GAP</span></td></tr>
+<tr><td>Find accounts with no employee</td><td>An “orphans” report exists in the source code; its screen was not located. <span class="pill m">GAP</span></td></tr></table>
+<ul><li>One person, one account; never share logins.</li><li>A user who holds Doctor should also be an HR employee in a clinical position.</li><li>The testing instance currently has two accounts: the testing administrator and a receptionist account named “reception”.</li></ul>
+
+<h1>9. Module configuration summary</h1>
+<table><tr><th>Module</th><th>Minimum to make it usable</th></tr>
+<tr><td>Outpatient</td><td>Department + service + receptionist login + doctor practitioner</td></tr>
+<tr><td>Laboratory</td><td>Lab tests (and ranges); lab technician login</td></tr>
+<tr><td>Pharmacy</td><td>Drugs with sell prices; pharmacist login</td></tr>
+<tr><td>Inpatient</td><td>Inpatient department; beds</td></tr>
+<tr><td>Reports</td><td>None — fills as data arrives</td></tr>
+<tr><td>HR</td><td>Rest days, positions, leave types, shift types, employees</td></tr>
+<tr><td>Finance</td><td>Initialised books; accountant and finance manager logins</td></tr>
+<tr><td>CRM</td><td>Call-center logins; workspace settings</td></tr></table>
+
+<h1>10. Operational recommendations <span class="pill r">RECOMMENDATION</span></h1>
+<ol>
+<li><b>Rehearse first.</b> Run one full patient journey on the testing instance (check-in, queue, consultation, lab, pharmacy, till) before any real patient.</li>
+<li><b>Keep real hospital data separate from test data.</b> Use a clean database for go-live; never reuse the testing instance.</li>
+<li><b>Name things carefully.</b> Departments and services cannot be renamed on screen.</li>
+<li><b>Review audit weekly.</b> Reports → Audit log and Errors.</li>
+<li><b>Review Collections and Till daily</b> with the receptionist supervisor.</li>
+<li><b>Review credentials monthly.</b> The application can compute expiry status but no automatic daily reminder runs.</li>
+<li><b>Back up.</b> The project provides database backup commands (<code>db:backup</code>, <code>db:restore</code>) and a testing-server guide; schedule them with the IT team.</li>
+<li><b>Keep passwords out of documents</b> and force change on first sign-in (already enforced for temporary passwords).</li>
+<li><b>Confirm with the hospital</b> the open decisions in Section 11 before go-live.</li></ol>
+
+<h1>11. Known gaps and open decisions</h1>
+<table><tr><th>#</th><th>Item</th><th>Status</th></tr>
+<tr><td>1</td><td>Roles and permissions cannot be created or edited on screen</td><td><span class="pill m">GAP</span></td></tr>
+<tr><td>2</td><td>HR → payroll employee link is manual</td><td><span class="pill m">GAP</span></td></tr>
+<tr><td>3</td><td>Opening unpaid invoices cannot be loaded individually; accountant and cutover date pending</td><td><span class="pill m">GAP</span></td></tr>
+<tr><td>4</td><td>Nurse sample-collection rule (R9) and same-person enter/verify lab results need hospital confirmation</td><td>Open question</td></tr>
+<tr><td>5</td><td>Where public holidays are entered; where roles of an existing user are changed; where orphan accounts are listed</td><td>Not confirmed on screen</td></tr>
+<tr><td>6</td><td>Credential reminder runner has no automatic schedule</td><td><span class="pill m">GAP</span></td></tr>
+<tr><td>7</td><td>Dari and Pashto wording of detailed HR screens awaiting staff review</td><td>Open</td></tr>
+<tr><td>8</td><td>Lab panels, reference ranges, CRM workspace settings, beds and finance post-initialisation tabs were not tried on the testing instance</td><td>Not verified</td></tr>
+<tr><td>9</td><td><b>HR Positions, Leave types and Shift types forms do not save and show no error, so no employee or clinical login can be created</b></td><td><span class="pill x">BLOCKER on the testing server</span> — fixed in the development copy, not yet deployed (item D-01)</td></tr></table>
+</body></html>
