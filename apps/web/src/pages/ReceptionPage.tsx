@@ -385,9 +385,12 @@ export function ReceptionPage() {
   const patientReady = mode === 'new' ? patientForm.values.firstName.trim().length > 0 : chosen != null
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
-      <div className="flex items-center justify-between gap-3 border-b px-4 py-2">
-        <PageHeader title={t('reception.title')} />
+    <div className="space-y-6 pb-10">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('reception.title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('reception.subtitle')}</p>
+        </div>
         <Link className={cn(buttonVariants({ variant: 'outline' }))} to="/reception/operations">
           Reception operations
         </Link>
@@ -396,14 +399,15 @@ export function ReceptionPage() {
       <form
         onSubmit={onSubmit}
         onKeyDown={onFormKeyDown}
-        className="flex flex-1 gap-3 overflow-hidden p-3"
+        className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_23rem]"
         noValidate
       >
         {/* Left column: Patient + Visit details */}
-        <div className="flex w-[35%] flex-col gap-3 overflow-y-auto">
+        <div className="min-w-0 space-y-6">
           {/* Step 1: Patient */}
-          <div className="rounded-lg border bg-card p-3">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="rounded-2xl border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 flex items-center gap-2.5 text-sm font-semibold">
+              <StepBadge n={1} />
               {t('reception.steps.patient')}
             </h3>
             {mode === 'search' ? (
@@ -419,18 +423,18 @@ export function ReceptionPage() {
                         value={term}
                         onChange={(e) => setTerm(e.target.value)}
                         placeholder={t('patients.search.placeholder')}
-                        className="h-8 ps-8 text-sm"
+                        className="h-10 ps-9 text-sm"
                         autoFocus
                       />
                     </div>
                     {term.trim().length >= PATIENT_SEARCH_MIN && (
-                      <ul className="max-h-40 divide-y divide-border overflow-y-auto rounded border text-sm">
+                      <ul className="max-h-56 divide-y divide-border overflow-y-auto rounded-xl border text-sm">
                         {(search.data?.patients ?? []).map((patient) => (
                           <li key={patient.id}>
                             <button
                               type="button"
                               onClick={() => setChosen(patient)}
-                              className="flex w-full items-baseline justify-between gap-2 p-2 text-start hover:bg-muted"
+                              className="flex w-full cursor-pointer items-baseline justify-between gap-2 p-3 text-start hover:bg-muted"
                             >
                               <span className="text-sm font-medium">
                                 {[patient.prefix, patient.firstName, patient.lastName]
@@ -484,11 +488,12 @@ export function ReceptionPage() {
           </div>
 
           {/* Step 2: Visit */}
-          <div className="rounded-lg border bg-card p-3">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="rounded-2xl border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 flex items-center gap-2.5 text-sm font-semibold">
+              <StepBadge n={2} />
               {t('reception.steps.visit')}
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div className="flex flex-wrap gap-1">
                 {VISIT_CREATE_TYPES.map((option) => (
                   <Chip
@@ -500,14 +505,15 @@ export function ReceptionPage() {
                 ))}
               </div>
 
+              <div className="grid gap-4 sm:grid-cols-2">
               {/* Searchable Department Select */}
               <div ref={departmentRef} className="relative">
-                <Label className="text-xs">
+                <Label className="mb-1.5 block text-sm">
                   {t('visits.fields.department')}
                   <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
-                  <Search className="pointer-events-none absolute start-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     ref={departmentInputRef}
                     value={
@@ -523,7 +529,7 @@ export function ReceptionPage() {
                       setDepartmentSearch('')
                     }}
                     placeholder={t('visits.create.chooseDepartment')}
-                    className="h-8 ps-7 text-sm"
+                    className="h-10 ps-8 text-sm"
                   />
                   {departmentId && !showDepartmentDropdown && (
                     <button
@@ -572,11 +578,11 @@ export function ReceptionPage() {
                   (see onDoctorSearchChange's comment on why this differs from the drug
                   picker's deliberately list-driven UX). */}
               <div ref={doctorRef} className="relative">
-                <Label className="text-xs" htmlFor="practitionerId">
+                <Label className="mb-1.5 block text-sm" htmlFor="practitionerId">
                   {t('visits.fields.practitioner')}
                 </Label>
                 <div className="relative">
-                  <Search className="pointer-events-none absolute start-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="practitionerId"
                     ref={doctorInputRef}
@@ -594,7 +600,7 @@ export function ReceptionPage() {
                       setDoctorSearch('')
                     }}
                     placeholder={t('visits.create.noDoctor')}
-                    className="h-8 ps-7 text-sm"
+                    className="h-10 ps-8 text-sm"
                   />
                   {practitionerId && !showDoctorDropdown && (
                     <button
@@ -636,17 +642,15 @@ export function ReceptionPage() {
                   </ul>
                 )}
               </div>
-
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Right column: Services + Payment */}
-        <div className="flex w-[65%] flex-col gap-3">
           {/* Step 3: Services */}
-          <div className="flex-1 rounded-lg border bg-card p-3 overflow-hidden flex flex-col">
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="rounded-2xl border bg-card p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="flex items-center gap-2.5 text-sm font-semibold">
+                <StepBadge n={3} />
                 {t('reception.steps.bill')}
               </h3>
               {chosenServices.length > 0 && (
@@ -661,20 +665,20 @@ export function ReceptionPage() {
             ) : (
               <>
                 <div className="relative mb-2">
-                  <Search className="pointer-events-none absolute start-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     ref={serviceSearchInputRef}
                     value={serviceSearch}
                     onChange={(e) => setServiceSearch(e.target.value)}
                     placeholder="Search services..."
-                    className="h-7 ps-7 text-xs"
+                    className="h-10 ps-9 text-sm"
                   />
                 </div>
 
-                <div className="flex-1 overflow-y-auto -mx-3 px-3">
+                <div className="max-h-[26rem] space-y-4 overflow-y-auto pe-1">
                   {filteredDeptServices.length > 0 && (
                     <div className="mb-2">
-                      <p className="mb-1 text-[10px] font-medium uppercase text-muted-foreground">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         Department Services
                       </p>
                       <ServiceGrid
@@ -687,7 +691,7 @@ export function ReceptionPage() {
 
                   {filteredOtherServices.length > 0 && (
                     <div>
-                      <p className="mb-1 text-[10px] font-medium uppercase text-muted-foreground">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         Other Services
                       </p>
                       <ServiceGrid
@@ -705,11 +709,71 @@ export function ReceptionPage() {
                   )}
                 </div>
 
-                {/* Discount + Total */}
-                <div className="mt-2 border-t pt-2">
+              </>
+            )}
+          </div>
+        </div>
+
+        <aside className="space-y-4 lg:sticky lg:top-20">
+          <div className="rounded-2xl border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 flex items-center gap-2.5 text-sm font-semibold">
+              <StepBadge n={4} />
+              Summary
+            </h3>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Patient</dt>
+                <dd className="truncate font-medium">
+                  {mode === 'search'
+                    ? chosen
+                      ? [chosen.firstName, chosen.lastName].filter(Boolean).join(' ')
+                      : '—'
+                    : patientForm.values.firstName.trim() || 'New patient'}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Department</dt>
+                <dd className="truncate font-medium">
+                  {departmentId ? departmentName(departments.find((d) => d.id === departmentId)!) : '—'}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Doctor</dt>
+                <dd className="truncate font-medium">
+                  {practitioners.find((x) => x.id === practitionerId)?.name ?? '—'}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="my-4 border-t" />
+
+            {chosenServices.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No services selected yet.</p>
+            ) : (
+              <ul className="space-y-1.5 text-sm">
+                {chosenServices.map((service) => (
+                  <li key={service.id} className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 truncate">
+                      {service.name}
+                      {(quantities[service.id] ?? 0) > 1 && (
+                        <span className="text-muted-foreground"> × {quantities[service.id]}</span>
+                      )}
+                    </span>
+                    <span dir="ltr" className="font-mono text-muted-foreground">
+                      {moneyDecimal(service.fee).mul(String(quantities[service.id])).toFixed(2)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {departmentId && (
+              <div className="mt-4 space-y-3 border-t pt-4">
+                
+                <div>
                   <div className="mb-2 grid grid-cols-3 gap-2">
                     <div>
-                      <Label className="text-[10px]" htmlFor="discountPercent">
+                      <Label className="text-xs" htmlFor="discountPercent">
                         Discount %
                       </Label>
                       <Input
@@ -718,12 +782,12 @@ export function ReceptionPage() {
                         inputMode="decimal"
                         value={discountPercentText}
                         onChange={(e) => onDiscountPercentChange(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-9 text-sm"
                         aria-invalid={overCeiling}
                       />
                     </div>
                     <div>
-                      <Label className="text-[10px]" htmlFor="discount">
+                      <Label className="text-xs" htmlFor="discount">
                         Discount
                       </Label>
                       <Input
@@ -732,7 +796,7 @@ export function ReceptionPage() {
                         inputMode="decimal"
                         value={discount}
                         onChange={(e) => onDiscountAmountChange(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-9 text-sm"
                         aria-invalid={overCeiling}
                       />
                       {overCeiling && (
@@ -742,7 +806,7 @@ export function ReceptionPage() {
                       )}
                     </div>
                     <div>
-                      <Label className="text-[10px]" htmlFor="discountReason">
+                      <Label className="text-xs" htmlFor="discountReason">
                         Reason
                       </Label>
                       <Input
@@ -750,7 +814,7 @@ export function ReceptionPage() {
                         value={discountReason}
                         disabled={discountAmount.lte('0')}
                         onChange={(e) => setDiscountReason(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-9 text-sm"
                       />
                     </div>
                   </div>
@@ -770,17 +834,15 @@ export function ReceptionPage() {
                     <span className="text-lg font-bold font-mono">{totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
 
           {/* Step 4: Payment + Submit */}
-          <div className="rounded-lg border bg-card p-3">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('reception.steps.payment')}
-            </h3>
-            <div className="flex items-end justify-between gap-4">
-              <div className="flex-1">
+          <div className="rounded-2xl border bg-card p-5 shadow-sm">
+            <h3 className="mb-3 text-sm font-semibold">{t('reception.steps.payment')}</h3>
+            <div className="space-y-4">
+              <div>
                 <div className="mb-2 flex flex-wrap gap-1">
                   {PAYMENT_METHODS.map((method) => (
                     <Chip
@@ -794,7 +856,7 @@ export function ReceptionPage() {
 
                 {paymentMethod !== 'cash' && (
                   <div>
-                    <Label className="text-[10px]" htmlFor="paymentReference">
+                    <Label className="text-xs" htmlFor="paymentReference">
                       Reference
                     </Label>
                     <Input
@@ -802,7 +864,7 @@ export function ReceptionPage() {
                       dir="ltr"
                       value={paymentReference}
                       onChange={(e) => setPaymentReference(e.target.value)}
-                      className="h-7 text-xs"
+                      className="h-9 text-sm"
                     />
                   </div>
                 )}
@@ -811,7 +873,7 @@ export function ReceptionPage() {
               <Button
                 type="submit"
                 size="lg"
-                className="h-12 px-8 text-base"
+                className="h-12 w-full text-base"
                 disabled={
                   checkIn.isPending || !patientReady || !departmentId || chosenServices.length === 0
                 }
@@ -866,7 +928,7 @@ export function ReceptionPage() {
               <p className="mt-2 text-xs text-destructive">{t('reception.error')}</p>
             )}
           </div>
-        </div>
+        </aside>
       </form>
     </div>
   )
@@ -883,7 +945,7 @@ function ServiceGrid({
   setQuantity: (serviceId: string, quantity: number) => void
 }) {
   return (
-    <div className="grid grid-cols-3 gap-1">
+    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {services.map((service) => {
         const quantity = quantities[service.id] ?? 0
         const selected = quantity > 0
@@ -891,7 +953,7 @@ function ServiceGrid({
           <div
             key={service.id}
             className={cn(
-              'flex items-center gap-1 rounded border p-1.5 transition-colors',
+              'flex items-center gap-2.5 rounded-xl border p-2.5 transition-colors',
               'hover:border-primary/50',
               selected ? 'border-primary bg-primary/5' : 'border-border'
             )}
@@ -900,7 +962,7 @@ function ServiceGrid({
               type="button"
               onClick={() => setQuantity(service.id, selected ? 0 : 1)}
               className={cn(
-                'flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border text-[10px] font-bold transition-colors',
+                'flex size-5 flex-shrink-0 cursor-pointer items-center justify-center rounded-md border text-[10px] font-bold transition-colors',
                 selected
                   ? 'border-primary bg-primary text-primary-foreground'
                   : 'border-muted-foreground/30'
@@ -909,8 +971,8 @@ function ServiceGrid({
               {selected && <Check className="size-2.5" />}
             </button>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[11px] font-medium leading-tight">{service.name}</p>
-              <p className="text-[10px] font-mono text-muted-foreground">{service.fee}</p>
+              <p className="truncate text-sm font-medium leading-tight">{service.name}</p>
+              <p dir="ltr" className="font-mono text-xs text-muted-foreground">{service.fee}</p>
             </div>
             {selected && (
               <div className="flex flex-shrink-0 items-center gap-0.5">
@@ -920,7 +982,7 @@ function ServiceGrid({
                     e.stopPropagation()
                     setQuantity(service.id, Math.max(1, quantity - 1))
                   }}
-                  className="flex h-5 w-5 items-center justify-center rounded border text-xs hover:bg-muted"
+                  className="flex size-6 cursor-pointer items-center justify-center rounded-md border text-sm hover:bg-muted"
                 >
                   −
                 </button>
@@ -931,7 +993,7 @@ function ServiceGrid({
                     e.stopPropagation()
                     setQuantity(service.id, Math.min(99, quantity + 1))
                   }}
-                  className="flex h-5 w-5 items-center justify-center rounded border text-xs hover:bg-muted"
+                  className="flex size-6 cursor-pointer items-center justify-center rounded-md border text-sm hover:bg-muted"
                 >
                   +
                 </button>
@@ -941,6 +1003,17 @@ function ServiceGrid({
         )
       })}
     </div>
+  )
+}
+
+function StepBadge({ n }: { n: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground"
+    >
+      {n}
+    </span>
   )
 }
 
@@ -960,7 +1033,7 @@ function Chip({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'rounded-md border px-2 py-1 text-xs font-medium transition-colors',
+        'cursor-pointer rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         active
           ? 'border-primary bg-primary text-primary-foreground'
@@ -984,7 +1057,7 @@ function ChosenPatient({
   const age = currentAgeYears(patient)
 
   return (
-    <div className="flex items-start justify-between gap-2 rounded border bg-muted/50 p-2">
+    <div className="flex items-start justify-between gap-2 rounded-xl border bg-primary/5 p-3">
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold">
           {[patient.prefix, patient.firstName, patient.lastName].filter(Boolean).join(' ')}

@@ -105,7 +105,8 @@ export function PatientFormFields({
   if (errors.dateOfBirth && !showMore) setShowMore(true)
 
   return (
-    <>
+    <div className="@container">
+    <div className="grid content-start gap-x-4 gap-y-4 @lg:grid-cols-2">
       <Field id="firstName" label={t('patients.fields.firstName')} error={errors.firstName} required>
         <Input
           id="firstName"
@@ -197,7 +198,7 @@ export function PatientFormFields({
         />
       </Field>
 
-      <div className="border-t border-border pt-4">
+      <div className="border-t border-border pt-4 @lg:col-span-2">
         <button
           type="button"
           onClick={() => setShowMore((open) => !open)}
@@ -342,6 +343,7 @@ export function PatientFormFields({
           </div>
         )}
       </div>
-    </>
+    </div>
+    </div>
   )
 }
