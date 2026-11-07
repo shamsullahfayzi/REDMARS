@@ -25,6 +25,8 @@ import {
   type FinanceWorkspace,
 } from '@redmars/shared'
 import { useAuth } from '@/auth/authContext'
+import { FINANCE_SECTIONS } from '@/auth/nav'
+import { useSearchParams } from 'react-router'
 import { apiGet, apiPost, ApiError } from '@/lib/api'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -219,10 +221,19 @@ export function FinancePage() {
     queryKey: ['finance'],
     queryFn: () => apiGet('/finance', financeWorkspaceSchema),
   })
-  const [tab, setTab] = useState(() => {
-    const q = new URLSearchParams(window.location.search)
-    return q.has('asset') ? 'assets' : q.has('journal') ? 'journals' : q.has('payrollRun') ? 'payroll' : q.get('tab') === 'reports' ? 'reports' : 'overview'
-  })
+  // The section lives in the URL (?tab=) and is chosen from the sidebar's Finance sub-menu.
+  // Deep links that predate it (?asset=, ?journal=, ?payrollRun=) still land on their section.
+  const [searchParams] = useSearchParams()
+  const requestedTab = searchParams.get('tab')
+  const tab = FINANCE_SECTIONS.some((x) => x.id === requestedTab)
+    ? (requestedTab as string)
+    : searchParams.has('asset')
+      ? 'assets'
+      : searchParams.has('journal')
+        ? 'journals'
+        : searchParams.has('payrollRun')
+          ? 'payroll'
+          : 'overview'
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -283,24 +294,11 @@ export function FinancePage() {
       </div>
     )
   const data = workspace.data
-  const tabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'journals', label: 'Journals' },
-    { id: 'accounts', label: 'Accounts & periods' },
-    { id: 'expenses', label: 'Expenses' },
-    { id: 'suppliers', label: 'Suppliers & payables' },
-    { id: 'payroll', label: 'Payroll' },
-    { id: 'assets', label: 'Fixed assets' },
-    { id: 'budgets', label: 'Budgets & variance' },
-    { id: 'reconcile', label: 'Cash & bank' },
-    { id: 'reports', label: 'Financial reports' },
-    { id: 'ledger', label: 'General ledger & trial balance' },
-    { id: 'revenue', label: 'Revenue, AR & tills' },
-  ]
+  const sectionLabel = FINANCE_SECTIONS.find((x) => x.id === tab)?.label ?? 'Overview'
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        title={t('nav.finance')}
+        title={data.settings ? sectionLabel : t('nav.finance')}
         description="AFN books · Hospital finance and accounting"
       />
       {error && (
@@ -345,21 +343,6 @@ export function FinancePage() {
         )
       ) : (
         <>
-          <nav
-            aria-label="Finance sections"
-            className="flex flex-wrap gap-2 border-b pb-3"
-          >
-            {tabs.map((x) => (
-              <Button
-                key={x.id}
-                variant={tab === x.id ? 'default' : 'ghost'}
-                aria-current={tab === x.id ? 'page' : undefined}
-                onClick={() => setTab(x.id)}
-              >
-                {x.label}
-              </Button>
-            ))}
-          </nav>
           {tab === 'overview' && (
             <>
               <div className="grid gap-4 sm:grid-cols-3">

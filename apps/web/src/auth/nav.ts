@@ -27,6 +27,54 @@ export interface NavItem {
    * ModuleGuard re-checks the endpoints regardless of what the menu rendered.
    */
   module?: ModuleKey
+  /**
+   * In-page sections shown as an expandable sub-menu under this item. Each links to
+   * `${to}?tab=${section.id}`; the page reads that same param, so the sidebar is the
+   * one navigation for a multi-section workspace (Finance, HR).
+   */
+  sections?: readonly NavSection[]
+}
+
+export interface NavSection {
+  id: string
+  label: string
+  /** Narrower than the parent item; omitted = everyone who sees the item. */
+  roles?: readonly string[]
+  /** Lucide icon name resolved in navIcons (kept as a string so this file stays UI-free). */
+  icon?: string
+}
+
+export const FINANCE_SECTIONS: readonly NavSection[] = [
+  { id: 'overview', label: 'Overview', icon: 'overview' },
+  { id: 'revenue', label: 'Revenue, AR & tills', icon: 'revenue' },
+  { id: 'journals', label: 'Journals', icon: 'journals' },
+  { id: 'ledger', label: 'Ledger & trial balance', icon: 'ledger' },
+  { id: 'accounts', label: 'Accounts & periods', icon: 'accounts' },
+  { id: 'expenses', label: 'Expenses', icon: 'expenses' },
+  { id: 'suppliers', label: 'Suppliers & payables', icon: 'suppliers' },
+  { id: 'payroll', label: 'Payroll', icon: 'payroll' },
+  { id: 'assets', label: 'Fixed assets', icon: 'assets' },
+  { id: 'budgets', label: 'Budgets & variance', icon: 'budgets' },
+  { id: 'reconcile', label: 'Cash & bank', icon: 'reconcile' },
+  { id: 'reports', label: 'Financial reports', icon: 'statements' },
+]
+
+export const HR_SECTIONS: readonly NavSection[] = [
+  { id: 'employees', label: 'Employees', roles: ['admin'], icon: 'employees' },
+  { id: 'credentials', label: 'Credentials', roles: ['admin'], icon: 'credentials' },
+  { id: 'attendance', label: 'Attendance', roles: ['admin'], icon: 'attendance' },
+  { id: 'leave', label: 'Leave', icon: 'leave' },
+  { id: 'roster', label: 'Duty roster', icon: 'roster' },
+  { id: 'settings', label: 'HR settings', roles: ['admin'], icon: 'hrSettings' },
+]
+
+/** The sections of `item` this user may open, in menu order. */
+export function sectionsForRoles(
+  item: Pick<NavItem, 'sections'>,
+  userRoles: readonly string[],
+): NavSection[] {
+  const held = new Set(userRoles)
+  return (item.sections ?? []).filter((s) => !s.roles || s.roles.some((r) => held.has(r)))
 }
 
 // Roles that can see everything role-gated open to all — kept here so "visible to
@@ -46,9 +94,9 @@ const ALL_ROLES = [
 ] as const
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { key: 'hr', to: '/hr', group: 'administration', roles: ALL_ROLES, module: 'hr' },
+  { key: 'hr', to: '/hr', group: 'administration', roles: ALL_ROLES, module: 'hr', sections: HR_SECTIONS },
   { key: 'crm', to: '/crm', group: 'main', roles: ['admin', 'call_center'], module: 'crm' },
-  { key: 'finance', to: '/finance', group: 'administration', roles: ['admin', 'accountant', 'finance_manager', 'management', 'payroll_officer', 'auditor'], module: 'finance' },
+  { key: 'finance', to: '/finance', group: 'administration', roles: ['admin', 'accountant', 'finance_manager', 'management', 'payroll_officer', 'auditor'], module: 'finance', sections: FINANCE_SECTIONS },
   { key: 'dashboard', to: '/', group: 'main', roles: ALL_ROLES },
   // The desk's home screen (task 3.6). Receptionist only, matching `visit.create` —
   // the one route that registers, queues, bills and takes cash in a single save.

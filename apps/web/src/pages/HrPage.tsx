@@ -17,6 +17,7 @@ import {
   shiftTypeSchema,
 } from "@redmars/shared";
 import { useAuth } from "@/auth/authContext";
+import { HR_SECTIONS, sectionsForRoles } from "@/auth/nav";
 import {
   apiDownload,
   apiGet,
@@ -142,42 +143,17 @@ function downloadTable(
 export function HrPage() {
   const { roles } = useAuth();
   const admin = roles.includes("admin");
-  const [params, setParams] = useSearchParams();
-  const rawTab = params.get("tab") as Tab | null;
-  const tab: Tab =
-    rawTab &&
-    [
-      "employees",
-      "credentials",
-      "attendance",
-      "leave",
-      "roster",
-      "settings",
-    ].includes(rawTab)
-      ? rawTab
-      : admin
-        ? "employees"
-        : "leave";
-  const tabs: Tab[] = admin
-    ? ["employees", "credentials", "attendance", "leave", "roster", "settings"]
-    : ["leave", "roster"];
+  const [params] = useSearchParams();
+  const sections = sectionsForRoles({ sections: HR_SECTIONS }, roles);
+  const rawTab = params.get("tab");
+  const current = sections.find((x) => x.id === rawTab) ?? sections[0];
+  const tab = current.id as Tab;
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Human resources"
-        description="Axon Nura employee records, credentials, attendance, leave and duty roster."
+        title={current.label}
+        description="Human resources · employee records, credentials, attendance, leave and duty roster."
       />
-      <nav className="flex flex-wrap gap-2" aria-label="HR sections">
-        {tabs.map((x) => (
-          <Button
-            key={x}
-            variant={tab === x ? "default" : "outline"}
-            onClick={() => setParams({ tab: x })}
-          >
-            {x[0].toUpperCase() + x.slice(1)}
-          </Button>
-        ))}
-      </nav>
       {tab === "employees" && <Employees />}
       {tab === "credentials" && <Credentials />}
       {tab === "attendance" && <Attendance />}

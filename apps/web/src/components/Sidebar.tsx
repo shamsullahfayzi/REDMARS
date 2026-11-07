@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { NavLink } from 'react-router'
+import { NavLink, useLocation } from 'react-router'
 import type { ModuleKey } from '@redmars/shared'
-import { NAV_GROUPS, navItemsForRoles } from '@/auth/nav'
-import { NAV_ICONS } from '@/components/navIcons'
+import { NAV_GROUPS, navItemsForRoles, sectionsForRoles, type NavItem } from '@/auth/nav'
+import { NAV_ICONS, SECTION_ICONS } from '@/components/navIcons'
 import { Badge } from '@/components/ui/badge'
 import { useCollectionsList } from '@/hooks/useCollections'
 import { getCollectionsLastSeen } from '@/lib/collectionsSeen'
@@ -28,6 +28,7 @@ interface SidebarProps {
 export function Sidebar({ roles, enabledModules, open, onClose }: SidebarProps) {
   const { t } = useTranslation()
   const items = navItemsForRoles(roles, enabledModules)
+  const location = useLocation()
 
   return (
     <>
@@ -67,6 +68,19 @@ export function Sidebar({ roles, enabledModules, open, onClose }: SidebarProps) 
                 )}
                 {groupItems.map((item) => {
                   const Icon = NAV_ICONS[item.key]
+                  const sections = sectionsForRoles(item, roles)
+                  if (sections.length > 0) {
+                    return (
+                      <SectionedNavItem
+                        key={item.key}
+                        item={item}
+                        sections={sections}
+                        pathname={location.pathname}
+                        search={location.search}
+                        onClose={onClose}
+                      />
+                    )
+                  }
                   return (
                     <NavLink
                       key={item.key}
@@ -117,5 +131,78 @@ function CollectionsNavBadge() {
     <Badge variant="active" className="shrink-0">
       {newCount}
     </Badge>
+  )
+}
+
+/**
+ * A workspace with its own sections (Finance, HR). The sections live in the sidebar so the
+ * page body is only the chosen section's content, with no second row of tab buttons.
+ * Expanded whenever the route is inside the workspace; the active section is the `?tab=`
+ * param (the same param the page reads), falling back to the first section a user may open.
+ */
+function SectionedNavItem({
+  item,
+  sections,
+  pathname,
+  search,
+  onClose,
+}: {
+  item: NavItem
+  sections: ReturnType<typeof sectionsForRoles>
+  pathname: string
+  search: string
+  onClose: () => void
+}) {
+  const { t } = useTranslation()
+  const Icon = NAV_ICONS[item.key]
+  const inside = pathname === item.to || pathname.startsWith(`${item.to}/`)
+  const requested = new URLSearchParams(search).get('tab')
+  const active = sections.find((s) => s.id === requested)?.id ?? sections[0].id
+
+  return (
+    <div className="space-y-0.5">
+      <NavLink
+        to={`${item.to}?tab=${sections[0].id}`}
+        onClick={onClose}
+        aria-expanded={inside}
+        className={cn(
+          'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
+          inside
+            ? 'text-sidebar-accent-foreground'
+            : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
+        )}
+      >
+        {Icon && <Icon className="size-4 shrink-0" />}
+        <span className="min-w-0 flex-1 truncate">{t(`nav.${item.key}`)}</span>
+      </NavLink>
+      {inside && (
+        <ul className="ms-4 space-y-0.5 border-s border-sidebar-border ps-2">
+          {sections.map((section) => {
+            const SectionIcon = section.icon ? SECTION_ICONS[section.icon] : undefined
+            const isActive = section.id === active
+            return (
+              <li key={section.id}>
+                <NavLink
+                  to={`${item.to}?tab=${section.id}`}
+                  onClick={onClose}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-2 rounded-md px-2 py-1.5 text-[0.8125rem] transition-colors',
+                    isActive
+                      ? 'bg-primary/10 font-medium text-primary'
+                      : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
+                  )}
+                >
+                  {SectionIcon && <SectionIcon className="size-3.5 shrink-0" />}
+                  <span className="min-w-0 flex-1 truncate">
+                    {t(`nav.sections.${item.key}.${section.id}`, { defaultValue: section.label })}
+                  </span>
+                </NavLink>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
   )
 }

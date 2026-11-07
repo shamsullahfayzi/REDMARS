@@ -26,6 +26,20 @@ import {
   UserCog,
   UserRound,
   Wallet,
+  Gauge,
+  BookOpen,
+  Scale,
+  ListTree,
+  CreditCard,
+  Truck,
+  Landmark,
+  PiggyBank,
+  ArrowLeftRight,
+  FileBarChart,
+  IdCard,
+  KeyRound,
+  CalendarCheck,
+  Plane,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -59,4 +73,26 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   labPanels: Layers,
   drugs: Tablets,
   reports: BarChart3,
+}
+
+/** Icons for in-page sections (Finance / HR sub-menus), keyed by NavSection.icon. */
+export const SECTION_ICONS: Record<string, LucideIcon> = {
+  overview: Gauge,
+  revenue: Banknote,
+  journals: BookOpen,
+  ledger: Scale,
+  accounts: ListTree,
+  expenses: CreditCard,
+  suppliers: Truck,
+  payroll: Wallet,
+  assets: Landmark,
+  budgets: PiggyBank,
+  reconcile: ArrowLeftRight,
+  statements: FileBarChart,
+  employees: IdCard,
+  credentials: KeyRound,
+  attendance: CalendarCheck,
+  leave: Plane,
+  roster: CalendarDays,
+  hrSettings: SlidersHorizontal,
 }
