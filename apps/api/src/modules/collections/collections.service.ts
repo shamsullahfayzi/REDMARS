@@ -42,6 +42,9 @@ export class CollectionsService {
       where: {
         facilityId,
         status: { in: ['issued', 'partially_paid'] },
+        // A zero-total bill (all-free lines, or tests not priced yet) owes nothing: it would sit
+        // in the list as 'issued' forever.
+        total: { gt: 0 },
         items: { some: { refType: { in: ['lab_order_item', 'prescription_item'] } } },
         ...(createdAt ? { createdAt } : {}),
       },
