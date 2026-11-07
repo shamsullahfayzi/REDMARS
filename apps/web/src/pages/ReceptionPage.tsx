@@ -149,13 +149,15 @@ export function ReceptionPage() {
     // click the very thing they just chose, a second time, in a list on the other side of
     // the screen. Matched against the department's CODE or base name, never the localized
     // display name — service names aren't translated, so "OPD" only ever matches "OPD".
-    const sameName = services.find(
+    // Only when exactly one service matches: Medi-Pro data has several "OPD" services at
+    // different fees, and silently picking the first would bill the wrong one.
+    const sameNameMatches = services.filter(
       (s) =>
         s.departmentId === dept.id &&
         (s.name.trim().toLowerCase() === dept.code.trim().toLowerCase() ||
           s.name.trim().toLowerCase() === dept.name.trim().toLowerCase()),
     )
-    setQuantities(sameName ? { [sameName.id]: 1 } : {})
+    setQuantities(sameNameMatches.length === 1 ? { [sameNameMatches[0].id]: 1 } : {})
   }
 
   function chooseDoctor(doctor: VisitPractitionerOption) {
