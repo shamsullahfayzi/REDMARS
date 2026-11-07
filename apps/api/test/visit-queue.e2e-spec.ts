@@ -231,6 +231,19 @@ describe('Doctor queue (e2e)', () => {
     expect(queue.scope.practitionerId).toBe(drOpdId);
   });
 
+  it("a doctor's own queue also shows unassigned visits in their department, not other departments'", async () => {
+    const now = new Date();
+    await seedVisit({ startedAt: now, practitionerId: null, name: 'Unassigned' });
+    await seedVisit({ startedAt: now, practitionerId: null, departmentId: labId, name: 'ElsewhereNone' });
+    await seedVisit({ startedAt: now, practitionerId: drOtherId, name: 'Hers' });
+
+    const queue = (await getQueue().expect(200)).body as QueueResponse;
+
+    expect(queue.entries.map((e) => e.patientName).join('|')).toContain('Unassigned');
+    expect(queue.entries.map((e) => e.patientName).join('|')).not.toContain('Elsewhere');
+    expect(queue.entries.map((e) => e.patientName).join('|')).not.toContain('Hers');
+  });
+
   /**
    * How much of today has actually happened, in the facility's zone.
    *

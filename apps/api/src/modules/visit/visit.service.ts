@@ -822,14 +822,19 @@ export class VisitService {
     // "Whose queue is this?" — the caller's own, unless they said otherwise.
     let practitionerId = query.practitionerId ?? null;
     let mine = false;
+    // Departments of the caller's own practitioner record, used to also show visits that
+    // reception left with no doctor. Without this a "No doctor" check-in sits in nobody's
+    // queue: every doctor's default view is filtered to their own patients.
+    let unassignedDepartmentIds: string[] = [];
     if (!practitionerId) {
       const self = await this.prisma.db.practitioner.findFirst({
         where: { facilityId, userId },
-        select: { id: true },
+        select: { id: true, departments: { select: { departmentId: true } } },
       });
       if (self) {
         practitionerId = self.id;
         mine = true;
+        unassignedDepartmentIds = self.departments.map((d) => d.departmentId);
       }
     }
 
@@ -837,7 +842,16 @@ export class VisitService {
       facilityId,
       startedAt: { gte: start, lt: end },
       ...(query.departmentId ? { departmentId: query.departmentId } : {}),
-      ...(practitionerId ? { practitionerId } : {}),
+      ...(practitionerId
+        ? mine && unassignedDepartmentIds.length > 0
+          ? {
+              OR: [
+                { practitionerId },
+                { practitionerId: null, departmentId: { in: unassignedDepartmentIds } },
+              ],
+            }
+          : { practitionerId }
+        : {}),
     };
 
     const statusWhere = query.status
