@@ -314,7 +314,7 @@ export function FinancePage() {
           {notice}
         </p>
       )}
-      <ShamsiCalendar />
+      {tab === 'overview' && <ShamsiCalendar />}
       {!data.settings ? (
         canPost ? (
           <SimpleForm

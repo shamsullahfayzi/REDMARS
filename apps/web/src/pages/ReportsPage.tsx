@@ -64,6 +64,16 @@ function ChartHeading({ icon: Icon, children }: { icon: typeof Activity; childre
   )
 }
 
+/** A headline number above a report — the figure first, the table below for detail. */
+function StatTile({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <div className="rounded-2xl border bg-card p-4 shadow-sm">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className={`mt-1 text-3xl font-semibold tracking-tight tabular-nums ${tone}`}>{value}</p>
+    </div>
+  )
+}
+
 function LegendDot({ className, label }: { className: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -179,26 +189,36 @@ export function ReportsPage() {
     <div className="space-y-6">
       <PageHeader title={t('nav.reports')} description={t('reports.subtitle')} />
 
-      <div className="flex flex-wrap gap-1 print:hidden">
+      <div
+        role="tablist"
+        aria-label={t('nav.reports')}
+        className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border print:hidden"
+      >
         {tabs.map((tab) => (
-          <Button
+          <button
             key={tab.key}
-            variant={active === tab.key ? 'default' : 'outline'}
-            size="sm"
+            type="button"
+            role="tab"
+            aria-selected={active === tab.key}
             onClick={() => setActive(tab.key)}
+            className={`-mb-px shrink-0 cursor-pointer border-b-2 px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              active === tab.key
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
           >
             {tab.label}
-          </Button>
+          </button>
         ))}
       </div>
 
       {showFilters && (
-        <div className="flex flex-wrap items-end gap-2 print:hidden">
-          <div className="flex gap-1">
+        <div className="flex flex-wrap items-end gap-3 rounded-2xl border bg-card p-4 shadow-sm print:hidden">
+          <div className="flex gap-1 rounded-lg bg-muted p-1">
             {(['today', 'yesterday', 'thisMonth', 'lastMonth'] as const).map((p) => (
               <Button
                 key={p}
-                variant={preset === p ? 'default' : 'outline'}
+                variant={preset === p ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => applyPreset(p)}
               >
@@ -359,6 +379,12 @@ function CensusView({
       <ReportShell isPending={query.isPending} isError={query.isError} isEmpty={!!data && data.rows.length === 0}>
         {data && (
           <>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatTile label={t('reports.census.col.visits')} value={data.totals.visitCount} tone="text-foreground" />
+              <StatTile label={t('reports.census.col.completed')} value={data.totals.completed} tone="text-success" />
+              <StatTile label={t('reports.census.col.cancelled')} value={data.totals.cancelled} tone="text-destructive" />
+              <StatTile label={t('reports.census.col.noShow')} value={data.totals.noShow} tone="text-warning" />
+            </div>
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
                 {t('reports.census.totals', {
