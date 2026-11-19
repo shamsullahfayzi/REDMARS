@@ -44,8 +44,14 @@ export function RootLayout() {
 
           <div className="ms-auto flex items-center gap-2">
             {user && (
-              <span className="hidden text-sm text-muted-foreground sm:inline">
-                {t('auth.signedInAs', { name: user.fullName })}
+              <span className="hidden items-center gap-2 sm:inline-flex" title={t('auth.signedInAs', { name: user.fullName })}>
+                <span
+                  aria-hidden
+                  className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                >
+                  {user.fullName.trim().charAt(0).toUpperCase()}
+                </span>
+                <span className="max-w-40 truncate text-sm font-medium">{user.fullName}</span>
               </span>
             )}
             <LanguageToggle />
@@ -59,7 +65,7 @@ export function RootLayout() {
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6">
+        <main className="flex-1 bg-muted/20 p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl">
             <Outlet />
           </div>

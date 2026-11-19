@@ -169,6 +169,32 @@
     }
 }
 
+/* Shared data-table polish, applied app-wide so every list page reads the same:
+   quiet uppercase column heads, roomy rows, a hover band, hairline separators. */
+@layer components {
+  main table {
+    @apply w-full border-collapse text-sm;
+  }
+  main thead {
+    @apply bg-muted/40;
+  }
+  main thead th {
+    @apply whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+  main tbody tr {
+    @apply border-t border-border transition-colors;
+  }
+  main tbody tr:hover {
+    @apply bg-muted/40;
+  }
+  main tbody td {
+    @apply px-3 py-3 align-middle;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    main tbody tr { transition: none; }
+  }
+}
+
 /*
  * The signed-in home is the only neumorphic surface. Shadows are deliberately
  * shallow, while text, focus rings and operational states keep their normal

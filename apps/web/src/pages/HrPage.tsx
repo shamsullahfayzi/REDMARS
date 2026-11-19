@@ -1147,11 +1147,24 @@ function HrSettings() {
       apiPost(path, body, resultSchema),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["hr"] }),
   });
+  // One shared status line: every "Add …" form below posts through `add`, so a rejected
+  // position or leave type used to fail silently (only the shift form showed the error).
+  const addAndReset = (form: HTMLFormElement, vars: { path: string; body: unknown }) =>
+    add.mutate(vars, { onSuccess: () => form.reset() });
   const rest = useMemo(
     () => new Set(config.data?.weeklyRestDays ?? []),
     [config.data],
   );
   return (
+    <div className="space-y-4">
+      <div aria-live="polite" className="min-h-5">
+        {add.isPending || saveConfig.isPending ? (
+          <p className="text-sm text-muted-foreground">Saving…</p>
+        ) : add.isSuccess || saveConfig.isSuccess ? (
+          <p role="status" className="text-sm text-success">Saved.</p>
+        ) : null}
+        <ErrorText error={add.error ?? saveConfig.error} />
+      </div>
     <div className="grid gap-6 lg:grid-cols-2">
       <Card className="p-5">
         <h2 className="text-lg font-semibold">Monthly salary processing</h2>
@@ -1219,7 +1232,6 @@ function HrSettings() {
             />
           </Field>
           <Button type="submit">Save controls</Button>
-          <ErrorText error={saveConfig.error} />
         </form>
       </Card>
       <Card className="p-5">
@@ -1284,7 +1296,7 @@ function HrSettings() {
           onSubmit={(e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget);
-            add.mutate({
+            addAndReset(e.currentTarget, {
               path: "/hr/positions",
               body: {
                 titleEn: f.get("titleEn"),
@@ -1318,7 +1330,7 @@ function HrSettings() {
           onSubmit={(e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget);
-            add.mutate({
+            addAndReset(e.currentTarget, {
               path: "/hr/leave-types",
               body: {
                 code: f.get("code"),
@@ -1355,7 +1367,7 @@ function HrSettings() {
           onSubmit={(e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget);
-            add.mutate({
+            addAndReset(e.currentTarget, {
               path: "/hr/shift-types",
               body: {
                 code: f.get("code"),
@@ -1384,9 +1396,9 @@ function HrSettings() {
           </Field>
           <Input name="color" placeholder="Color, for example #2563eb" />
           <Button type="submit">Add shift</Button>
-          <ErrorText error={add.error} />
         </form>
       </Card>
+    </div>
     </div>
   );
 }
