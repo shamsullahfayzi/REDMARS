@@ -2094,6 +2094,8 @@ model Panel {
 
 /// 39 — ONE invoice table. Not APPOINTMENTPAYMENT + LABTESTPAYMENT + ...
 model Invoice {
+  /// Null for invoices issued without whole-AFN rounding.
+  roundingAdjustment Decimal? @map("rounding_adjustment") @db.Decimal(3, 2)
   id         String        @id @default(uuid())
   facilityId String        @map("facility_id")
   patientId  String        @map("patient_id")

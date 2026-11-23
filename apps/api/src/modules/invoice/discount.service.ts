@@ -56,7 +56,7 @@ export class DiscountService {
     const result = await this.prisma.db.$transaction(async (tx) => {
       const invoice = await tx.invoice.findFirst({
         where: { id: invoiceId, facilityId },
-        select: { id: true, status: true, subtotal: true, paidAmount: true, currency: true },
+        select: { id: true, status: true, roundingAdjustment: true, subtotal: true, paidAmount: true, currency: true },
       });
       if (!invoice) throw new NotFoundException('Invoice not found');
       if (invoice.status === 'cancelled') {
@@ -86,7 +86,8 @@ export class DiscountService {
         input.approval,
       );
 
-      const total = invoice.subtotal.minus(discount);
+      const net = invoice.subtotal.minus(discount);
+      const total = invoice.roundingAdjustment === null ? net : net.floor();
       if (total.lessThan(invoice.paidAmount)) {
         // The patient has already paid more than the discounted bill would total — settling
         // that gap is a refund (6.6), not something a discount should silently create.
@@ -108,6 +109,7 @@ export class DiscountService {
         data: {
           discount,
           discountReason: input.reason,
+          roundingAdjustment: invoice.roundingAdjustment === null ? null : net.minus(total),
           total,
           status,
           discountApprovedBy: approver?.id ?? null,

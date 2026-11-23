@@ -587,6 +587,7 @@
     }
   },
   "settings": {
+    "branding": {"title": "Hospital identity", "name": "Hospital name", "logo": "Hospital logo", "remove": "Use REDMARS logo", "invalid": "Choose a PNG, JPEG or WebP image up to 5 MB.", "error": "Could not load or save hospital identity."},
     "subtitle": "Facility-wide settings.",
     "save": "Save",
     "saving": "Saving…",
@@ -1014,6 +1015,7 @@
     "qty": "Qty {{count}}",
     "allergyOverride": "Prescribed despite allergy: {{reason}}",
     "advice": "Advice",
+    "rounding": "Whole-AFN rounding",
     "priceTitle": "Price this prescription",
     "unitPriceFor": "Unit price for {{drug}}",
     "billTotal": "Bill total",

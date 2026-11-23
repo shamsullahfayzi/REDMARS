@@ -8,8 +8,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { updateDiscountCeilingRequestSchema, type DiscountCeilingResponse } from '@redmars/shared';
+import {
+  updateBrandingSchema,
+  updateDiscountCeilingRequestSchema,
+  type DiscountCeilingResponse,
+} from '@redmars/shared';
 import type { AuthContext } from '../../auth/auth-context';
+import { Public } from '../../auth/decorators/public.decorator';
 import { RequirePermission } from '../../auth/decorators/require-permission.decorator';
 import { SettingService } from '../../services/setting.service';
 
@@ -22,6 +27,26 @@ import { SettingService } from '../../services/setting.service';
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settings: SettingService) {}
+
+  @Public()
+  @Get('public-branding')
+  publicBranding() {
+    return this.settings.branding();
+  }
+
+  @RequirePermission('auth.me')
+  @Get('branding')
+  branding(@Req() req: Request) {
+    return this.settings.branding(this.auth(req).facilityId);
+  }
+
+  @RequirePermission('setting.manage')
+  @Patch('branding')
+  updateBranding(@Req() req: Request, @Body() body: unknown) {
+    const result = updateBrandingSchema.safeParse(body);
+    if (!result.success) throw new BadRequestException('Invalid hospital name or logo.');
+    return this.settings.setBranding(this.auth(req).facilityId, result.data.name, result.data.logo);
+  }
 
   @RequirePermission('discount.apply')
   @Get('discount-ceiling')

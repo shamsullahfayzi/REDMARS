@@ -744,9 +744,9 @@ describe('Pharmacy queue (e2e)', () => {
       packet: { size: 10, unitName: 'tablet' },
     });
     expect(JSON.stringify((await available()).body)).not.toContain('Price');
-    for (const [qty, expected, invoiceQty] of [
-      [30, '52.59', 3],
-      [13, '22.79', 1],
+    for (const [qty, expected, invoiceQty, subtotal] of [
+      [30, '52.00', 3, '52.59'],
+      [13, '22.00', 1, '22.79'],
     ] as const) {
       const rx = await seedPrescription(facilityId, patientId, dept.id, practitionerId, drug.id, {
         visitNo: PREFIX + 'PACK' + qty,
@@ -770,6 +770,19 @@ describe('Pharmacy queue (e2e)', () => {
         .set('Authorization', 'Bearer ' + tokens.pharm)
         .send({ items: [{ itemId: line.id, unitPrice: '17.53', pricingBatchId: batch.id }] })
         .expect(200);
+      expect(result.body.subtotal).toBe(subtotal);
+      if (qty === 30) {
+        const discounted = await request(server)
+          .post('/invoices/' + result.body.invoiceId + '/discount')
+          .set('Authorization', 'Bearer ' + tokens.pharm)
+          .send({ amount: '0.20', reason: 'Test discount' })
+          .expect(200);
+        expect(discounted.body.total).toBe('52.00');
+        const saved = await prisma.invoice.findUniqueOrThrow({
+          where: { id: result.body.invoiceId },
+        });
+        expect(saved.roundingAdjustment?.toFixed(2)).toBe('0.39');
+      }
       expect(result.body.total).toBe(expected);
       expect(result.body.items[0].quantity).toBe(invoiceQty);
       await pay('recep', result.body.invoiceId, { amount: expected, method: 'cash' }).expect(200);
@@ -791,6 +804,14 @@ describe('Pharmacy queue (e2e)', () => {
       packaging: { ...packaging, unitsPerPacket: 6 },
     }).expect(201);
     expect((await available()).body[0]).toMatchObject({ available: 117, packet: null });
+    // Two rows at 10.65 must collect 21, not 20 from truncating each row.
+    const multi = await seedPrescription(facilityId, patientId, dept.id, practitionerId, drug.id, {
+      visitNo: PREFIX + 'ROUND', visitStatus: 'arrived', status: 'active', drugs: ['Fixture A','Fixture B'],
+    });
+    const rows = await prisma.prescriptionItem.findMany({where:{prescriptionId:multi},select:{id:true}});
+    const combined = await billRx('pharm',multi,rows.map(row=>row.id),'10.65').expect(200);
+    expect(combined.body).toMatchObject({subtotal:'21.30',total:'21.00'});
+
   });
 
   it('serves approved available alternatives and lets only one bench dispense the last unit', async () => {

@@ -141,6 +141,7 @@ export const invoiceSummarySchema = z.object({
   subtotal: z.string(),
   discount: z.string(),
   discountReason: z.string().nullable(),
+  roundingAdjustment: z.string().nullable().optional(),
   total: z.string(),
   paidAmount: z.string(),
   currency: z.string(),

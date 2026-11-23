@@ -20,3 +20,11 @@ export const updateDiscountCeilingRequestSchema = z.object({
     .max(DISCOUNT_MAX_PERCENT_BOUNDS[1], 'Cannot exceed 100%.'),
 })
 export type UpdateDiscountCeilingRequest = z.infer<typeof updateDiscountCeilingRequestSchema>
+
+// Browser uploads are rasterized to a small square PNG before transport.
+export const hospitalLogoSchema = z.string().max(70000).regex(/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/)
+export const brandingSchema = z.object({name:z.string().nullable(), logo:hospitalLogoSchema.nullable()})
+export const updateBrandingSchema = z.object({
+  name:z.string().trim().min(1).max(160),
+  logo:hospitalLogoSchema.nullable().optional(),
+})

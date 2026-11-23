@@ -168,6 +168,7 @@ export class DispenseService {
       if (subtotal.gt('9999999999.99'))
         throw new BadRequestException('The total exceeds the invoice amount limit.');
 
+      const total = subtotal.floor();
       const invoiceNo = await this.sequence.next(facilityId, 'invoice_no', undefined, tx);
       const invoice = await tx.invoice.create({
         data: {
@@ -177,13 +178,20 @@ export class DispenseService {
           createdBy: userId,
           invoiceNo: invoiceNo.formatted,
           subtotal,
-          total: subtotal,
+          total,
+          roundingAdjustment: subtotal.minus(total),
           // A wholly free-issue sheet has nothing to pay, so it is born paid — the handover
           // gate below reads exactly this field, so a free sheet is never stuck behind a
           // payment that was never owed.
           paidAmount: ZERO,
-          status: subtotal.greaterThan(ZERO) ? 'issued' : 'paid',
-          items: { create: lines },
+          status: total.greaterThan(ZERO) ? 'issued' : 'paid',
+          items: {
+            create: lines.map((line) => ({
+              ...line,
+              isPaid: total.isZero(),
+              paidAt: total.isZero() ? new Date() : null,
+            })),
+          },
         },
         select: {
           id: true,

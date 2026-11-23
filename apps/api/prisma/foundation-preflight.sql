@@ -4,7 +4,7 @@ SELECT 'invoice_balance' AS issue, i.id
 FROM invoice i LEFT JOIN payment p ON p.invoice_id = i.id
 GROUP BY i.id
 HAVING i.paid_amount <> COALESCE(SUM(p.amount), 0)
-   OR i.total <> i.subtotal - i.discount OR i.paid_amount < 0 OR i.paid_amount > i.total
+   OR i.total <> i.subtotal - i.discount - COALESCE((to_jsonb(i)->>'rounding_adjustment')::numeric, 0) OR i.paid_amount < 0 OR i.paid_amount > i.total
    OR i.subtotal < 0 OR i.discount < 0 OR i.discount > i.subtotal;
 
 SELECT 'invoice_subtotal' AS issue, i.id FROM invoice i

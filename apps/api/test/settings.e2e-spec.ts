@@ -92,6 +92,31 @@ describe('Settings — discount ceiling (e2e)', () => {
     await app.close();
   });
 
+  it('lets an admin set the facility name and favicon, preserve it on rename, and remove it', async () => {
+    const logo =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAAAAADH8yjkAAAAIElEQVR4nO3BgQAAAADDoPlTX+AIVQEAAAAAAAAAAHQNJGAAAQbH8O4AAAAASUVORK5CYII=';
+    const change = (token: string, body: object) =>
+      request(server)
+        .patch('/settings/branding')
+        .set('Authorization', 'Bearer ' + token)
+        .send(body);
+    await change(receptionistToken, { name: 'Denied' }).expect(403);
+    await change(adminToken, {
+      name: 'Fixture Hospital',
+      logo: 'data:image/png;base64,YWJj',
+    }).expect(400);
+    await change(adminToken, { name: 'Fixture Hospital', logo }).expect(200);
+    await change(adminToken, { name: 'Renamed Hospital' }).expect(200);
+    const view = await request(server)
+      .get('/settings/branding')
+      .set('Authorization', 'Bearer ' + receptionistToken)
+      .expect(200);
+    expect(view.body).toEqual({ name: 'Renamed Hospital', logo });
+    const cleared = await change(adminToken, { name: 'Renamed Hospital', logo: null }).expect(200);
+    expect(cleared.body.logo).toBeNull();
+    await request(server).get('/settings/public-branding').expect(200);
+  });
+
   it('reads the default before anyone has ever set it', async () => {
     const res = await getCeiling(adminToken).expect(200);
     expect((res.body as DiscountCeilingResponse).maxPercent).toBe(DISCOUNT_MAX_PERCENT_DEFAULT);

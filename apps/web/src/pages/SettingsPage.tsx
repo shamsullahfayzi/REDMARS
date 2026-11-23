@@ -1,12 +1,20 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQueryClient, useMutation } from '@tanstack/react-query'
+import { brandingSchema } from '@redmars/shared'
+import { useBranding } from '@/hooks/useBranding'
+import { useAuth } from '@/auth/authContext'
+import { apiPatch } from '@/lib/api'
 import { Check } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useDiscountCeiling, useSetDiscountCeiling } from '@/hooks/useDiscountCeiling'
+import {
+  useDiscountCeiling,
+  useSetDiscountCeiling,
+} from '@/hooks/useDiscountCeiling'
 
 /**
  * Task 6b.1 — admin-only facility settings. One field today: the R10 discount ceiling,
@@ -33,18 +41,25 @@ export function SettingsPage() {
     event.preventDefault()
     setSaved(false)
     const maxPercent = Number(value)
-    if (!Number.isFinite(maxPercent) || maxPercent < 0 || maxPercent > 100) return
+    if (!Number.isFinite(maxPercent) || maxPercent < 0 || maxPercent > 100)
+      return
     setCeiling.mutate(maxPercent, { onSuccess: () => setSaved(true) })
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('nav.settings')} description={t('settings.subtitle')} />
+      <PageHeader
+        title={t('nav.settings')}
+        description={t('settings.subtitle')}
+      />
 
+      <HospitalBranding />
       <Card className="max-w-lg space-y-4 p-6">
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
           <div className="space-y-1.5">
-            <Label htmlFor="discountCeiling">{t('settings.discountCeiling.label')}</Label>
+            <Label htmlFor="discountCeiling">
+              {t('settings.discountCeiling.label')}
+            </Label>
             <div className="flex items-center gap-2">
               <Input
                 id="discountCeiling"
@@ -59,15 +74,22 @@ export function SettingsPage() {
               />
               <span className="text-sm text-muted-foreground">%</span>
             </div>
-            <p className="text-sm text-muted-foreground">{t('settings.discountCeiling.hint')}</p>
+            <p className="text-sm text-muted-foreground">
+              {t('settings.discountCeiling.hint')}
+            </p>
           </div>
 
           {setCeiling.isError && (
-            <p className="text-sm text-destructive">{t('settings.discountCeiling.error')}</p>
+            <p className="text-sm text-destructive">
+              {t('settings.discountCeiling.error')}
+            </p>
           )}
 
           <div className="flex items-center gap-3">
-            <Button type="submit" disabled={setCeiling.isPending || ceilingQuery.isPending}>
+            <Button
+              type="submit"
+              disabled={setCeiling.isPending || ceilingQuery.isPending}
+            >
               {setCeiling.isPending ? t('settings.saving') : t('settings.save')}
             </Button>
             {saved && !setCeiling.isPending && (
@@ -80,5 +102,139 @@ export function SettingsPage() {
         </form>
       </Card>
     </div>
+  )
+}
+
+async function resizeLogo(file: File) {
+  if (
+    !['image/png', 'image/jpeg', 'image/webp'].includes(file.type) ||
+    file.size > 5 * 1024 * 1024
+  )
+    throw new Error('invalid logo')
+  const image = await createImageBitmap(file)
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 96
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Canvas unavailable')
+    const scale = 96 / Math.max(image.width, image.height)
+    const w = image.width * scale,
+      h = image.height * scale
+    ctx.drawImage(image, (96 - w) / 2, (96 - h) / 2, w, h)
+    return canvas.toDataURL('image/png')
+  } finally {
+    image.close()
+  }
+}
+
+function HospitalBranding() {
+  const { t } = useTranslation()
+  const query = useBranding()
+  const { user } = useAuth()
+  const client = useQueryClient()
+  const [name, setName] = useState<string>()
+  const [logo, setLogo] = useState<string | null>()
+  const [processing, setProcessing] = useState(false)
+  const [invalid, setInvalid] = useState(false)
+  const save = useMutation({
+    mutationFn: () =>
+      apiPatch(
+        '/settings/branding',
+        { name: (name ?? query.data?.name ?? '').trim(), logo },
+        brandingSchema,
+      ),
+    onSuccess: (data) => {
+      client.setQueryData(['branding', user?.facilityId], data)
+      void client.invalidateQueries({ queryKey: ['branding', 'public'] })
+      setName(undefined)
+      setLogo(undefined)
+    },
+  })
+  const preview = logo === undefined ? query.data?.logo : logo
+  return (
+    <Card className="max-w-lg space-y-4 p-6">
+      <h2 className="font-semibold">{t('settings.branding.title')}</h2>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          save.mutate()
+        }}
+      >
+        <fieldset
+          disabled={!query.data || save.isPending || processing}
+          className="space-y-3"
+        >
+          <Label htmlFor="hospital-name">{t('settings.branding.name')}</Label>
+          <Input
+            id="hospital-name"
+            maxLength={160}
+            required
+            value={name ?? query.data?.name ?? ''}
+            onChange={(e) => {
+              save.reset()
+              setName(e.target.value)
+            }}
+          />
+          <Label htmlFor="hospital-logo">{t('settings.branding.logo')}</Label>
+          <div className="flex items-center gap-3">
+            <img
+              className="size-12 object-contain"
+              alt=""
+              src={preview ?? '/favicon.svg'}
+            />
+            <Input
+              id="hospital-logo"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ''
+                if (!file) return
+                setInvalid(false)
+                save.reset()
+                setProcessing(true)
+                try {
+                  setLogo(await resizeLogo(file))
+                } catch {
+                  setInvalid(true)
+                } finally {
+                  setProcessing(false)
+                }
+              }}
+            />
+          </div>
+          {preview && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                save.reset()
+                setInvalid(false)
+                setLogo(null)
+              }}
+            >
+              {t('settings.branding.remove')}
+            </Button>
+          )}
+          <div>
+            <Button
+              type="submit"
+              disabled={
+                !(name ?? query.data?.name)?.trim() ||
+                (name === undefined && logo === undefined)
+              }
+            >
+              {t('settings.save')}
+            </Button>
+          </div>
+        </fieldset>
+        {invalid && <p role="alert">{t('settings.branding.invalid')}</p>}
+        {(save.isError || query.isError) && (
+          <p role="alert">{t('settings.branding.error')}</p>
+        )}
+        {save.isSuccess && <p role="status">{t('settings.saved')}</p>}
+      </form>
+    </Card>
   )
 }

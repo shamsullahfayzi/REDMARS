@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from 'react-router'
+import { DocumentBranding } from '@/hooks/useBranding'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { FirstRunLanguagePicker } from '@/components/FirstRunLanguagePicker'
 import { getStoredLanguage } from '@/i18n/languages'
@@ -19,18 +20,12 @@ export function AppRoot() {
   // the chosen theme applies before the user is even signed in.
   return (
     <ThemeProvider>
-      {!hasChosen ? (
-        <FirstRunLanguagePicker onChosen={() => setHasChosen(true)} />
-      ) : (
-        <QueryClientProvider client={queryClient}>
-          {/* AuthProvider above the router: the route components (ProtectedRoute,
-              LoginPage, RootLayout) all read useAuth, so the provider must sit over
-              RouterProvider, not inside a route. */}
-          <AuthProvider>
-            <RouterProvider router={router} />
-          </AuthProvider>
-        </QueryClientProvider>
-      )}
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <DocumentBranding />
+          {hasChosen ? <RouterProvider router={router} /> : <FirstRunLanguagePicker onChosen={() => setHasChosen(true)} />}
+        </AuthProvider>
+      </QueryClientProvider>
     </ThemeProvider>
   )
 }

@@ -127,6 +127,9 @@ export function   InvoiceReceipt({
 
       {/* Totals, aligned right like the old bill's TOTAL / PAID block. */}
       <div className="ms-auto max-w-xs space-y-1 border-t border-border pt-2">
+        {invoice.roundingAdjustment && invoice.roundingAdjustment !== '0.00' && (
+          <TotalLine label={t('pharmacy.rounding')} value={`−${invoice.roundingAdjustment}`} currency={invoice.currency} />
+        )}
         {invoice.discount !== '0.00' && (
           <TotalLine
             label={
@@ -140,7 +143,7 @@ export function   InvoiceReceipt({
         )}
         <TotalLine
           label={t('reception.receipt.total')}
-          value={invoice.total}
+          value={invoice.roundingAdjustment != null ? invoice.total.replace(/\.00$/, '') : invoice.total}
           currency={invoice.currency}
           strong
         />

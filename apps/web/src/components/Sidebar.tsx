@@ -5,6 +5,7 @@ import { NAV_GROUPS, navItemsForRoles, sectionsForRoles, type NavItem } from '@/
 import { NAV_ICONS, SECTION_ICONS } from '@/components/navIcons'
 import { Badge } from '@/components/ui/badge'
 import { useCollectionsList } from '@/hooks/useCollections'
+import { useBranding } from '@/hooks/useBranding'
 import { getCollectionsLastSeen } from '@/lib/collectionsSeen'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +28,7 @@ interface SidebarProps {
 
 export function Sidebar({ roles, enabledModules, open, onClose }: SidebarProps) {
   const { t } = useTranslation()
+  const {data:branding}=useBranding()
   const items = navItemsForRoles(roles, enabledModules)
   const location = useLocation()
 
@@ -48,10 +50,10 @@ export function Sidebar({ roles, enabledModules, open, onClose }: SidebarProps) 
         )}
       >
         <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
-          <div className="flex size-7 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-            R
+          <img src={branding?.logo ?? '/favicon.svg'} alt="" className="size-8 shrink-0 object-contain" />
+          <div className="min-w-0"><span className="font-semibold tracking-tight">REDMARS</span>
+            {branding?.name && <p className="truncate text-xs text-muted-foreground" title={branding.name}>{branding.name}</p>}
           </div>
-          <span className="font-semibold tracking-tight">{t('app.name')}</span>
         </div>
 
         <nav className="flex-1 space-y-5 overflow-y-auto p-3">
