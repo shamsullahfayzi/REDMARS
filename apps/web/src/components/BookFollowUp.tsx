@@ -37,8 +37,10 @@ export function BookFollowUp({
   patientId,
   defaultDepartmentId,
   lockToSelf = false,
+  compact = false,
 }: {
-  patientId: string
+  compact?: boolean
+  patientId: string | undefined
   defaultDepartmentId?: string
   lockToSelf?: boolean
 }) {
@@ -64,6 +66,7 @@ export function BookFollowUp({
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
+    if (!patientId) return
     setError(null)
 
     const parsed = createAppointmentRequestSchema.safeParse({
@@ -88,12 +91,12 @@ export function BookFollowUp({
   }
 
   return (
-    <Card className="max-w-lg space-y-4 p-6">
+    <Card className={compact ? "desk-appointment desk-panel" : "max-w-lg space-y-4 p-6"}>
       <div className="flex items-center gap-2">
         <CalendarPlus className="size-4 text-muted-foreground" aria-hidden />
         <h2 className="font-medium text-foreground">{t('appointments.book.title')}</h2>
       </div>
-      <p className="text-sm text-muted-foreground">{t('appointments.book.hint')}</p>
+      <p className="text-sm text-muted-foreground">{t(!patientId ? 'reception.bookingPatient' : 'appointments.book.hint')}</p>
 
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div className="space-y-1.5">
@@ -102,6 +105,7 @@ export function BookFollowUp({
             <span className="ms-0.5 text-destructive">*</span>
           </Label>
           <Input
+            disabled={!patientId}
             id="apptDate"
             type="date"
             dir="ltr"
@@ -116,6 +120,7 @@ export function BookFollowUp({
             <span className="ms-0.5 text-destructive">*</span>
           </Label>
           <Select
+            disabled={!patientId}
             id="apptDepartment"
             value={departmentId}
             onChange={(e) => {
@@ -157,6 +162,7 @@ export function BookFollowUp({
         <div className="space-y-1.5">
           <Label htmlFor="apptReason">{t('appointments.fields.reason')}</Label>
           <Input
+            disabled={!patientId}
             id="apptReason"
             value={reason}
             placeholder={t('appointments.book.reasonPlaceholder')}
@@ -175,7 +181,7 @@ export function BookFollowUp({
           </p>
         )}
 
-        <Button type="submit" disabled={create.isPending || !scheduledOn || !departmentId}>
+        <Button type="submit" disabled={!patientId || create.isPending || !scheduledOn || !departmentId}>
           {create.isPending ? t('appointments.book.saving') : t('appointments.book.submit')}
         </Button>
       </form>

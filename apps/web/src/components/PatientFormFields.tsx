@@ -85,6 +85,7 @@ interface PatientFormFieldsProps {
   belowPhone?: ReactNode
   autoFocus?: boolean
   /** Open the drawer from the start, e.g. when editing a record that uses those fields. */
+  compact?: boolean
   defaultShowMore?: boolean
 }
 
@@ -95,6 +96,7 @@ export function PatientFormFields({
   belowPhone,
   autoFocus = false,
   defaultShowMore = false,
+  compact = false,
 }: PatientFormFieldsProps) {
   const { t } = useTranslation()
   const [showMore, setShowMore] = useState(defaultShowMore)
@@ -105,7 +107,7 @@ export function PatientFormFields({
   if (errors.dateOfBirth && !showMore) setShowMore(true)
 
   return (
-    <div className="@container">
+    <div className={compact ? "@container desk-fields" : "@container"}>
     <div className="grid content-start gap-x-4 gap-y-4 @lg:grid-cols-2">
       <Field id="firstName" label={t('patients.fields.firstName')} error={errors.firstName} required>
         <Input

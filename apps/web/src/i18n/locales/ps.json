@@ -776,6 +776,13 @@
     }
   },
   "reception": {
+    "searchServices": "خدمتونه ولټوئ",
+    "registrationError": "ناروغ ثبت نه شو. معلومات وګورئ او بیا هڅه وکړئ.",
+    "clearDepartment": "څانګه پاکه کړئ",
+    "clearDoctor": "ډاکټر پاک کړئ",
+    "checkInMode": "نوملیکنه",
+    "summary": "لنډیز",
+    "bookingPatient": "د نوبت د تایید لپاره ناروغ ومومئ یا یې ثبت کړئ.",
     "title": "پذیرش",
     "subtitle": "ثبت، د لیدنې پیل او د پیسو اخیستل — په یوه ځل خوندي کولو.",
     "steps": {

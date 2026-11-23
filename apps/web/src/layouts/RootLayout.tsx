@@ -22,7 +22,7 @@ export function RootLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex min-h-svh bg-background text-foreground">
+    <div className="app-shell flex min-h-svh bg-background text-foreground">
       <Sidebar
         roles={roles}
         enabledModules={enabledModules}

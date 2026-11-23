@@ -1,0 +1,69 @@
+/* The desktop shell gives the desk the space between the app header and the
+   bottom edge. Only catalogs, optional details and exceptional messages overflow. */
+.reception-desk, .desk-clinical, .desk-grid, .desk-booking {
+  display: grid;
+  gap: .75rem;
+  min-inline-size: 0;
+}
+.desk-panel {
+  min-inline-size: 0;
+  padding: .875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, .75rem);
+  background: var(--card);
+}
+.desk-patient, .desk-services, .desk-review, .desk-appointment {
+  min-block-size: 0;
+}
+.desk-select {
+  width: 100%;
+  height: 2rem;
+  padding-inline: .5rem;
+  border: 1px solid var(--input);
+  border-radius: .45rem;
+  background: var(--background);
+  font-size: .875rem;
+}
+.reception-desk :is(button, select, input):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.desk-confirm { margin-top: .75rem; }
+.desk-service-list { max-height: 16rem; overflow-y: auto; }
+.desk-appointment form { display: grid; align-content: start; gap: .75rem; }
+.desk-appointment form > * { margin: 0; }
+.desk-appointment > p { margin-block: .75rem; }
+.desk-fields > .grid { gap: .6rem; }
+.desk-fields input { height: 2rem; }
+.desk-fields [role=group] button { height: 1.875rem; padding-inline: .5rem; }
+.desk-fields [role=group] { gap: .25rem; }
+@container (min-width: 15rem) {
+  .desk-fields > .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .desk-fields > .grid > :is(:has([role=group]), :has(#ageYears), :last-child) { grid-column: 1 / -1; }
+}
+@media screen and (min-width: 1024px) {
+  .app-shell:has(.reception-desk) { height: 100dvh; }
+  .app-shell:has(.reception-desk) > div > header { flex-shrink: 0; }
+  main:has(> div > .reception-desk) { min-height: 0; padding: 1rem; }
+  main > div:has(> .reception-desk) { height: 100%; max-width: none; }
+  .reception-desk { height: 100%; grid-template-rows: auto minmax(0, 1fr); }
+  .desk-grid, .desk-booking { min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  .desk-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, .95fr); }
+  .desk-booking { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .desk-booking fieldset, .desk-booking .desk-patient { height: 100%; }
+  .desk-patient, .desk-review, .desk-appointment { overflow-y: auto; }
+  .desk-clinical { grid-template-rows: auto minmax(0, 1fr); }
+  .desk-services { display: flex; flex-direction: column; }
+  .desk-services > :not(.desk-service-list) { flex-shrink: 0; }
+  .desk-service-list { min-height: 0; max-height: none; }
+  .desk-summary { display: grid; grid-template-rows: minmax(0, 1fr) auto; border-top: 3px solid var(--primary); }
+  .desk-review { padding: 2px; }
+  .desk-confirm { border-top: 1px solid var(--border); padding-top: .75rem; }
+  .desk-appointment form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .desk-appointment form > :is(button, p) { grid-column: 1 / -1; }
+}
+
+@media screen and (max-width: 639px) {
+  .app-shell:has(.reception-desk) > div > header { height: auto; min-height: 3.5rem; }
+  .app-shell:has(.reception-desk) > div > header > div { flex-wrap: wrap; justify-content: end; padding-block: .25rem; }
+}

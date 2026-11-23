@@ -776,6 +776,13 @@
     }
   },
   "reception": {
+    "searchServices": "جستجوی خدمات",
+    "registrationError": "ثبت بیمار انجام نشد. مشخصات را بررسی و دوباره تلاش کنید.",
+    "clearDepartment": "پاک کردن بخش",
+    "clearDoctor": "پاک کردن داکتر",
+    "checkInMode": "پذیرش",
+    "summary": "خلاصه",
+    "bookingPatient": "برای تأیید نوبت، بیمار را پیدا یا ثبت کنید.",
     "title": "پذیرش",
     "subtitle": "ثبت، شروع مراجعه و دریافت پول — با یک ذخیره.",
     "steps": {

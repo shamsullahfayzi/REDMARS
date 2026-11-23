@@ -776,6 +776,13 @@
     }
   },
   "reception": {
+    "searchServices": "Search services",
+    "registrationError": "Could not register the patient. Please review the details and try again.",
+    "clearDepartment": "Clear department",
+    "clearDoctor": "Clear doctor",
+    "checkInMode": "Check in",
+    "summary": "Summary",
+    "bookingPatient": "Find or register the patient to confirm this appointment.",
     "title": "Reception",
     "subtitle": "Register, start the visit and take payment — one save.",
     "steps": {
