@@ -8,8 +8,14 @@ import type {
   PharmacyQueueItem,
   PharmacyQueueResponse,
 } from '@redmars/shared';
-import { ALLERGY_SEVERITY_RANK, currentAgeYears } from '@redmars/shared';
+import {
+  ALLERGY_SEVERITY_RANK,
+  currentAgeYears,
+  receiptPackSchema,
+  unitsPerPack,
+} from '@redmars/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { facilityDateString } from '../../common/facility-time';
 import { money } from '../invoice/invoice.service';
 
 /** A display name from its parts, skipping the blanks. */
@@ -219,7 +225,21 @@ export class PharmacyService {
             quantity: true,
             instructions: true,
             allergyOverrideReason: true,
-            drug: { select: { sellPrice: true } },
+            drug: {
+              select: {
+                sellPrice: true,
+                stockBatches: {
+                  where: {
+                    quantity: { gt: 0 },
+                    quarantined: false,
+                    expiresOn: { gte: new Date(facilityDateString()) },
+                  },
+                  orderBy: [{ expiresOn: 'asc' }, { id: 'asc' }],
+                  take: 1,
+                  select: { id: true, packaging: true },
+                },
+              },
+            },
           },
         },
       },
@@ -314,18 +334,32 @@ export class PharmacyService {
       practitionerName: fullName([row.practitioner.firstName, row.practitioner.lastName]),
       advice: row.advice,
       interactionAckReason: row.interactionAckReason,
-      items: row.items.map((item) => ({
-        id: item.id,
-        drugName: item.drugNameAtTime,
-        dose: item.dose,
-        frequency: item.frequency,
-        duration: item.duration,
-        route: item.route,
-        quantity: item.quantity,
-        instructions: item.instructions,
-        allergyOverrideReason: item.allergyOverrideReason,
-        suggestedUnitPrice: item.drug.sellPrice != null ? money(item.drug.sellPrice) : null,
-      })),
+      items: row.items.map((item) => {
+        const first = item.drug.stockBatches[0];
+        const pack = first?.packaging ? receiptPackSchema.parse(first.packaging) : null;
+        return {
+          suggestedPack: pack
+            ? {
+                batchId: first.id,
+                basis: pack.sellBy,
+                size: unitsPerPack(pack.sellBy, pack),
+                price: pack.sellPrice,
+                unitName: pack.unitName,
+                unitsPerPacket: pack.unitsPerPacket,
+              }
+            : null,
+          id: item.id,
+          drugName: item.drugNameAtTime,
+          dose: item.dose,
+          frequency: item.frequency,
+          duration: item.duration,
+          route: item.route,
+          quantity: item.quantity,
+          instructions: item.instructions,
+          allergyOverrideReason: item.allergyOverrideReason,
+          suggestedUnitPrice: item.drug.sellPrice != null ? money(item.drug.sellPrice) : null,
+        };
+      }),
       allergies,
       bill,
     };

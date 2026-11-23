@@ -13,7 +13,8 @@ import type {
   ReturnMedicineRequest,
   ReturnMedicineResponse,
 } from '@redmars/shared';
-import { facilityDayBounds } from '../../common/facility-time';
+import { priceForUnits, receiptPackSchema, unitsPerPack } from '@redmars/shared';
+import { facilityDayBounds, facilityDateString } from '../../common/facility-time';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
 
@@ -100,9 +101,10 @@ export class DispenseService {
 
       // The priced set the pharmacist sent must be exactly the sheet's own items — not a
       // subset, not an extra line smuggled in from somewhere else.
-      const priceByItemId = new Map(input.items.map((line) => [line.itemId, line.unitPrice]));
+      const priceByItemId = new Map(input.items.map((line) => [line.itemId, line]));
       const sheetItemIds = new Set(prescription.items.map((item) => item.id));
       const pricedMatchesSheet =
+        input.items.length === sheetItemIds.size &&
         priceByItemId.size === sheetItemIds.size &&
         [...sheetItemIds].every((id) => priceByItemId.has(id));
       if (!pricedMatchesSheet) {
@@ -114,13 +116,48 @@ export class DispenseService {
 
       // Priced at what the pharmacist typed, not the formulary — quantity falls back to one
       // when the prescriber left it blank.
+      const pricingLots = input.items.some((line) => line.pricingBatchId)
+        ? await tx.pharmacyBatch.findMany({
+            where: {
+              drugId: { in: prescription.items.map((item) => item.drugId) },
+              drug: { facilityId },
+              quantity: { gt: 0 },
+              quarantined: false,
+              expiresOn: { gte: new Date(facilityDateString()) },
+            },
+            distinct: ['drugId'],
+            orderBy: [{ drugId: 'asc' }, { expiresOn: 'asc' }, { id: 'asc' }],
+            select: { id: true, drugId: true, packaging: true },
+          })
+        : [];
+      const lotByDrug = new Map(pricingLots.map((lot) => [lot.drugId, lot]));
       const lines = prescription.items.map((item) => {
-        const quantity = item.quantity ?? 1;
-        const unitPrice = new Prisma.Decimal(priceByItemId.get(item.id)!);
+        const units = item.quantity ?? 1;
+        const quote = priceByItemId.get(item.id)!;
+        let description = item.drugNameAtTime;
+        let quantity = units;
+        let unitPrice = new Prisma.Decimal(quote.unitPrice);
+        if (quote.pricingBatchId) {
+          const lot = lotByDrug.get(item.drugId);
+          if (!lot?.packaging || lot.id !== quote.pricingBatchId)
+            throw new ConflictException(
+              'The pricing batch changed. Reopen the prescription to refresh prices.',
+            );
+          const pack = receiptPackSchema.parse(lot.packaging);
+          const size = unitsPerPack(pack.sellBy, pack);
+          description += ` (${units} × ${pack.unitName}, ${quote.unitPrice} AFN/${pack.sellBy} of ${size})`;
+          // Invoice quantities are whole numbers. For a broken pack invoice the exact
+          // dispensed portion as one line, keeping the quoted pack rate in its description.
+          if (units % size === 0) quantity = units / size;
+          else {
+            quantity = 1;
+            unitPrice = new Prisma.Decimal(priceForUnits(quote.unitPrice, size, units));
+          }
+        }
         return {
           refType: 'prescription_item',
           refId: item.id,
-          description: item.drugNameAtTime,
+          description,
           quantity,
           unitPrice,
           total: unitPrice.mul(quantity),
@@ -128,6 +165,8 @@ export class DispenseService {
       });
       await allocateStock(tx, facilityId, prescription.items);
       const subtotal = lines.reduce((sum, line) => sum.add(line.total), ZERO);
+      if (subtotal.gt('9999999999.99'))
+        throw new BadRequestException('The total exceeds the invoice amount limit.');
 
       const invoiceNo = await this.sequence.next(facilityId, 'invoice_no', undefined, tx);
       const invoice = await tx.invoice.create({
@@ -348,6 +387,7 @@ export class DispenseService {
             drugId: source.drugId,
             supplierId: source.supplierId,
             lot: source.lot,
+            ...(source.packaging ? { packaging: receiptPackSchema.parse(source.packaging) } : {}),
             expiresOn: source.expiresOn,
             location: source.location,
             quarantined: true,

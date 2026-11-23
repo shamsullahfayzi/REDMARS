@@ -1000,6 +1000,7 @@
       "drugs": "دواها",
       "prescriber": "تجویزکننده",
       "qty": "تعداد",
+      "sellingPrice": "قیمت فروش",
       "unitPrice": "نرخ واحد",
       "lineTotal": "مجموع قلم"
     },

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { allergySeveritySchema } from './allergy.js'
+import { packBasisSchema } from './inventory.js'
 import { moneySchema } from './reception.js'
 
 /**
@@ -96,6 +97,10 @@ export const pharmacyDrugLineSchema = z.object({
    * pre-fill.
    */
   suggestedUnitPrice: z.string().nullable(),
+  suggestedPack: z.object({
+    batchId: z.uuid(), basis: packBasisSchema, price: moneySchema, size: z.int().positive(),
+    unitName: z.string(), unitsPerPacket: z.int().positive(),
+  }).nullable().optional(),
 })
 export type PharmacyDrugLine = z.infer<typeof pharmacyDrugLineSchema>
 
@@ -180,6 +185,7 @@ export const billPrescriptionRequestSchema = z.object({
       z.object({
         itemId: z.uuid(),
         unitPrice: moneySchema,
+        pricingBatchId: z.uuid().optional(),
       }),
     )
     .min(1),

@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { intakeSchema, stockSettingsSchema } from '@redmars/shared';
+import { intakeSchema, stockSettingsSchema, receiptPackSchema } from '@redmars/shared';
 import type { z } from 'zod';
 import { facilityDateString } from '../../common/facility-time';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -56,15 +56,32 @@ export class InventoryService {
     for (const drug of drugs)
       for (const pair of drug.alternatives) requested.add(pair.alternative.id);
     const balances = await this.prisma.pharmacyBatch.groupBy({
-      by: ['drugId'],
+      by: ['drugId', 'packaging'],
       where: { drugId: { in: [...requested] }, drug: { facilityId }, ...usable(date) },
       _sum: { quantity: true },
     });
-    const units = new Map(balances.map((b) => [b.drugId, b._sum.quantity ?? 0]));
+    const units = new Map<string, number>();
+    const packets = new Map<string, { size: number; unitName: string } | null>();
+    for (const row of balances) {
+      units.set(row.drugId, (units.get(row.drugId) ?? 0) + (row._sum.quantity ?? 0));
+      const pack = row.packaging ? receiptPackSchema.parse(row.packaging) : null;
+      const prior = packets.get(row.drugId);
+      if (
+        !pack ||
+        (prior !== undefined &&
+          (prior?.size !== pack.unitsPerPacket ||
+            prior.unitName.toLowerCase() !== pack.unitName.toLowerCase()))
+      ) {
+        packets.set(row.drugId, null);
+      } else {
+        packets.set(row.drugId, { size: pack.unitsPerPacket, unitName: pack.unitName });
+      }
+    }
     return drugs.map((d) => ({
       id: d.id,
       reorderThreshold: d.reorderThreshold,
       available: units.get(d.id) ?? 0,
+      packet: packets.get(d.id) ?? null,
       alternatives: d.alternatives
         .map(({ alternative: a }) => ({
           id: a.id,
@@ -106,6 +123,7 @@ export class InventoryService {
       drugs: drugs.map((d) => ({
         id: d.id,
         name: name(d),
+        dispensingUnit: d.dispensingUnit,
         reorderThreshold: d.reorderThreshold,
         available: total(d.stockBatches.filter((b) => !b.quarantined && b.expiresOn >= date)),
         alternativeIds: d.alternatives.map((a) => a.alternativeId),
@@ -117,6 +135,7 @@ export class InventoryService {
           quantity: b.quantity,
           quarantined: b.quarantined,
           supplier: b.supplier?.name ?? null,
+          packaging: b.packaging ? receiptPackSchema.parse(b.packaging) : null,
         })),
       })),
     };
@@ -128,7 +147,7 @@ export class InventoryService {
       throw new BadRequestException('Invalid history cursor');
     const rows = await this.prisma.pharmacyMovement.findMany({
       where,
-      include: { batch: { select: { lot: true, location: true } } },
+      include: { batch: { select: { lot: true, location: true, packaging: true } } },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: 51,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -142,6 +161,10 @@ export class InventoryService {
         quantity: m.quantity,
         at: m.createdAt.toISOString(),
         reason: m.reason,
+        packaging:
+          m.kind === 'receipt' && m.batch.packaging
+            ? receiptPackSchema.parse(m.batch.packaging)
+            : null,
       })),
       next: rows.length > 50 ? rows[49].id : null,
     };
@@ -164,7 +187,9 @@ export class InventoryService {
           prior.lot === body.lot &&
           prior.location === body.location &&
           day(prior.expiresOn) === body.expiresOn &&
-          prior.movements[0]?.quantity === body.quantity
+          prior.movements[0]?.quantity === body.quantity &&
+          JSON.stringify(prior.packaging ? receiptPackSchema.parse(prior.packaging) : null) ===
+            JSON.stringify(body.packaging ?? null)
         )
           return;
         throw new ConflictException('Receipt reference already used');
@@ -176,6 +201,19 @@ export class InventoryService {
         }))
       )
         throw new BadRequestException('Unknown supplier');
+      // Package sizes may vary by batch, but every prescription and stock balance
+      // for this formulary entry must count the same physical dispensing unit.
+      if (body.packaging) {
+        const unit = body.packaging.unitName;
+        if (drug.dispensingUnit && drug.dispensingUnit.toLowerCase() !== unit.toLowerCase()) {
+          throw new BadRequestException(
+            'This medication is counted in ' + drug.dispensingUnit + '.',
+          );
+        }
+        if (!drug.dispensingUnit) {
+          await tx.drug.update({ where: { id: drug.id }, data: { dispensingUnit: unit } });
+        }
+      }
       const batch = await tx.pharmacyBatch.create({
         data: { ...body, expiresOn: new Date(body.expiresOn) },
       });

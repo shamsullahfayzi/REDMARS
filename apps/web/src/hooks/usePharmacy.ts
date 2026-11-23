@@ -76,6 +76,9 @@ export function useBillPrescription() {
       prescriptionId: string
       body: BillPrescriptionRequest
     }) => apiPost(`/pharmacy/prescriptions/${prescriptionId}/bill`, body, dispenseResponseSchema),
+    onError: (_error, { prescriptionId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['pharmacy', 'prescription', prescriptionId] })
+    },
     onSuccess: (_data, { prescriptionId }) => {
       void queryClient.invalidateQueries({ queryKey: ['pharmacy', 'prescription', prescriptionId] })
       void queryClient.invalidateQueries({ queryKey: ['invoices'] })

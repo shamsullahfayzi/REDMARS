@@ -691,6 +691,108 @@ describe('Pharmacy queue (e2e)', () => {
     expect(again.code).toBe('already_returned');
   });
 
+  it('receives boxes, quotes packets, bills the exact prescribed units and retains the purchase details', async () => {
+    const drug = await prisma.drug.create({
+      data: { facilityId, code: PREFIX + 'PACK', genericName: 'Pack fixture' },
+    });
+    const dept = await prisma.department.findFirstOrThrow({ where: { facilityId } });
+    const packaging = {
+      unitName: 'tablet',
+      unitsPerPacket: 10,
+      packetsPerBox: 5,
+      receivedAs: 'box',
+      receivedCount: 2,
+      purchasePrice: '60.00',
+      sellBy: 'packet',
+      sellPrice: '17.53',
+    };
+    const body = {
+      drugId: drug.id,
+      receiptKey: crypto.randomUUID(),
+      supplierId: null,
+      location: 'Counter',
+      lot: 'PK1',
+      expiresOn: '2099-05-01',
+      quantity: 100,
+      packaging,
+    };
+    const root = '/pharmacy/inventory';
+    const receive = (data: object) =>
+      request(server)
+        .post(root + '/receipts')
+        .set('Authorization', 'Bearer ' + tokens.pharm)
+        .send(data);
+    await receive({ ...body, quantity: 2 }).expect(400);
+    await receive(body).expect(201);
+    await receive(body).expect(201);
+    await receive({ ...body, packaging: { ...packaging, purchasePrice: '90.00' } }).expect(409);
+    await receive({
+      ...body,
+      receiptKey: crypto.randomUUID(),
+      packaging: { ...packaging, unitName: 'bottle' },
+    }).expect(400);
+    const batch = await prisma.pharmacyBatch.findUniqueOrThrow({
+      where: { receiptKey: body.receiptKey },
+    });
+    const available = () =>
+      request(server)
+        .get(root + '/availability?ids=' + drug.id)
+        .set('Authorization', 'Bearer ' + tokens.doctor)
+        .expect(200);
+    expect((await available()).body[0]).toMatchObject({
+      available: 100,
+      packet: { size: 10, unitName: 'tablet' },
+    });
+    expect(JSON.stringify((await available()).body)).not.toContain('Price');
+    for (const [qty, expected, invoiceQty] of [
+      [30, '52.59', 3],
+      [13, '22.79', 1],
+    ] as const) {
+      const rx = await seedPrescription(facilityId, patientId, dept.id, practitionerId, drug.id, {
+        visitNo: PREFIX + 'PACK' + qty,
+        visitStatus: 'arrived',
+        status: 'active',
+        drugs: ['Pack fixture'],
+      });
+      const line = await prisma.prescriptionItem.findFirstOrThrow({
+        where: { prescriptionId: rx },
+      });
+      await prisma.prescriptionItem.update({ where: { id: line.id }, data: { quantity: qty } });
+      const view = await detail('pharm', rx).expect(200);
+      expect(view.body.items[0].suggestedPack).toMatchObject({
+        size: 10,
+        basis: 'packet',
+        price: '17.53',
+        batchId: batch.id,
+      });
+      const result = await request(server)
+        .post('/pharmacy/prescriptions/' + rx + '/bill')
+        .set('Authorization', 'Bearer ' + tokens.pharm)
+        .send({ items: [{ itemId: line.id, unitPrice: '17.53', pricingBatchId: batch.id }] })
+        .expect(200);
+      expect(result.body.total).toBe(expected);
+      expect(result.body.items[0].quantity).toBe(invoiceQty);
+      await pay('recep', result.body.invoiceId, { amount: expected, method: 'cash' }).expect(200);
+      await handover('pharm', rx).expect(200);
+    }
+    expect((await available()).body[0].available).toBe(57);
+    const history = await request(server)
+      .get(root + '/drugs/' + drug.id + '/movements')
+      .set('Authorization', 'Bearer ' + tokens.pharm)
+      .expect(200);
+    expect(
+      history.body.movements.find((m: { kind: string }) => m.kind === 'receipt').packaging,
+    ).toEqual(packaging);
+    await receive({
+      ...body,
+      quantity: 60,
+      receiptKey: crypto.randomUUID(),
+      lot: 'PK2',
+      packaging: { ...packaging, unitsPerPacket: 6 },
+    }).expect(201);
+    expect((await available()).body[0]).toMatchObject({ available: 117, packet: null });
+  });
+
   it('serves approved available alternatives and lets only one bench dispense the last unit', async () => {
     await seedActor('director', 'management');
     const root = '/pharmacy/inventory';

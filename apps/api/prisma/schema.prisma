@@ -1700,6 +1700,7 @@ model Template {
 /// Deliberately separate from pharmacy stock (batches, quantities) — that's v2,
 /// and keeping them apart is what lets the pharmacy module ship standalone later.
 model Drug {
+  dispensingUnit String? @map("dispensing_unit")
   reorderThreshold Int @default(0) @map("reorder_threshold")
   stockBatches PharmacyBatch[]
   alternatives PharmacyAlternative[] @relation("alternativeSource")
@@ -3225,6 +3226,8 @@ model HrNotification {
 }
 
 model PharmacyBatch {
+  /// Receipt snapshot: physical packaging and the quoted AFN purchase and retail rates.
+  packaging Json?
   id String @id @default(uuid())
   drugId String @map("drug_id")
   drug Drug @relation(fields: [drugId], references: [id], onDelete: Restrict)

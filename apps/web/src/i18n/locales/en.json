@@ -1000,6 +1000,7 @@
       "drugs": "Drugs",
       "prescriber": "Prescriber",
       "qty": "Qty",
+      "sellingPrice": "Selling price",
       "unitPrice": "Unit price",
       "lineTotal": "Line total"
     },

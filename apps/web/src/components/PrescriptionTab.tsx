@@ -13,6 +13,7 @@ import {
   isPrescriptionTemplate,
   isVisitOpen,
   matchCode,
+  packetEquivalent,
   savePrescriptionRequestSchema,
   type AllergyConflict,
   type DrugSummary,
@@ -521,7 +522,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold text-foreground">{row.drugLabel}</span>
                   {stock.enabled && (
-                    <PrescriptionStock balance={stock.entries.find(entry => entry.id === row.drugId)} failed={stock.failed} />
+                    <PrescriptionStock quantity={Number(row.quantity)} balance={stock.entries.find(entry => entry.id === row.drugId)} failed={stock.failed} />
                   )}
                   {open && (
                     <Button
@@ -989,13 +990,17 @@ function CopyLast({
  * thirty seconds get spent. Enter picks the first match, so a doctor who knows the drug
  * never has to look at the list.
  */
-function PrescriptionStock({ balance, failed }: {
+function PrescriptionStock({ balance, failed, quantity }: {
+  quantity: number
   balance?: ReturnType<typeof useAvailability>['entries'][number]
   failed: boolean
 }) {
   const { t } = useTranslation()
   return <>
     <StockBadge stock={balance} failed={failed} external />
+    {balance?.packet && balance.packet.size > 1 && Number.isSafeInteger(quantity) && quantity > 0 && (
+      <small>{quantity} × {balance.packet.unitName} = {packetEquivalent(quantity,balance.packet.size,balance.packet.unitName)}</small>
+    )}
     {balance && balance.available <= balance.reorderThreshold && balance.alternatives.length > 0 && (
       <small>{t('inventoryStatus.alternatives')} {balance.alternatives.map(a => a.name).join('، ')}</small>
     )}

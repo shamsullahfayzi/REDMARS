@@ -2,7 +2,16 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
-import { inventoryDashboardSchema, movementPageSchema } from '@redmars/shared'
+import {
+  inventoryDashboardSchema,
+  movementPageSchema,
+  receiptPackSchema,
+  priceForUnits,
+  unitsPerPack,
+  packetEquivalent,
+  type ReceiptPack,
+  type PackBasis,
+} from '@redmars/shared'
 import { useAuth } from '@/auth/authContext'
 import { apiGet, apiPost, serverMessage } from '@/lib/api'
 import { StockBadge } from '@/components/StockAvailability'
@@ -46,7 +55,9 @@ export function InventoryPage() {
   return (
     <main className="space-y-5 p-4">
       <h1 className="text-2xl font-semibold">{t('nav.inventory')}</h1>
-      {query.isError && <p role="status">Refresh failed. Showing the last available inventory counts.</p>}
+      {query.isError && (
+        <p role="status">Refresh failed. Showing the last available inventory counts.</p>
+      )}
       <div className="flex flex-wrap gap-2">
         {[
           ['all', 'All medications', data.drugs.length],
@@ -98,10 +109,78 @@ export function InventoryPage() {
   )
 }
 
+function packFromForm(form: HTMLFormElement) {
+  const f = new FormData(form)
+  const receivedAs = f.get('receivedAs')
+  const sellBy = f.get('sellBy')
+  const looseOnly = receivedAs === 'unit' && sellBy === 'unit'
+  return receiptPackSchema.safeParse({
+    unitName: f.get('unitName'),
+    receivedAs,
+    sellBy,
+    receivedCount: Number(f.get('receivedCount')),
+    unitsPerPacket: Number(f.get('unitsPerPacket') || (looseOnly ? 1 : 0)),
+    packetsPerBox: f.get('packetsPerBox') ? Number(f.get('packetsPerBox')) : null,
+    purchasePrice: f.get('purchasePrice'),
+    sellPrice: f.get('sellPrice'),
+  })
+}
+
+function ReceiptPrices({ pack }: { pack: ReceiptPack }) {
+  const boughtSize = unitsPerPack(pack.receivedAs, pack)
+  const soldSize = unitsPerPack(pack.sellBy, pack)
+  return (
+    <div className="rounded border p-2 text-sm">
+      <p>
+        Received {pack.receivedCount} × {pack.receivedAs} ({pack.receivedCount * boughtSize} ×{' '}
+        {pack.unitName})
+      </p>
+      <p>Purchase total: {priceForUnits(pack.purchasePrice, 1, pack.receivedCount)} AFN</p>
+      <table className="mt-1 w-full text-start">
+        <thead>
+          <tr>
+            <th scope="col" className="text-start">
+              Basis
+            </th>
+            <th scope="col">Buy (AFN)</th>
+            <th scope="col">Sell (AFN)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(['unit', 'packet', 'box'] as const)
+            .filter(
+              (b) =>
+                b === 'unit' ||
+                (b === 'packet' ? pack.unitsPerPacket > 1 : pack.packetsPerBox !== null),
+            )
+            .map((b) => {
+              const size = unitsPerPack(b, pack)
+              return (
+                <tr key={b}>
+                  <th scope="row" className="text-start">
+                    {b === 'unit' ? pack.unitName : b + ' (' + size + ')'}
+                  </th>
+                  <td className="text-center">
+                    {priceForUnits(pack.purchasePrice, boughtSize, size)}
+                  </td>
+                  <td className="text-center">{priceForUnits(pack.sellPrice, soldSize, size)}</td>
+                </tr>
+              )
+            })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function StockDetail({ drug, data, manage }: { drug: Drug; data: Dashboard; manage: boolean }) {
   const client = useQueryClient()
   const [key, setKey] = useState(() => crypto.randomUUID())
   const [message, setMessage] = useState('')
+  const [receivedAs, setReceivedAs] = useState<PackBasis>('box')
+  const [sellBy, setSellBy] = useState<PackBasis>('packet')
+  const [preview, setPreview] = useState<ReceiptPack | null>(null)
+  const [receiptError, setReceiptError] = useState('')
   const action = useMutation({
     mutationFn: ({ path, body }: { path: string; body: unknown }) =>
       apiPost(root + path, body, success),
@@ -110,6 +189,7 @@ function StockDetail({ drug, data, manage }: { drug: Drug; data: Dashboard; mana
         client.invalidateQueries({ queryKey: ['inventory'] }),
         client.invalidateQueries({ queryKey: ['inventory-history'] }),
         client.invalidateQueries({ queryKey: ['stock-availability'] }),
+        client.invalidateQueries({ queryKey: ['pharmacy', 'prescription'] }),
       ])
     },
   })
@@ -146,6 +226,21 @@ function StockDetail({ drug, data, manage }: { drug: Drug; data: Dashboard; mana
                   ? ' · Expiring soon'
                   : ''}
           </p>
+          {b.packaging && (
+            <details>
+              <summary>Packaging and prices</summary>
+              <p>
+                {b.packaging.unitsPerPacket} × {b.packaging.unitName} per packet
+                {b.packaging.packetsPerBox &&
+                  ' · ' + b.packaging.packetsPerBox + ' packets per box'}
+              </p>
+              <p>
+                On hand:{' '}
+                {packetEquivalent(b.quantity, b.packaging.unitsPerPacket, b.packaging.unitName)}
+              </p>
+              <ReceiptPrices pack={b.packaging} />
+            </details>
+          )}
           {manage && !b.quarantined && b.quantity > 0 && (
             <details>
               <summary>Quarantine batch</summary>
@@ -179,10 +274,26 @@ function StockDetail({ drug, data, manage }: { drug: Drug; data: Dashboard; mana
             <summary>Receive stock</summary>
             <form
               className="grid gap-2 pt-2"
+              onChange={(e) => {
+                const parsed = packFromForm(e.currentTarget)
+                setPreview(parsed.success ? parsed.data : null)
+                setReceiptError('')
+              }}
               onSubmit={async (e) => {
                 e.preventDefault()
                 const form = e.currentTarget
                 const f = new FormData(form)
+                const parsed = packFromForm(form)
+                if (!parsed.success) {
+                  setReceiptError(parsed.error.issues[0].message)
+                  return
+                }
+                const pack = parsed.data
+                const quantity = pack.receivedCount * unitsPerPack(pack.receivedAs, pack)
+                if (quantity > 1000000000) {
+                  setReceiptError('Received units exceed the stock limit.')
+                  return
+                }
                 if (
                   await submit(
                     '/receipts',
@@ -192,13 +303,17 @@ function StockDetail({ drug, data, manage }: { drug: Drug; data: Dashboard; mana
                       lot: f.get('lot'),
                       location: f.get('location'),
                       expiresOn: f.get('expiresOn'),
-                      quantity: Number(f.get('quantity')),
+                      quantity,
+                      packaging: pack,
                       supplierId: f.get('supplier') || null,
                     },
                     'Stock received.',
                   )
                 ) {
                   form.reset()
+                  setPreview(null)
+                  setReceivedAs('box')
+                  setSellBy('packet')
                   setKey(crypto.randomUUID())
                 }
               }}
@@ -215,10 +330,86 @@ function StockDetail({ drug, data, manage }: { drug: Drug; data: Dashboard; mana
                 Expiration date
                 <Input type="date" name="expiresOn" required />
               </label>
-              <label>
-                Units received
-                <Input type="number" min={1} max={1000000000} name="quantity" required />
-              </label>
+              <fieldset className="grid gap-2 rounded border p-3 sm:grid-cols-2">
+                <legend className="px-1 font-medium">Package contents</legend>
+                <label>
+                  Dispensing unit
+                  <Input
+                    name="unitName"
+                    defaultValue={drug.dispensingUnit ?? ''}
+                    readOnly={!!drug.dispensingUnit}
+                    placeholder="Tablet, capsule, vial…"
+                    maxLength={32}
+                    required
+                  />
+                </label>
+                <label>
+                  Units per packet
+                  <Input
+                    name="unitsPerPacket"
+                    type="number"
+                    min={1}
+                    max={1000000000}
+                    required={receivedAs !== 'unit' || sellBy !== 'unit'}
+                  />
+                </label>
+                <label>
+                  Packets per box
+                  <Input
+                    name="packetsPerBox"
+                    type="number"
+                    min={1}
+                    max={1000000000}
+                    required={receivedAs === 'box' || sellBy === 'box'}
+                  />
+                </label>
+              </fieldset>
+              <fieldset className="grid gap-2 rounded border p-3 sm:grid-cols-2">
+                <legend className="px-1 font-medium">Purchase</legend>
+                <label>
+                  Received as{' '}
+                  <select
+                    className={selectClass}
+                    name="receivedAs"
+                    value={receivedAs}
+                    onChange={(e) => setReceivedAs(e.target.value as PackBasis)}
+                  >
+                    <option value="box">Boxes</option>
+                    <option value="packet">Packets</option>
+                    <option value="unit">Loose units</option>
+                  </select>
+                </label>
+                <label>
+                  Number received
+                  <Input name="receivedCount" type="number" min={1} max={1000000000} required />
+                </label>
+                <label>
+                  Buy price per {receivedAs} (AFN)
+                  <Input type="number" name="purchasePrice" min="0" step="0.01" required />
+                </label>
+              </fieldset>
+              <fieldset className="grid gap-2 rounded border p-3 sm:grid-cols-2">
+                <legend className="px-1 font-medium">Retail</legend>
+                <label>
+                  Sell by{' '}
+                  <select
+                    className={selectClass}
+                    name="sellBy"
+                    value={sellBy}
+                    onChange={(e) => setSellBy(e.target.value as PackBasis)}
+                  >
+                    <option value="packet">Packet</option>
+                    <option value="box">Box</option>
+                    <option value="unit">Loose unit</option>
+                  </select>
+                </label>
+                <label>
+                  Sell price per {sellBy} (AFN)
+                  <Input type="number" name="sellPrice" min="0" step="0.01" required />
+                </label>
+              </fieldset>
+              {preview && <ReceiptPrices pack={preview} />}
+              {receiptError && <p role="alert">{receiptError}</p>}
               <label>
                 Supplier{' '}
                 <select className={selectClass} name="supplier">
@@ -317,6 +508,14 @@ function MovementHistory({ drugId }: { drugId: string }) {
         <p key={m.id} className="border-b py-2 text-sm">
           {new Date(m.at).toLocaleString()} · {m.kind} · {m.quantity} units · {m.lot} · {m.location}{' '}
           {m.reason && ' · ' + m.reason}
+          {m.packaging && (
+            <span className="block">
+              Bought {m.packaging.receivedCount} × {m.packaging.receivedAs} at{' '}
+              {m.packaging.purchasePrice} AFN each · Retail {m.packaging.sellPrice} AFN/
+              {m.packaging.sellBy} · {m.packaging.unitsPerPacket} units/packet
+              {m.packaging.packetsPerBox && ' · ' + m.packaging.packetsPerBox + ' packets/box'}
+            </span>
+          )}
         </p>
       ))}
       {query.data?.movements.length === 0 && <p>No movements recorded.</p>}

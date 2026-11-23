@@ -1,4 +1,4 @@
-import { moneyDecimal, parseMoneyInput } from '@redmars/shared'
+import { moneyDecimal, parseMoneyInput, priceForUnits, packetEquivalent } from '@redmars/shared'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Pill, Search, TriangleAlert } from 'lucide-react'
@@ -240,7 +240,7 @@ function PrescriptionView({
           <DrugSheet rx={rx} />
 
           {isPharmacist && rx.status === 'active' && !rx.bill && (
-            <BillForm prescriptionId={prescriptionId} items={rx.items} />
+            <BillForm key={rx.items.map(i => i.id + ':' + (i.suggestedPack?.batchId ?? 'unit')).join(',')} prescriptionId={prescriptionId} items={rx.items} />
           )}
 
           {rx.bill && (
@@ -275,13 +275,13 @@ function BillForm({ prescriptionId, items }: { prescriptionId: string; items: Ph
   const { t } = useTranslation()
   const billMutation = useBillPrescription()
   const [prices, setPrices] = useState<Record<string, string>>(() =>
-    Object.fromEntries(items.map((item) => [item.id, item.suggestedUnitPrice ?? ''])),
+    Object.fromEntries(items.map((item) => [item.id, item.suggestedPack?.price ?? item.suggestedUnitPrice ?? ''])),
   )
 
   const qtyOf = (item: PharmacyDrugLine) => item.quantity ?? 1
   const lineTotal = (item: PharmacyDrugLine) => {
     const price = parseMoneyInput(prices[item.id])
-    return price ? price.mul(String(qtyOf(item))) : moneyDecimal('0')
+    return price ? moneyDecimal(priceForUnits(price.toString(), item.suggestedPack?.size ?? 1, qtyOf(item))) : moneyDecimal('0')
   }
   const billTotal = items.reduce((sum, item) => sum.add(lineTotal(item)), moneyDecimal('0'))
   const allPriced = items.every((item) => moneySchema.safeParse(prices[item.id]).success)
@@ -290,7 +290,7 @@ function BillForm({ prescriptionId, items }: { prescriptionId: string; items: Ph
     if (!allPriced || billMutation.isPending) return
     billMutation.mutate({
       prescriptionId,
-      body: { items: items.map((item) => ({ itemId: item.id, unitPrice: prices[item.id].trim() })) },
+      body: { items: items.map((item) => ({ itemId: item.id, unitPrice: prices[item.id].trim(), pricingBatchId:item.suggestedPack?.batchId })) },
     })
   }
 
@@ -303,14 +303,16 @@ function BillForm({ prescriptionId, items }: { prescriptionId: string; items: Ph
             <tr>
               <th className="pb-2 text-start font-medium">{t('pharmacy.col.drugs')}</th>
               <th className="pb-2 text-end font-medium">{t('pharmacy.col.qty')}</th>
-              <th className="pb-2 text-end font-medium">{t('pharmacy.col.unitPrice')}</th>
+              <th className="pb-2 text-end font-medium">{items.some(item=>item.suggestedPack) ? t('pharmacy.col.sellingPrice') : t('pharmacy.col.unitPrice')}</th>
               <th className="pb-2 text-end font-medium">{t('pharmacy.col.lineTotal')}</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item) => (
               <tr key={item.id} className="border-t border-border">
-                <td className="py-2 pe-2 text-foreground">{item.drugName}</td>
+                <td className="py-2 pe-2 text-foreground">{item.drugName}
+                  {item.suggestedPack && <p className="text-xs text-muted-foreground">{qtyOf(item)} × {item.suggestedPack.unitName} · {packetEquivalent(qtyOf(item),item.suggestedPack.unitsPerPacket,item.suggestedPack.unitName)}</p>}
+                </td>
                 <td className="py-2 text-end text-muted-foreground" dir="ltr">
                   {qtyOf(item)}
                 </td>
@@ -323,8 +325,9 @@ function BillForm({ prescriptionId, items }: { prescriptionId: string; items: Ph
                     inputMode="decimal"
                     dir="ltr"
                     className="w-24 ms-auto text-end font-mono"
-                    aria-label={t('pharmacy.unitPriceFor', { drug: item.drugName })}
+                    aria-label={item.suggestedPack ? item.drugName + ' AFN per ' + item.suggestedPack.basis : t('pharmacy.unitPriceFor', { drug: item.drugName })}
                   />
+                  {item.suggestedPack && <small>AFN / {item.suggestedPack.basis} ({item.suggestedPack.size} units)</small>}
                 </td>
                 <td className="py-2 ps-2 text-end font-mono text-foreground" dir="ltr">
                   {lineTotal(item).toFixed(2)}
