@@ -41,7 +41,11 @@ export const drugSummarySchema = z.object({
 })
 export type DrugSummary = z.infer<typeof drugSummarySchema>
 
+export const DRUG_PAGE_SIZE = 20
+export const drugPageSchema = z.coerce.number().int().min(1).max(1000000).optional()
+
 export const drugListResponseSchema = z.object({
+  total: z.number().int().nonnegative().optional(),
   drugs: z.array(drugSummarySchema),
 })
 export type DrugListResponse = z.infer<typeof drugListResponseSchema>

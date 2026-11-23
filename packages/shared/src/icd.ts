@@ -21,6 +21,7 @@ export const icdCodeSummarySchema = z.object({
 export type IcdCodeSummary = z.infer<typeof icdCodeSummarySchema>
 
 export const icdSearchResponseSchema = z.object({
+  total: z.number().int().nonnegative(),
   results: z.array(icdCodeSummarySchema),
 })
 export type IcdSearchResponse = z.infer<typeof icdSearchResponseSchema>
@@ -33,7 +34,8 @@ export const DEFAULT_ICD_LIMIT = 20
 export const MAX_ICD_LIMIT = 50
 
 export const icdSearchQuerySchema = z.object({
-  q: z.string().trim().min(MIN_ICD_QUERY_LENGTH, 'Type at least two characters').max(100),
+  q: z.string().trim().min(MIN_ICD_QUERY_LENGTH, 'Type at least two characters').max(100).optional(),
+  page: z.coerce.number().int().min(1).max(1000000).optional(),
   limit: z.coerce.number().int().min(1).max(MAX_ICD_LIMIT).optional(),
 })
 export type IcdSearchQuery = z.infer<typeof icdSearchQuerySchema>

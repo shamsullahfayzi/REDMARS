@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search } from 'lucide-react'
-import { MIN_ICD_QUERY_LENGTH } from '@redmars/shared'
+import { DEFAULT_ICD_LIMIT, MIN_ICD_QUERY_LENGTH } from '@redmars/shared'
+import { CatalogPagination } from '@/components/CatalogPagination'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -19,7 +20,8 @@ export function IcdLookupPage() {
   const { t } = useTranslation()
   const [input, setInput] = useState('')
   const query = useDebounced(input, 250)
-  const searchQuery = useIcdSearch(query)
+  const [page, setPage] = useState(1)
+  const searchQuery = useIcdSearch(query, page)
 
   const tooShort = query.trim().length > 0 && query.trim().length < MIN_ICD_QUERY_LENGTH
   const results = searchQuery.data?.results ?? []
@@ -32,7 +34,7 @@ export function IcdLookupPage() {
         <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => { setInput(e.target.value); setPage(1) }}
           placeholder={t('icd.searchPlaceholder')}
           className="ps-9"
           autoFocus
@@ -42,10 +44,10 @@ export function IcdLookupPage() {
       {tooShort && <p className="text-sm text-muted-foreground">{t('icd.tooShort')}</p>}
       {searchQuery.isError && <p className="text-sm text-destructive">{t('icd.error')}</p>}
 
-      {query.trim().length >= MIN_ICD_QUERY_LENGTH && !searchQuery.isError && (
+      {!tooShort && input === query && !searchQuery.isError && (
         <section className="space-y-3">
           {results.length === 0 && !searchQuery.isPending ? (
-            <p className="text-muted-foreground">{t('icd.empty')}</p>
+            <p className="text-muted-foreground">{t(query.trim() ? 'icd.empty' : 'icd.catalogEmpty')}</p>
           ) : (
             <Card className="overflow-x-auto p-0">
               <table className="w-full text-sm">
@@ -83,6 +85,8 @@ export function IcdLookupPage() {
               </table>
             </Card>
           )}
+          {searchQuery.data && <CatalogPagination page={page} pageSize={DEFAULT_ICD_LIMIT}
+            total={searchQuery.data.total} onChange={setPage} />}
         </section>
       )}
     </div>

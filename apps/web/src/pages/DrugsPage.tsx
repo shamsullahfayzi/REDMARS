@@ -2,11 +2,13 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, Search } from 'lucide-react'
 import {
+  DRUG_PAGE_SIZE,
   createDrugRequestSchema,
   updateDrugRequestSchema,
   type DrugSummary,
   type ImportDrugsResponse,
 } from '@redmars/shared'
+import { CatalogPagination } from '@/components/CatalogPagination'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,7 +28,8 @@ import { formatNumber } from '@/lib/format'
 export function DrugsPage() {
   const { t } = useTranslation()
   const [q, setQ] = useState('')
-  const drugsQuery = useDrugs(q)
+  const [page, setPage] = useState(1)
+  const drugsQuery = useDrugs(q, page)
 
   return (
     <div className="space-y-6">
@@ -43,7 +46,7 @@ export function DrugsPage() {
             <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => { setQ(e.target.value); setPage(1) }}
               placeholder={t('drugs.list.search')}
               className="ps-9"
             />
@@ -83,9 +86,11 @@ export function DrugsPage() {
           ))}
         {drugsQuery.data && drugsQuery.data.drugs.length > 0 && (
           <p className="text-xs text-muted-foreground">
-            {t('drugs.list.count', { count: drugsQuery.data.drugs.length })}
+            {t('drugs.list.count', { count: drugsQuery.data.total ?? drugsQuery.data.drugs.length })}
           </p>
         )}
+        {drugsQuery.data && <CatalogPagination page={page} pageSize={DRUG_PAGE_SIZE}
+          total={drugsQuery.data.total ?? 0} onChange={setPage} />}
       </section>
     </div>
   )

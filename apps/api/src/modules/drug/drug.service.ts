@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { Prisma } from '@prisma/client';
 import {
   createDrugRequestSchema,
+  DRUG_PAGE_SIZE,
   type CreateDrugRequest,
   type DrugListResponse,
   type DrugSummary,
@@ -100,25 +101,30 @@ export class DrugService {
    * brand name. Case-insensitive `contains` — simple on purpose; a real full-text
    * index is a later refinement if the list grows past a few thousand.
    */
-  async list(facilityId: string, q?: string): Promise<DrugListResponse> {
+  async list(facilityId: string, q?: string, page?: number): Promise<DrugListResponse> {
     const term = q?.trim();
-    const drugs = await this.prisma.db.drug.findMany({
-      where: {
-        facilityId,
-        ...(term
-          ? {
-              OR: [
-                { code: { contains: term, mode: 'insensitive' } },
-                { genericName: { contains: term, mode: 'insensitive' } },
-                { brandName: { contains: term, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: { genericName: 'asc' },
-      select: DRUG_SELECT,
-    });
-    return { drugs: drugs.map(toSummary) };
+    const where = {
+      facilityId,
+      ...(term
+        ? {
+            OR: [
+              { code: { contains: term, mode: 'insensitive' as const } },
+              { genericName: { contains: term, mode: 'insensitive' as const } },
+              { brandName: { contains: term, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+    };
+    const catalog = this.prisma.db.drug;
+    const [drugs, total] = await Promise.all([
+      catalog.findMany({
+        where, orderBy: [{ genericName: 'asc' }, { id: 'asc' }],
+        ...(page ? { skip: (page - 1) * DRUG_PAGE_SIZE, take: DRUG_PAGE_SIZE } : {}),
+        select: DRUG_SELECT,
+      }),
+      page ? catalog.count({ where }) : undefined,
+    ]);
+    return { drugs: drugs.map(toSummary), total };
   }
 
   async create(facilityId: string, input: CreateDrugRequest): Promise<DrugSummary> {

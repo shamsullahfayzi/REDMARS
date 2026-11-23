@@ -27,18 +27,23 @@ export class IcdService {
    * query here would not change, only the index behind it.
    */
   async search(query: IcdSearchQuery): Promise<IcdSearchResponse> {
-    const q = query.q.trim();
-    const results = await this.prisma.db.icdCode.findMany({
-      where: {
-        OR: [
-          { code: { startsWith: q.toUpperCase() } },
-          { title: { contains: q, mode: 'insensitive' } },
-        ],
-      },
-      orderBy: { code: 'asc' },
-      take: query.limit ?? DEFAULT_ICD_LIMIT,
-      select: ICD_SELECT,
-    });
-    return { results };
+    const q = query.q;
+    const limit = query.limit ?? DEFAULT_ICD_LIMIT;
+    const where = q ? {
+      OR: [
+        { code: { startsWith: q.toUpperCase() } },
+        { title: { contains: q, mode: 'insensitive' as const } },
+        { titleLocal: { contains: q, mode: 'insensitive' as const } },
+      ],
+    } : {};
+    const catalog = this.prisma.db.icdCode;
+    const [results, total] = await Promise.all([
+      catalog.findMany({
+        where, orderBy: { code: 'asc' }, skip: ((query.page ?? 1) - 1) * limit,
+        take: limit, select: ICD_SELECT,
+      }),
+      catalog.count({ where }),
+    ]);
+    return { results, total };
   }
 }

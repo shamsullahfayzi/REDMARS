@@ -552,6 +552,7 @@
     "failed": "Could not save the range. Please try again."
   },
   "icd": {
+    "catalogEmpty": "The diagnosis catalog is empty. Ask an administrator to import the ICD-10 catalog.",
     "subtitle": "Look up an ICD-10 diagnosis code. Type a code or part of a description.",
     "searchPlaceholder": "e.g. depress, anxiety, F32…",
     "tooShort": "Type at least two characters.",

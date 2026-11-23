@@ -156,7 +156,7 @@ export function ConsultPage() {
             panels={{
               vitals: <VitalsTab visit={context.visit} />,
               complaint: <ComplaintTab visit={context.visit} />,
-              diagnosis: <DiagnosisTab visit={context.visit} />,
+              diagnosis: <DiagnosisTab visit={context.visit} active={tab === 'diagnosis'} />,
               prescription: <PrescriptionTab visit={context.visit} />,
               labs: <LabsTab visit={context.visit} />,
               notes: <NotesTab key={context.visit.id} visit={context.visit} navigate={destination => {

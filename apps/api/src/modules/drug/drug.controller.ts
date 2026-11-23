@@ -14,6 +14,7 @@ import {
 import type { Request } from 'express';
 import {
   createDrugRequestSchema,
+  drugPageSchema,
   importDrugsRequestSchema,
   setActiveRequestSchema,
   updateDrugRequestSchema,
@@ -44,8 +45,10 @@ export class DrugController {
    */
   @RequirePermission('drug.read')
   @Get()
-  list(@Req() req: Request, @Query('q') q?: string): Promise<DrugListResponse> {
-    return this.drugs.list(this.auth(req).facilityId, q);
+  list(@Req() req: Request, @Query('q') q?: string, @Query('page') page?: string): Promise<DrugListResponse> {
+    const parsed = drugPageSchema.safeParse(page);
+    if (!parsed.success) throw new BadRequestException('Invalid page');
+    return this.drugs.list(this.auth(req).facilityId, q, parsed.data);
   }
 
   @RequirePermission('drug.manage')

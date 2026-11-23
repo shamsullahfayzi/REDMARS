@@ -13,12 +13,15 @@ import { apiGet, apiPatch, apiPost } from '@/lib/api'
 const DRUGS_KEY = ['drugs']
 
 /** The formulary, optionally filtered by a search term. The term is part of the query key so each search is its own cache entry. Admin + pharmacist server-side. */
-export function useDrugs(q: string) {
+export function useDrugs(q: string, page?: number) {
   const term = q.trim()
+  const params = new URLSearchParams()
+  if (term) params.set('q', term)
+  if (page) params.set('page', String(page))
   return useQuery<DrugListResponse>({
-    queryKey: [...DRUGS_KEY, term],
+    queryKey: [...DRUGS_KEY, term, page],
     queryFn: () =>
-      apiGet(`/drugs${term ? `?q=${encodeURIComponent(term)}` : ''}`, drugListResponseSchema),
+      apiGet(`/drugs?${params}`, drugListResponseSchema),
   })
 }
 

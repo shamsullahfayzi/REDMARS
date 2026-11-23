@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Star, Trash2 } from 'lucide-react'
 import {
   DIAGNOSIS_CERTAINTIES,
+  DEFAULT_ICD_LIMIT,
   isVisitOpen,
   recordDiagnosisRequestSchema,
   type Diagnosis,
@@ -10,6 +11,7 @@ import {
   type IcdCodeSummary,
   type VisitSummary,
 } from '@redmars/shared'
+import { CatalogPagination } from '@/components/CatalogPagination'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -36,7 +38,7 @@ import { cn } from '@/lib/utils'
  * the end of a first consultation — and `refuted` is on the list because ruling something
  * OUT is a finding worth keeping, not a row to remove.
  */
-export function DiagnosisTab({ visit }: { visit: VisitSummary }) {
+export function DiagnosisTab({ visit, active }: { visit: VisitSummary; active: boolean }) {
   const { t } = useTranslation()
   const [text, setText] = useState('')
   const [icdCode, setIcdCode] = useState<string | null>(null)
@@ -51,7 +53,9 @@ export function DiagnosisTab({ visit }: { visit: VisitSummary }) {
   // Only search once the code is not already chosen — a picked diagnosis should stop
   // suggesting alternatives at the doctor while they read it back.
   const search = useDebounced(icdCode ? '' : text, 250)
-  const icdQuery = useIcdSearch(search)
+  const [page, setPage] = useState(1)
+  const showCatalog = active && open && !icdCode && search === text
+  const icdQuery = useIcdSearch(search, page, showCatalog)
 
   const isDirty = text.trim().length > 0
 
@@ -65,6 +69,7 @@ export function DiagnosisTab({ visit }: { visit: VisitSummary }) {
     }
     setError(null)
     await add.mutateAsync(parsed.data)
+    setPage(1)
     setText('')
     setIcdCode(null)
     setCertainty('provisional')
@@ -99,6 +104,7 @@ export function DiagnosisTab({ visit }: { visit: VisitSummary }) {
                 value={text}
                 placeholder={t('diagnosis.placeholder')}
                 onChange={(e) => {
+                  setPage(1)
                   setText(e.target.value)
                   // Typing over a picked diagnosis unpicks the code. Leaving it attached
                   // would file the doctor's words under somebody else's number.
@@ -123,23 +129,28 @@ export function DiagnosisTab({ visit }: { visit: VisitSummary }) {
             </div>
 
             {/* Suggestions, not a gate. An empty result is not an error. */}
-            {!icdCode && icdQuery.data && icdQuery.data.results.length > 0 && (
-              <ul className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border p-1">
-                {icdQuery.data.results.map((code) => (
-                  <li key={code.code}>
-                    <button
-                      type="button"
-                      onClick={() => pick(code)}
-                      className="flex w-full items-baseline gap-3 rounded px-2 py-1.5 text-start text-sm hover:bg-muted"
-                    >
-                      <span dir="ltr" className="font-mono font-semibold text-primary">
-                        {code.code}
-                      </span>
-                      <span className="text-foreground">{code.title}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            {showCatalog && icdQuery.isError && <p role="alert">{t('icd.error')}</p>}
+            {showCatalog && icdQuery.data && (
+              <>
+                {icdQuery.data.total === 0 && <p className="text-sm">{t(search.trim() ? 'icd.empty' : 'icd.catalogEmpty')}</p>}
+                <ul className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border p-1">
+                  {icdQuery.data.results.map((code) => (
+                    <li key={code.code}>
+                      <button
+                        type="button"
+                        onClick={() => pick(code)}
+                        className="flex w-full items-baseline gap-3 rounded px-2 py-1.5 text-start text-sm hover:bg-muted"
+                      >
+                        <span dir="ltr" className="font-mono font-semibold text-primary">
+                          {code.code}
+                        </span>
+                        <span className="text-foreground">{code.title}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <CatalogPagination page={page} pageSize={DEFAULT_ICD_LIMIT} total={icdQuery.data.total} onChange={setPage} />
+              </>
             )}
 
             <div className="flex flex-wrap items-end gap-4">
