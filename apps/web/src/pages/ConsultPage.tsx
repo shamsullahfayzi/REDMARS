@@ -15,7 +15,7 @@ import {
   TestTube,
   TrendingUp,
 } from 'lucide-react'
-import { defaultPrintSettings, isVisitOpen, type ConsultContext, type PaperSize } from '@redmars/shared'
+import { HISTORY_MONTHS, defaultPrintSettings, isVisitOpen, type ConsultContext, type PaperSize } from '@redmars/shared'
 import { AllergyBanner } from '@/components/AllergyBanner'
 import { AllergyEditor } from '@/components/AllergyEditor'
 import { ConsultActions } from '@/components/ConsultActions'
@@ -33,6 +33,7 @@ import { useAuth } from '@/auth/authContext'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { usePatientHistory } from '@/hooks/useHistory'
 import { useConsultContext } from '@/hooks/useConsult'
 import { ConsultSaveProvider } from '@/components/ConsultSaveProvider'
 import { LabPrintSelectionProvider } from '@/components/LabPrintSelectionProvider'
@@ -72,13 +73,13 @@ const TABS = [
   { key: 'vitals', icon: Activity },
   { key: 'complaint', icon: MessageSquare },
   { key: 'history', icon: History },
-  { key: 'trends', icon: TrendingUp },
   // Module-gated: the laboratory is optional (task 2.13), so this tab is present only when
   // the facility has it on. The server re-checks the module on every lab route regardless.
   { key: 'labs', icon: TestTube, module: 'lab' },
   { key: 'diagnosis', icon: ClipboardList },
   { key: 'prescription', icon: Pill },
   { key: 'notes', icon: FileText },
+  { key: 'trends', icon: TrendingUp },
 ] as const
 
 type Tab = (typeof TABS)[number]
@@ -87,8 +88,11 @@ type TabKey = Tab['key']
 export function ConsultPage() {
   const { t } = useTranslation()
   const { visitId } = useParams<{ visitId: string }>()
-  const { enabledModules } = useAuth()
+  const { enabledModules, roles } = useAuth()
   const contextQuery = useConsultContext(visitId)
+  const context = contextQuery.data
+  const mayReadHistory = roles.includes('doctor') || roles.includes('admin')
+  const history = usePatientHistory(mayReadHistory ? context?.patient.id : undefined, HISTORY_MONTHS.default)
   const [tab, setTab] = useState<TabKey>('vitals')
   // Task: doctor picks the OUTPUT PAPER at print time, not a facility setting buried in an
   // admin screen. The facility default (Axon: A4) is only the picker's opening value —
@@ -100,7 +104,15 @@ export function ConsultPage() {
   // lab route is module-guarded on the server too.
   const tabs = TABS.filter((entry) => !('module' in entry) || enabledModules.includes(entry.module))
 
-  const context = contextQuery.data
+  // The current visit appears in History. Count visits outside the default window too.
+  const onlyCurrentVisit = history.isSuccess && history.data.olderVisits === 0 &&
+    !history.data.truncated && history.data.visits.length === 1 &&
+    history.data.visits[0].id === visitId
+  if (onlyCurrentVisit) {
+    const historyIndex = tabs.findIndex(entry => entry.key === 'history')
+    const [historyTab] = tabs.splice(historyIndex, 1)
+    tabs.splice(tabs.length - 1, 0, historyTab)
+  }
 
   if (contextQuery.isPending) {
     return <p className="text-sm text-muted-foreground">{t('consult.loading')}</p>
