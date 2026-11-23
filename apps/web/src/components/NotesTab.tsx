@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, Plus } from 'lucide-react'
 import {
+  IDEATION_SCREEN,
   MSE_FIELDS,
   MSE_QUICK_PICKS,
   NOTE_TYPES,
@@ -125,7 +126,7 @@ function toRiskContent(draft: RiskDraft): RiskAssessmentContent {
 function toContent(noteType: NoteType, drafts: Drafts): Record<string, unknown> {
   if (noteType === 'risk_assessment') return toRiskContent(drafts.risk_assessment)
   return Object.fromEntries(
-    Object.entries(drafts[noteType]).map(([field, value]) => [field, clean(value)]),
+    Object.entries(drafts[noteType]).filter(([field, value]) => field !== 'ideation' || value).map(([field, value]) => [field, clean(value)]),
   )
 }
 
@@ -142,7 +143,12 @@ const EMPTY_SIGNATURE = Object.fromEntries(
   NOTE_TYPES.map((noteType) => [noteType, JSON.stringify(toContent(noteType, blankDrafts()))]),
 ) as Record<NoteType, string>
 
-export function NotesTab({ visit }: { visit: VisitSummary }) {
+type NoteDestination = 'complaint' | 'diagnosis' | 'prescription' | 'followUp'
+
+export function NotesTab({ visit, navigate }: {
+  visit: VisitSummary
+  navigate: (destination: NoteDestination) => void
+}) {
   const { t } = useTranslation()
   const { roles } = useAuth()
   const notesQuery = useClinicalNotes(visit.id)
@@ -248,6 +254,75 @@ export function NotesTab({ visit }: { visit: VisitSummary }) {
       <Card className="p-8 text-center">
         <p className="text-sm text-destructive">{t('notes.error')}</p>
       </Card>
+    )
+  }
+
+  if (visit.type === 'opd_consult' || visit.type === 'follow_up') {
+    const assessment = drafts.psych_assessment
+    const risk = highestRiskLevel(toRiskContent(drafts.risk_assessment))
+    function update(section: TextSection, field: string, value: string) {
+      setDrafts(current => ({ ...current, [section]: { ...current[section], [field]: value } }))
+    }
+    function fields(section: TextSection, names: readonly string[]) {
+      return <TextForm section={section} fields={names} compact draft={drafts[section]} disabled={!open}
+        onChange={(field, value) => update(section, field, value)} />
+    }
+    const targeted = ['mood', 'thoughtContent']
+    const routine = ['historyOfPresentingIllness', 'formulation', 'plan']
+    return (
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="me-auto font-semibold">{t('notes.opd.title')}</h2>
+          {(['diagnosis', 'prescription', 'followUp'] as const).map(dest => (
+            <Button type="button" key={dest} size="sm" variant="outline" onClick={() => navigate(dest)}>
+              {t(dest === 'followUp' ? 'prescription.followUp.label' : `consult.tabs.${dest}`)}
+            </Button>
+          ))}
+          {open && <Button type="button" size="sm" disabled={!dirtyTypes.length || saveNote.isPending}
+            onClick={() => void save().catch(() => undefined)}>{t(saveNote.isPending ? 'notes.saving' : 'notes.save')}</Button>}
+        </div>
+        {Object.entries(errors).map(([kind, error]) => <p key={kind} role="alert" className="text-sm text-destructive">{t(`notes.type.${kind}`)} — {error}</p>)}
+        <div className="grid items-start gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <Card className="min-w-0 space-y-2 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">{t('notes.opd.complaint')}</h3>
+              <Button type="button" variant="outline" size="sm" onClick={() => navigate('complaint')}>{t('consult.tabs.complaint')}</Button>
+            </div>
+            {visit.chiefComplaint && <p className="whitespace-pre-wrap break-words text-sm">{visit.chiefComplaint}</p>}
+            {fields('psych_assessment', ['historyOfPresentingIllness'])}
+          </Card>
+          <Card className="min-w-0 space-y-2 p-3">
+            <h3 className="text-sm font-semibold">{t('notes.type.mse')}</h3>
+            {fields('mse', targeted)}
+            <Label htmlFor="opd-ideation">{t('notes.opd.ideation')}</Label>
+            <Select id="opd-ideation" value={assessment.ideation ?? ''} disabled={!open}
+              onChange={event => update('psych_assessment', 'ideation', event.target.value)}>
+              {(['', ...IDEATION_SCREEN]).map(value => <option key={value} value={value}>{t(`notes.opd.${value || 'unassessed'}`)}</option>)}
+            </Select>
+          </Card>
+          <Card className="min-w-0 space-y-2 p-3 md:col-span-2 xl:col-span-1">
+            <h3 className="text-sm font-semibold">{t('notes.opd.assessmentPlan')}</h3>
+            {fields('psych_assessment', ['formulation', 'plan'])}
+          </Card>
+        </div>
+        {NOTE_TYPES.map(kind => (
+          <details key={kind} className="rounded-lg border px-3 py-1.5">
+            <summary className="cursor-pointer text-sm font-medium">
+              {t(`notes.type.${kind}`)}
+              {baseline[kind] && <span className="ms-2 text-xs text-muted-foreground">{t('notes.written')}</span>}
+              {kind === 'risk_assessment' && risk !== 'none' && <Badge variant={riskVariant(risk)} className="ms-2">{t(`notes.risk.level.${risk}`)}</Badge>}
+            </summary>
+            <div className="mt-2">
+              {kind === 'risk_assessment' ? <RiskForm draft={drafts.risk_assessment} disabled={!open}
+                onChange={next => setDrafts(current => ({ ...current, risk_assessment: next }))} />
+                : fields(kind, TEXT_SECTIONS[kind].filter(field =>
+                  !(kind === 'mse' && targeted.includes(field)) && !(kind === 'psych_assessment' && routine.includes(field))))}
+              {notes?.find(note => note.noteType === kind)?.practitionerName && <small>{t('notes.author', {name: notes.find(note => note.noteType === kind)?.practitionerName})}</small>}
+            </div>
+          </details>
+        ))}
+        {!open && <p className="text-sm text-muted-foreground">{t('notes.closed')}</p>}
+      </div>
     )
   }
 
@@ -369,11 +444,15 @@ function SectionStrip({
 /** The three free-text sections, which differ only in their field list. */
 function TextForm({
   section,
+  fields = TEXT_SECTIONS[section],
+  compact = false,
   draft,
   disabled,
   onChange,
 }: {
   section: TextSection
+  fields?: readonly string[]
+  compact?: boolean
   draft: TextDraft
   disabled: boolean
   onChange: (field: string, value: string) => void
@@ -381,8 +460,8 @@ function TextForm({
   const { t } = useTranslation()
 
   return (
-    <div className="space-y-4">
-      {TEXT_SECTIONS[section].map((field) => (
+    <div className={compact ? "space-y-2" : "space-y-4"}>
+      {fields.map((field) => (
         <div key={field} className="space-y-1.5">
           <Label htmlFor={`note-${section}-${field}`}>{t(`notes.field.${field}`)}</Label>
           {/* Task 4.4's stacking, applied to the one section with a standard vocabulary.
@@ -390,6 +469,7 @@ function TextForm({
               the box would be the dropdown this contract deliberately refused to be. */}
           {section === 'mse' && (
             <QuickPicks
+              compact={compact}
               field={field}
               disabled={disabled}
               onPick={(phrase) => onChange(field, append(draft[field], phrase))}
@@ -397,7 +477,7 @@ function TextForm({
           )}
           <Textarea
             id={`note-${section}-${field}`}
-            rows={3}
+            rows={compact ? 2 : 3}
             value={draft[field] ?? ''}
             disabled={disabled}
             onChange={(event) => onChange(field, event.target.value)}
@@ -411,10 +491,12 @@ function TextForm({
 /** Common findings, one click each. English clinical shorthand — see the contract. */
 function QuickPicks({
   field,
+  compact,
   disabled,
   onPick,
 }: {
   field: string
+  compact: boolean
   disabled: boolean
   onPick: (phrase: string) => void
 }) {
@@ -423,12 +505,13 @@ function QuickPicks({
 
   return (
     <div className="flex flex-wrap gap-1.5">
-      {picks.map((phrase) => (
+      {(compact ? picks.slice(0, 3) : picks).map((phrase) => (
         <Button
           key={phrase}
           type="button"
           size="sm"
           variant="outline"
+          className={compact ? 'h-auto min-h-6 whitespace-normal px-2 py-0.5 text-xs' : undefined}
           onClick={() => onPick(phrase)}
         >
           <Plus className="size-3.5" aria-hidden />

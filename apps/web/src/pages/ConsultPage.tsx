@@ -147,7 +147,16 @@ export function ConsultPage() {
               diagnosis: <DiagnosisTab visit={context.visit} />,
               prescription: <PrescriptionTab visit={context.visit} />,
               labs: <LabsTab visit={context.visit} />,
-              notes: <NotesTab visit={context.visit} />,
+              notes: <NotesTab key={context.visit.id} visit={context.visit} navigate={destination => {
+                const target = destination === 'followUp' ? 'prescription' : destination
+                setTab(target)
+                requestAnimationFrame(() => {
+                  const field = { complaint: 'chiefComplaint', diagnosis: 'diagnosisText', followUp: 'followUpDate', prescription: 'consult-tab-prescription' }[destination]
+                  const control = document.getElementById(field)
+                  if (control && !control.matches(':disabled')) control.focus()
+                  else document.getElementById(`consult-tab-${target}`)?.focus()
+                })
+              }} />,
               history: (
                 <HistoryTab
                   patient={context.patient}

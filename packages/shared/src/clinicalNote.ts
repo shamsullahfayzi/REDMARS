@@ -68,8 +68,8 @@ const noteField = (max = 4000) =>
 /** Nothing written anywhere. The one thing a note may not be. */
 const BLANK = 'Write something before saving this note.'
 
-const anyWritten = (content: Record<string, string | null>) =>
-  Object.values(content).some((value) => value !== null)
+const anyWritten = (content: Record<string, string | null | undefined>) =>
+  Object.values(content).some((value) => value != null)
 
 // ---- psych_assessment ------------------------------------------------------
 
@@ -82,7 +82,10 @@ const anyWritten = (content: Record<string, string | null>) =>
  * review — and is NOT the prescription's advice field (task 4.7), which is what the
  * patient is told to do at home.
  */
+export const IDEATION_SCREEN = ['denied', 'passive', 'active'] as const
+
 export const psychAssessmentContentSchema = z.object({
+  ideation: z.enum(IDEATION_SCREEN).optional(),
   historyOfPresentingIllness: noteField(),
   pastPsychiatricHistory: noteField(),
   pastMedicalHistory: noteField(),

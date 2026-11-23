@@ -1558,6 +1558,16 @@
     }
   },
   "notes": {
+    "opd": {
+      "title": "Outpatient note",
+      "complaint": "Chief complaint",
+      "ideation": "Suicidal ideation",
+      "unassessed": "Not assessed",
+      "denied": "Denied",
+      "passive": "Passive",
+      "active": "Active",
+      "assessmentPlan": "Assessment and outpatient plan"
+    },
     "loading": "Opening the notes…",
     "error": "Could not open the notes.",
     "denied": "Only a doctor writes clinical notes.",
