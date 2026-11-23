@@ -146,6 +146,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     roles: ['admin', 'doctor', 'pharmacist'],
   },
   { key: 'lab', to: '/lab', group: 'clinical', roles: ['admin', 'lab_tech'], module: 'lab' },
+  { key: 'inventory', to: '/pharmacy/inventory', group: 'clinical', roles: ['pharmacist','admin','management'] },
   { key: 'pharmacy', to: '/pharmacy', group: 'clinical', roles: ['pharmacist'] },
   // Task 6.1 — the billing register, matching `invoice.list`. Grouped with the other
   // money-and-numbers screens (reports) rather than the clinical desk. Not module-gated,

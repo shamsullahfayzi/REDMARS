@@ -114,6 +114,9 @@ describe('Pharmacy queue (e2e)', () => {
 
   async function cleanup(): Promise<void> {
     const facilityFilter = { facility: { code: { startsWith: PREFIX } } };
+    await prisma.pharmacyMovement.deleteMany({ where: { batch: { drug: facilityFilter } } });
+    await prisma.pharmacyBatch.deleteMany({ where: { drug: facilityFilter } });
+    await prisma.pharmacyAlternative.deleteMany({ where: { drug: facilityFilter } });
     await prisma.auditLog.deleteMany({ where: facilityFilter });
     // Bills raised by dispensing (task 6.10) — before the visit they point at.
     await prisma.payment.deleteMany({ where: { invoice: facilityFilter } });
@@ -496,6 +499,51 @@ describe('Pharmacy queue (e2e)', () => {
     expect(body.bill).toBeNull();
   });
 
+  it('reports zero usable units, rejects a short bill and counts each receipt exactly once', async () => {
+    const root = '/pharmacy/inventory';
+    const availability = () =>
+      request(server)
+        .get(root + '/availability?ids=' + drugId)
+        .set('Authorization', 'Bearer ' + tokens.doctor);
+    const receive = (body: unknown) =>
+      request(server)
+        .post(root + '/receipts')
+        .set('Authorization', 'Bearer ' + tokens.pharm)
+        .send(body as object);
+    const base = {
+      drugId,
+      lot: 'short-dated',
+      location: 'Main',
+      supplierId: null,
+      quantity: 1,
+      expiresOn: '2098-01-01',
+    };
+    await receive({
+      ...base,
+      receiptKey: crypto.randomUUID(),
+      quantity: 50,
+      expiresOn: '2001-01-01',
+    }).expect(201);
+    expect((await availability().expect(200)).body[0].available).toBe(0);
+    await billRx('pharm', dispensePrescriptionId, dispenseItemIds).expect(409);
+    await request(server)
+      .get(root)
+      .set('Authorization', 'Bearer ' + tokens.doctor)
+      .expect(403);
+    const first = { ...base, receiptKey: crypto.randomUUID() };
+    await receive(first).expect(201);
+    await receive(first).expect(201);
+    expect((await availability().expect(200)).body[0].available).toBe(1);
+    await receive({
+      ...base,
+      lot: 'later',
+      receiptKey: crypto.randomUUID(),
+      expiresOn: '2099-01-01',
+      quantity: 2,
+    }).expect(201);
+    expect((await availability().expect(200)).body[0].available).toBe(3);
+  });
+
   it('404s a prescription in another facility', async () => {
     await detail('pharm', otherPrescriptionId).expect(404);
   });
@@ -564,6 +612,11 @@ describe('Pharmacy queue (e2e)', () => {
     const handed = (await handover('pharm', dispensePrescriptionId).expect(200))
       .body as ConfirmHandoverResponse;
     expect(handed.status).toBe('completed');
+    const usableLots = await prisma.pharmacyBatch.findMany({
+      where: { drugId, expiresOn: { gt: new Date() } },
+      orderBy: { expiresOn: 'asc' },
+    });
+    expect(usableLots.map((b) => b.quantity)).toEqual([0, 1]);
 
     const afterHandover = await prisma.prescription.findUniqueOrThrow({
       where: { id: dispensePrescriptionId },
@@ -619,6 +672,9 @@ describe('Pharmacy queue (e2e)', () => {
     expect(ret.refundedAmount).toBe('50.00');
     expect(ret.refundReceiptNo).toMatch(/^RCP-/);
     expect(ret.status).toBe('cancelled');
+    expect(
+      await prisma.pharmacyBatch.count({ where: { drugId, quarantined: true, quantity: 1 } }),
+    ).toBe(1);
 
     const invoice = await prisma.invoice.findUniqueOrThrow({
       where: { id: bill.invoiceId },
@@ -633,6 +689,107 @@ describe('Pharmacy queue (e2e)', () => {
     const again = (await returnRx('pharm', returnPrescriptionId, { reason: 'again' }).expect(400))
       .body as { code?: string };
     expect(again.code).toBe('already_returned');
+  });
+
+  it('serves approved available alternatives and lets only one bench dispense the last unit', async () => {
+    await seedActor('director', 'management');
+    const root = '/pharmacy/inventory';
+    const medicine = await prisma.drug.create({
+      data: { facilityId, code: PREFIX + 'LAST', genericName: 'Last unit fixture' },
+    });
+    const receipt = {
+      drugId: medicine.id,
+      quantity: 1,
+      location: 'Main',
+      lot: 'Last',
+      supplierId: null,
+      expiresOn: '2099-01-01',
+      receiptKey: crypto.randomUUID(),
+    };
+    await request(server)
+      .get(root)
+      .set('Authorization', 'Bearer ' + tokens.director)
+      .expect(200);
+    await request(server)
+      .post(root + '/receipts')
+      .set('Authorization', 'Bearer ' + tokens.director)
+      .send(receipt)
+      .expect(403);
+    await request(server)
+      .post(root + '/receipts')
+      .set('Authorization', 'Bearer ' + tokens.pharm)
+      .send(receipt)
+      .expect(201);
+    await request(server)
+      .post(root + '/drugs/' + drugId + '/settings')
+      .set('Authorization', 'Bearer ' + tokens.pharm)
+      .send({ reorderThreshold: 2, alternativeIds: [medicine.id] })
+      .expect(201);
+    const check = () =>
+      request(server)
+        .get(root + '/availability?ids=' + drugId)
+        .set('Authorization', 'Bearer ' + tokens.doctor)
+        .expect(200);
+    expect((await check()).body[0].alternatives).toEqual([
+      { id: medicine.id, name: medicine.genericName, available: 1 },
+    ]);
+    const dept = await prisma.department.findFirstOrThrow({ where: { facilityId } });
+    const prescriptions: string[] = [];
+    for (const suffix of ['A', 'B']) {
+      const rx = await seedPrescription(
+        facilityId,
+        patientId,
+        dept.id,
+        practitionerId,
+        medicine.id,
+        {
+          visitNo: PREFIX + 'race' + suffix,
+          visitStatus: 'arrived',
+          status: 'active',
+          drugs: [medicine.genericName],
+        },
+      );
+      const line = await prisma.prescriptionItem.findFirstOrThrow({
+        where: { prescriptionId: rx },
+      });
+      await billRx('pharm', rx, [line.id], '0').expect(200);
+      prescriptions.push(rx);
+    }
+    const results = await Promise.all(prescriptions.map((id) => handover('pharm', id)));
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(
+      await prisma.pharmacyMovement.count({
+        where: { kind: 'dispense', batch: { drugId: medicine.id } },
+      }),
+    ).toBe(1);
+    expect((await check()).body[0].alternatives).toHaveLength(0);
+
+    const replacement = { ...receipt, receiptKey: crypto.randomUUID(), quantity: 2 };
+    await request(server)
+      .post(root + '/receipts')
+      .set('Authorization', 'Bearer ' + tokens.pharm)
+      .send(replacement)
+      .expect(201);
+    const batch = await prisma.pharmacyBatch.findUniqueOrThrow({
+      where: { receiptKey: replacement.receiptKey },
+    });
+    await request(server)
+      .post(root + '/batches/' + batch.id + '/quarantine')
+      .set('Authorization', 'Bearer ' + tokens.pharm)
+      .send({ reason: 'Damaged packaging' })
+      .expect(201);
+    expect((await check()).body[0].alternatives).toHaveLength(0);
+    const history = await request(server)
+      .get(root + '/drugs/' + medicine.id + '/movements')
+      .set('Authorization', 'Bearer ' + tokens.director)
+      .expect(200);
+    expect(history.body.movements[0]).toMatchObject({
+      kind: 'quarantine',
+      reason: 'Damaged packaging',
+    });
+    expect(
+      (await prisma.pharmacyBatch.findUniqueOrThrow({ where: { id: batch.id } })).quantity,
+    ).toBe(2);
   });
 
   it('holds the R5 window and requires a reason', async () => {

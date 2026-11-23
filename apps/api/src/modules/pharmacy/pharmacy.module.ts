@@ -4,9 +4,12 @@ import { DispenseService } from './dispense.service';
 import { PharmacyController } from './pharmacy.controller';
 import { PharmacyService } from './pharmacy.service';
 
+import { InventoryService } from './inventory.service';
+import { InventoryController } from './inventory.controller';
+
 @Module({
   imports: [NumberSequenceModule],
-  controllers: [PharmacyController],
-  providers: [PharmacyService, DispenseService],
+  controllers: [PharmacyController, InventoryController],
+  providers: [PharmacyService, DispenseService, InventoryService],
 })
 export class PharmacyModule {}

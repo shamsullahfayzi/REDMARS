@@ -21,6 +21,7 @@ import { ModulesPage } from '@/pages/ModulesPage'
 import { LabTestsPage } from '@/pages/LabTestsPage'
 import { PatientDetailPage } from '@/pages/PatientDetailPage'
 import { PatientsPage } from '@/pages/PatientsPage'
+import { InventoryPage } from '@/pages/InventoryPage'
 import { PharmacyPage } from '@/pages/PharmacyPage'
 import { PractitionersPage } from '@/pages/PractitionersPage'
 import { TillPage } from '@/pages/TillPage'
@@ -83,6 +84,7 @@ export const router = createBrowserRouter([
           { path: 'invoices', element: <InvoicesPage /> },
           { path: 'collections', element: <CollectionsPage /> },
           { path: 'till', element: <TillPage /> },
+          { path: 'pharmacy/inventory', element: <InventoryPage /> },
           { path: 'pharmacy', element: <PharmacyPage /> },
           { path: 'users', element: <UsersPage /> },
           { path: 'settings', element: <SettingsPage /> },

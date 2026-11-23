@@ -93,7 +93,9 @@
       "invalid": "Your session ended. Please sign in again."
     }
   },
+  "inventoryStatus": {"in":"In Stock: {{count}} units","low":"Low Stock: {{count}} units","out":"Out of Stock","external":"Out of Stock — External Pharmacy Required","loading":"Checking stock…","unknown":"Stock unavailable","alternatives":"Approved alternatives:"},
   "nav": {
+    "inventory": "Pharmacy inventory",
     "crm": "CRM",
     "open": "Open menu",
     "dashboard": "Dashboard",

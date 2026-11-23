@@ -645,6 +645,7 @@ model FinanceDeposit {
 }
 
 model FinanceSupplier {
+  pharmacyBatches PharmacyBatch[]
   id                  String                      @id @default(uuid())
   facilityId          String                      @map("facility_id")
   name                String
@@ -1699,6 +1700,10 @@ model Template {
 /// Deliberately separate from pharmacy stock (batches, quantities) — that's v2,
 /// and keeping them apart is what lets the pharmacy module ship standalone later.
 model Drug {
+  reorderThreshold Int @default(0) @map("reorder_threshold")
+  stockBatches PharmacyBatch[]
+  alternatives PharmacyAlternative[] @relation("alternativeSource")
+  alternativeFor PharmacyAlternative[] @relation("alternativeTarget")
   id              String   @id @default(uuid())
   facilityId      String   @map("facility_id")
   code            String
@@ -1865,6 +1870,7 @@ model FollowUpResponse {
 /// dose + frequency + duration + route + quantity. All of them — your screenshot had them.
 /// NO discount, NO total. Money lives on invoice_item.
 model PrescriptionItem {
+  stockMovements PharmacyMovement[]
   id                    String   @id @default(uuid())
   prescriptionId        String   @map("prescription_id")
   drugId                String   @map("drug_id")
@@ -3216,4 +3222,45 @@ model HrNotification {
 
   @@index([facilityId, recipientUserId, readAt])
   @@map("hr_notification")
+}
+
+model PharmacyBatch {
+  id String @id @default(uuid())
+  drugId String @map("drug_id")
+  drug Drug @relation(fields: [drugId], references: [id], onDelete: Restrict)
+  supplierId String? @map("supplier_id")
+  supplier FinanceSupplier? @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  lot String
+  location String
+  expiresOn DateTime @map("expires_on") @db.Date
+  quantity Int
+  quarantined Boolean @default(false)
+  receiptKey String @unique @map("receipt_key")
+  movements PharmacyMovement[]
+  @@index([drugId, expiresOn, id])
+  @@map("pharmacy_batch")
+}
+
+model PharmacyMovement {
+  id String @id @default(uuid())
+  batchId String @map("batch_id")
+  batch PharmacyBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  itemId String? @map("item_id")
+  item PrescriptionItem? @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  kind String
+  quantity Int
+  actorId String @map("actor_id")
+  reason String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  @@unique([batchId, itemId, kind])
+  @@map("pharmacy_movement")
+}
+
+model PharmacyAlternative {
+  drugId String @map("drug_id")
+  alternativeId String @map("alternative_id")
+  drug Drug @relation("alternativeSource", fields: [drugId], references: [id])
+  alternative Drug @relation("alternativeTarget", fields: [alternativeId], references: [id])
+  @@id([drugId, alternativeId])
+  @@map("pharmacy_alternative")
 }

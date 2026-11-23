@@ -490,6 +490,9 @@ export const PERMISSION_MATRIX = {
   'lab.amend_result': { lab_tech: 'R4' },
 
   // ---- 8. Pharmacy ---------------------------------------------------------
+  'inventory.view': { admin: YES, pharmacist: YES, management: YES },
+  'inventory.manage': { admin: YES, pharmacist: YES },
+  'inventory.availability': { admin: YES, pharmacist: YES, doctor: YES },
   'pharmacy.read_queue': { admin: YES, pharmacist: YES },
   'pharmacy.dispense': { pharmacist: YES },
   'pharmacy.return_medicine': { pharmacist: 'R5' },

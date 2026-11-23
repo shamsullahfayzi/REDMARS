@@ -17,6 +17,8 @@ import { facilityDayBounds } from '../../common/facility-time';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NumberSequenceService } from '../../services/number-sequence.service';
 
+import { allocateStock } from './inventory.service';
+
 const ZERO = new Prisma.Decimal(0);
 
 /**
@@ -62,7 +64,7 @@ export class DispenseService {
           visit: { select: { id: true, patientId: true } },
           items: {
             orderBy: { sequence: 'asc' },
-            select: { id: true, drugNameAtTime: true, quantity: true },
+            select: { id: true, drugId: true, drugNameAtTime: true, quantity: true },
           },
         },
       });
@@ -124,6 +126,7 @@ export class DispenseService {
           total: unitPrice.mul(quantity),
         };
       });
+      await allocateStock(tx, facilityId, prescription.items);
       const subtotal = lines.reduce((sum, line) => sum.add(line.total), ZERO);
 
       const invoiceNo = await this.sequence.next(facilityId, 'invoice_no', undefined, tx);
@@ -199,7 +202,7 @@ export class DispenseService {
           id: true,
           status: true,
           dispensedAt: true,
-          items: { select: { id: true } },
+          items: { select: { id: true, drugId: true, drugNameAtTime: true, quantity: true } },
         },
       });
       if (!prescription) throw new NotFoundException('Prescription not found');
@@ -246,6 +249,7 @@ export class DispenseService {
         });
       }
 
+      await allocateStock(tx, facilityId, prescription.items, userId);
       return { prescriptionId, status: 'completed', dispensedAt: now.toISOString() };
     });
   }
@@ -255,9 +259,7 @@ export class DispenseService {
    * back: the pharmacy bill is cancelled and every payment on it reversed the append-only way
    * (the original marked, a negative row appended with its own receipt), exactly as a refund
    * does it (6.6). R5 is same-day and the pharmacist's alone — the window is measured from
-   * when the medicine was DISPENSED, not from now. No stock is tracked in v1, so the return
-   * is the financial reversal plus the cancelled bill; the box coming back is a physical act
-   * the cancelled bill records.
+   * when the medicine was DISPENSED, not from now. Stock previously issued from tracked lots goes into quarantine.
    */
   async returnMedicine(
     facilityId: string,
@@ -331,6 +333,37 @@ export class DispenseService {
         throw new ConflictException({
           message: 'This medicine was just returned at another bench. Reload.',
           code: 'already_returned',
+        });
+      }
+
+      // Returned packs stay segregated from saleable stock, even when the lot is still valid.
+      const allocations = await tx.pharmacyMovement.findMany({
+        where: { itemId: { in: itemIds }, kind: 'dispense' },
+        include: { batch: true },
+      });
+      for (const allocation of allocations) {
+        const source = allocation.batch;
+        const returned = await tx.pharmacyBatch.create({
+          data: {
+            drugId: source.drugId,
+            supplierId: source.supplierId,
+            lot: source.lot,
+            expiresOn: source.expiresOn,
+            location: source.location,
+            quarantined: true,
+            receiptKey: 'return-' + allocation.id,
+            quantity: -allocation.quantity,
+          },
+        });
+        await tx.pharmacyMovement.create({
+          data: {
+            batchId: returned.id,
+            itemId: allocation.itemId,
+            actorId: userId,
+            kind: 'return',
+            quantity: -allocation.quantity,
+            reason: input.reason,
+          },
         });
       }
 

@@ -39,6 +39,8 @@ import {
   useSavePrescription,
 } from '@/hooks/usePrescription'
 import { serverMessage } from '@/lib/api'
+import { StockBadge } from './StockAvailability'
+import { useAvailability } from '@/hooks/useAvailability'
 import { cn } from '@/lib/utils'
 
 /**
@@ -171,6 +173,7 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
   const deleteTemplate = useDeleteTemplate('prescription')
 
   const [rows, setRows] = useState<Row[]>([])
+  const stock = useAvailability(rows.map(row => row.drugId))
   const [advice, setAdvice] = useState('')
   /** Task 4.15 — YYYY-MM-DD, or '' for no review set. */
   const [followUpDate, setFollowUpDate] = useState('')
@@ -517,6 +520,9 @@ export function PrescriptionTab({ visit }: { visit: VisitSummary }) {
               <Card className="space-y-3 p-3">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold text-foreground">{row.drugLabel}</span>
+                  {stock.enabled && (
+                    <PrescriptionStock balance={stock.entries.find(entry => entry.id === row.drugId)} failed={stock.failed} />
+                  )}
                   {open && (
                     <Button
                       type="button"
@@ -983,6 +989,19 @@ function CopyLast({
  * thirty seconds get spent. Enter picks the first match, so a doctor who knows the drug
  * never has to look at the list.
  */
+function PrescriptionStock({ balance, failed }: {
+  balance?: ReturnType<typeof useAvailability>['entries'][number]
+  failed: boolean
+}) {
+  const { t } = useTranslation()
+  return <>
+    <StockBadge stock={balance} failed={failed} external />
+    {balance && balance.available <= balance.reorderThreshold && balance.alternatives.length > 0 && (
+      <small>{t('inventoryStatus.alternatives')} {balance.alternatives.map(a => a.name).join('، ')}</small>
+    )}
+  </>
+}
+
 function DrugPicker({ drugs, onPick }: { drugs: DrugSummary[]; onPick: (drug: DrugSummary) => void }) {
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
@@ -1001,6 +1020,8 @@ function DrugPicker({ drugs, onPick }: { drugs: DrugSummary[]; onPick: (drug: Dr
       )
       .slice(0, 8)
   }, [drugs, query])
+
+  const stock = useAvailability(matches.map(drug => drug.id))
 
   function pick(drug: DrugSummary) {
     onPick(drug)
@@ -1033,6 +1054,7 @@ function DrugPicker({ drugs, onPick }: { drugs: DrugSummary[]; onPick: (drug: Dr
               >
                 <Plus className="size-3.5 shrink-0 text-primary" aria-hidden />
                 <span className="font-medium text-foreground">{drugLabel(drug)}</span>
+                {stock.enabled && <StockBadge stock={stock.entries.find(entry => entry.id === drug.id)} failed={stock.failed} external />}
                 {/* What will be filled in, shown before it is — so the doctor knows what
                     they are accepting rather than discovering it in five boxes. */}
                 <span className="text-xs text-muted-foreground" dir="ltr">

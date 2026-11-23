@@ -94,6 +94,9 @@ export function useConfirmHandover() {
     mutationFn: (prescriptionId: string) =>
       apiPost(`/pharmacy/prescriptions/${prescriptionId}/handover`, {}, confirmHandoverResponseSchema),
     onSuccess: (_data, prescriptionId) => {
+      void queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      void queryClient.invalidateQueries({ queryKey: ['inventory-history'] })
+      void queryClient.invalidateQueries({ queryKey: ['stock-availability'] })
       void queryClient.invalidateQueries({ queryKey: ['pharmacy', 'queue'] })
       void queryClient.invalidateQueries({ queryKey: ['pharmacy', 'prescription', prescriptionId] })
     },
@@ -110,6 +113,8 @@ export function useReturnMedicine(prescriptionId: string) {
     mutationFn: (input: ReturnMedicineRequest) =>
       apiPost(`/pharmacy/prescriptions/${prescriptionId}/return`, input, returnMedicineResponseSchema),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      void queryClient.invalidateQueries({ queryKey: ['inventory-history'] })
       void queryClient.invalidateQueries({ queryKey: ['invoices'] })
       void queryClient.invalidateQueries({ queryKey: ['invoice'] })
       void queryClient.invalidateQueries({ queryKey: ['visit-bills'] })

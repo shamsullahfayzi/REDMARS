@@ -60,6 +60,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   interactions: ShieldAlert,
   lab: FlaskConical,
   pharmacy: Pill,
+  inventory: Pill,
   invoices: ReceiptText,
   collections: Banknote,
   till: Wallet,
