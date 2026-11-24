@@ -93,6 +93,24 @@
       "invalid": "Your session ended. Please sign in again."
     }
   },
+  "inventoryUi": {
+    "all": "All medications",
+    "out": "Out of stock",
+    "low": "Low stock",
+    "expiry": "Expired or due in 30 days",
+    "directory": "Medication directory",
+    "search": "Search medicine, batch or supplier",
+    "medicine": "Medication",
+    "availability": "Available stock",
+    "nextExpiry": "Earliest expiry",
+    "empty": "No medications match these filters.",
+    "batches": "Batches",
+    "receive": "Receive stock",
+    "movements": "Movement history",
+    "settings": "Stock settings",
+    "reorder": "Reorder threshold · {{count}} units",
+    "stale": "Refresh failed. Showing the last available counts."
+  },
   "inventoryStatus": {"in":"In Stock: {{count}} units","low":"Low Stock: {{count}} units","out":"Out of Stock","external":"Out of Stock — External Pharmacy Required","loading":"Checking stock…","unknown":"Stock unavailable","alternatives":"Approved alternatives:"},
   "nav": {
     "inventory": "Pharmacy inventory",
