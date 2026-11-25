@@ -37,6 +37,7 @@ export const authUserSchema = z.object({
   id: z.uuid(),
   username: z.string(),
   fullName: z.string(),
+  displayName: z.string().optional(),
   facilityId: z.uuid(),
   mustChangePassword: z.boolean().default(false),
 })

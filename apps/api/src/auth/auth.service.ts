@@ -297,6 +297,8 @@ export class AuthService implements OnModuleInit {
         id: true,
         username: true,
         fullName: true,
+        employee: { select: { firstName: true, lastName: true } },
+        practitioner: { select: { firstName: true, lastName: true } },
         facilityId: true,
         mustChangePassword: true,
       },
@@ -309,7 +311,12 @@ export class AuthService implements OnModuleInit {
     }
 
     const enabledModules = await this.modules.enabledKeys(auth.facilityId);
-    return { user, roles: auth.roles, enabledModules };
+    const { employee, practitioner, ...account } = user;
+    const person = employee ?? practitioner;
+    const displayName = person
+      ? [person.firstName, person.lastName].filter(Boolean).join(' ')
+      : account.fullName.trim().replace(/^(\S+)\s+.*\s+(\S+)$/u, '$1 $2');
+    return { user: { ...account, displayName }, roles: auth.roles, enabledModules };
   }
 
   /**

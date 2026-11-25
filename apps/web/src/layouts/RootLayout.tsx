@@ -21,6 +21,8 @@ export function RootLayout() {
   const { user, roles, enabledModules, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  const displayName = user?.displayName ?? user?.fullName
+
   return (
     <div className="app-shell flex min-h-svh bg-background text-foreground">
       <Sidebar
@@ -43,15 +45,15 @@ export function RootLayout() {
           </Button>
 
           <div className="ms-auto flex items-center gap-2">
-            {user && (
-              <span className="hidden items-center gap-2 sm:inline-flex" title={t('auth.signedInAs', { name: user.fullName })}>
+            {displayName && (
+              <span className="hidden items-center gap-2 sm:inline-flex" title={t('auth.signedInAs', { name: displayName })}>
                 <span
                   aria-hidden
                   className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
                 >
-                  {user.fullName.trim().charAt(0).toUpperCase()}
+                  {displayName.trim().charAt(0).toUpperCase()}
                 </span>
-                <span className="max-w-40 truncate text-sm font-medium">{user.fullName}</span>
+                <span className="max-w-40 truncate text-sm font-medium"><bdi>{displayName}</bdi></span>
               </span>
             )}
             <LanguageToggle />
