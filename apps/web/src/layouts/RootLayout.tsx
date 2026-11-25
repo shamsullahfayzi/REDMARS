@@ -33,7 +33,7 @@ export function RootLayout() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur">
+        <header className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-border bg-card px-3 sm:px-4">
           <Button
             variant="ghost"
             size="icon"
@@ -44,7 +44,7 @@ export function RootLayout() {
             <Menu />
           </Button>
 
-          <div className="ms-auto flex items-center gap-2">
+          <div className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 py-1">
             {displayName && (
               <span className="hidden items-center gap-2 sm:inline-flex" title={t('auth.signedInAs', { name: displayName })}>
                 <span
@@ -67,7 +67,7 @@ export function RootLayout() {
           </div>
         </header>
 
-        <main className="flex-1 bg-muted/20 p-4 sm:p-6 lg:p-8">
+        <main className="min-w-0 flex-1 bg-muted/35 p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl">
             <Outlet />
           </div>

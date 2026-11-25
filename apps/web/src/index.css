@@ -102,7 +102,7 @@
     --warning-foreground: oklch(0.99 0 0);
     --info: oklch(0.53 0.1 230);
     --info-foreground: oklch(0.99 0 0);
-    --radius: 0.625rem;
+    --radius: 0.5rem;
     --sidebar: oklch(0.975 0.005 240);
     --sidebar-foreground: oklch(0.21 0.02 250);
     --sidebar-primary: oklch(0.52 0.09 195);
@@ -169,148 +169,48 @@
     }
 }
 
-/* Shared data-table polish, applied app-wide so every list page reads the same:
-   quiet uppercase column heads, roomy rows, a hover band, hairline separators. */
-@layer components {
-  main table {
-    @apply w-full border-collapse text-sm;
+/* Screen treatments stay separate from forms printed for patients. */
+@media screen {
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  @layer base {
+    :where(button, a, summary, [tabindex]):focus-visible {
+      outline: 2px solid var(--ring);
+      outline-offset: 2px;
+    }
   }
-  main thead {
-    @apply bg-muted/40;
+  @layer components {
+    main table { @apply w-full border-collapse text-sm tabular-nums; }
+    main thead { @apply bg-muted; }
+    main thead th { @apply px-3 py-2.5 text-start text-sm font-medium text-muted-foreground; }
+    main tbody tr { @apply border-t border-border; }
+    main tbody td { @apply px-3 py-3 align-middle; }
+    main tbody tr:focus-within { @apply bg-accent; }
+    @media (hover: hover) {
+      main tbody tr:hover { @apply bg-muted/50; }
+    }
+    .chart-nav-current {
+      position: relative;
+      background: var(--sidebar-accent);
+      color: var(--sidebar-accent-foreground);
+    }
+    .chart-nav-current::before {
+      content: "";
+      position: absolute;
+      inset-inline-start: 0;
+      inset-block: .5rem;
+      inline-size: 3px;
+      border-radius: 2px;
+      background: var(--sidebar-primary);
+    }
   }
-  main thead th {
-    @apply whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground;
-  }
-  main tbody tr {
-    @apply border-t border-border transition-colors;
-  }
-  main tbody tr:hover {
-    @apply bg-muted/40;
-  }
-  main tbody td {
-    @apply px-3 py-3 align-middle;
+  /* Arabic-script letters join. Tracking utilities intended for Latin headings
+     and labels must not introduce gaps in Dari or Pashto. */
+  :where(html[dir="rtl"]) :is(h1, h2, h3, h4, th, label, button, nav) {
+    letter-spacing: normal;
   }
   @media (prefers-reduced-motion: reduce) {
-    main tbody tr { transition: none; }
-  }
-}
-
-/*
- * The signed-in home is the only neumorphic surface. Shadows are deliberately
- * shallow, while text, focus rings and operational states keep their normal
- * high-contrast treatment for accessibility in a hospital workspace.
- */
-.home-neumorphic {
-  --home-surface: oklch(0.955 0.012 235);
-  --home-highlight: oklch(1 0 0 / 88%);
-  --home-shadow: oklch(0.68 0.025 240 / 28%);
-  --home-module-accent: var(--primary);
-  background:
-    radial-gradient(circle at 8% 6%, oklch(1 0 0 / 75%), transparent 31rem),
-    var(--home-surface);
-}
-
-.dark .home-neumorphic {
-  --home-surface: oklch(0.19 0.014 250);
-  --home-highlight: oklch(0.29 0.018 245 / 68%);
-  --home-shadow: oklch(0.08 0.015 255 / 72%);
-  background:
-    radial-gradient(circle at 8% 6%, oklch(0.29 0.018 245 / 55%), transparent 31rem),
-    var(--home-surface);
-}
-
-.home-neo-raised,
-.home-neo-summary,
-.home-neo-module {
-  background: color-mix(in oklab, var(--home-surface) 96%, white 4%);
-  border: 1px solid color-mix(in oklab, var(--home-highlight) 65%, transparent);
-  box-shadow:
-    10px 10px 22px var(--home-shadow),
-    -10px -10px 22px var(--home-highlight);
-}
-
-.home-neo-hero {
-  min-height: 18rem;
-}
-
-.home-neo-inset,
-.home-neo-icon {
-  background: color-mix(in oklab, var(--home-surface) 98%, black 2%);
-  box-shadow:
-    inset 4px 4px 9px var(--home-shadow),
-    inset -4px -4px 9px var(--home-highlight);
-}
-
-.home-neo-inset > * {
-  border-color: transparent;
-  background: transparent;
-}
-
-.home-neo-icon {
-  color: var(--home-module-accent);
-}
-
-.home-neo-summary,
-.home-neo-module {
-  transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    border-color 180ms ease;
-}
-
-.home-neo-module:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in oklab, var(--home-module-accent) 25%, transparent);
-  box-shadow:
-    13px 13px 26px var(--home-shadow),
-    -13px -13px 26px var(--home-highlight);
-}
-
-.home-neo-module:active {
-  transform: translateY(1px);
-  box-shadow:
-    inset 3px 3px 8px var(--home-shadow),
-    inset -3px -3px 8px var(--home-highlight);
-}
-
-.home-neo-tone-clinical {
-  --home-module-accent: var(--success);
-}
-
-.home-neo-tone-administration {
-  --home-module-accent: var(--info);
-}
-
-.home-neo-orb {
-  position: absolute;
-  border-radius: 9999px;
-  pointer-events: none;
-  filter: blur(1px);
-}
-
-.home-neo-orb-primary {
-  inset-block-start: -5rem;
-  inset-inline-end: -4rem;
-  width: 16rem;
-  height: 16rem;
-  background: color-mix(in oklab, var(--primary) 13%, transparent);
-  box-shadow:
-    inset 10px 10px 22px color-mix(in oklab, var(--primary) 12%, transparent),
-    -9px -9px 20px var(--home-highlight);
-}
-
-.home-neo-orb-secondary {
-  inset-block-end: -7rem;
-  inset-inline-start: 42%;
-  width: 13rem;
-  height: 13rem;
-  background: color-mix(in oklab, var(--success) 10%, transparent);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-neo-summary,
-  .home-neo-module {
-    transition: none;
+    .app-shell :is(a, button, input, select, textarea) { transition-duration: 0s; }
   }
 }
 /*

@@ -26,8 +26,8 @@ export function FirstRunLanguagePicker({ onChosen }: Props) {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-background p-4">
-      <div className="flex w-full max-w-sm flex-col gap-6">
+    <div className="flex min-h-svh items-center justify-center bg-muted p-4">
+      <div className="flex w-full max-w-sm flex-col gap-6 rounded-xl border border-t-4 border-border border-t-primary bg-card p-6">
         <div className="text-center">
           <h1 className="text-xl font-semibold text-foreground">REDMARS HMIS</h1>
         </div>

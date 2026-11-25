@@ -782,7 +782,7 @@ export function ReceptionPage() {
                     <div className="desk-service-list space-y-2 pe-1">
                     {filteredDeptServices.length > 0 && (
                       <div className="mb-2">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <p className="mb-2 text-xs font-semibold text-muted-foreground">
                           {selectedDepartment && departmentName(selectedDepartment)}
                         </p>
                         <ServiceGrid
@@ -795,7 +795,7 @@ export function ReceptionPage() {
 
                     {filteredOtherServices.length > 0 && (
                       <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <p className="mb-2 text-xs font-semibold text-muted-foreground">
                           {t('reception.bill.moreServices')}
                         </p>
                         <ServiceGrid

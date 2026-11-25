@@ -239,7 +239,7 @@ export function ConsultActions({
       {/* The legend. A hotkey nobody has been told about is not a hotkey — and the same
           handlers sit behind the buttons, because a receptionist reviewing a visit has a
           mouse and there should not be two code paths to keep in step. */}
-      <div className="sticky bottom-0 flex flex-wrap items-center gap-2 border-t border-border bg-background/95 py-2 backdrop-blur">
+      <div className="sticky bottom-0 flex flex-wrap items-center gap-2 border-t border-border bg-card py-2">
         <KeyAction hint="F2" label={t('consult.hotkeys.saveContinue')} icon={Save} onRun={save} disabled={busy} />
         {/*
           Task: the doctor's own choice of OUTPUT PAPER, made right where they print — not a

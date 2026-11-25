@@ -21,7 +21,7 @@ export function LanguageToggle() {
   }
 
   return (
-    <div className="flex items-center gap-1" role="group">
+    <div className="inline-flex items-center rounded-lg border border-border bg-muted p-0.5" role="group">
       {LANGUAGE_CODES.map((code) => {
         const meta = LANGUAGES[code]
         const active = i18n.language === code
@@ -34,9 +34,9 @@ export function LanguageToggle() {
             aria-pressed={active}
             onClick={() => select(code)}
             className={cn(
-              'rounded-md px-2 py-1 text-sm transition-colors',
+              'rounded-md px-2 py-1 text-sm font-medium transition-colors',
               active
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-card text-primary'
                 : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
             )}
           >

@@ -122,7 +122,7 @@ export function StartVisitPage() {
           <p className="text-lg font-semibold text-foreground">{visit.patientName}</p>
 
           <div className="rounded-lg bg-muted p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               {t('visits.fields.visitNo')}
             </p>
             {/* Always LTR: an identifier reads left-to-right even on an RTL page. */}

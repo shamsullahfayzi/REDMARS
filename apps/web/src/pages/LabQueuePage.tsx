@@ -497,7 +497,7 @@ function StatusPill({ status }: { status: LabOrderItemStatus }) {
 function Count({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) {
   return (
     <Card className={cn('p-4', highlight && 'border-primary/40')}>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-bold text-foreground" dir="ltr">
         {value}
       </p>

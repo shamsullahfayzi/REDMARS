@@ -1102,7 +1102,7 @@ function AllergyBlock({
 
   return (
     <div role="alert" className="space-y-3 rounded-lg border-2 border-destructive bg-destructive/12 p-4">
-      <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-destructive">
+      <p className="flex items-center gap-2 text-sm font-bold text-destructive">
         <AlertTriangle className="size-5 shrink-0" aria-hidden />
         {t('prescription.blocked.title')}
       </p>

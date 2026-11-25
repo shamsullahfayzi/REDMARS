@@ -45,11 +45,11 @@ export function Sidebar({ roles, enabledModules, open, onClose }: SidebarProps) 
       <aside
         className={cn(
           'z-40 flex w-60 shrink-0 flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground',
-          'md:static md:flex',
+          'md:sticky md:top-0 md:flex md:h-dvh',
           open ? 'fixed inset-y-0 start-0 flex' : 'hidden',
         )}
       >
-        <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
+        <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-4">
           <img src={branding?.logo ?? '/favicon.svg'} alt="" className="size-8 shrink-0 object-contain" />
           <div className="min-w-0"><span className="font-semibold tracking-tight">REDMARS</span>
             {branding?.name && <p className="truncate text-xs text-muted-foreground" title={branding.name}>{branding.name}</p>}
@@ -64,7 +64,7 @@ export function Sidebar({ roles, enabledModules, open, onClose }: SidebarProps) 
             return (
               <div key={group} className="space-y-1">
                 {group !== 'main' && (
-                  <p className="px-2.5 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <p className="border-t border-sidebar-border px-3 pb-1 pt-4 text-sm font-semibold text-muted-foreground">
                     {t(`nav.groups.${group}`)}
                   </p>
                 )}
@@ -93,7 +93,7 @@ export function Sidebar({ roles, enabledModules, open, onClose }: SidebarProps) 
                         cn(
                           'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
                           isActive
-                            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                            ? 'chart-nav-current'
                             : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
                         )
                       }
@@ -187,11 +187,11 @@ function SectionedNavItem({
                 <NavLink
                   to={`${item.to}?tab=${section.id}`}
                   onClick={onClose}
-                  aria-current={isActive ? 'page' : undefined}
+                  aria-current={isActive ? 'page' : false}
                   className={cn(
                     'flex items-center gap-2 rounded-md px-2 py-1.5 text-[0.8125rem] transition-colors',
                     isActive
-                      ? 'bg-primary/10 font-medium text-primary'
+                      ? 'chart-nav-current font-semibold'
                       : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
                   )}
                 >

@@ -139,7 +139,7 @@ export function FollowUpsPage() {
               change meaning under the desk as they work it down. */}
           <Count label={t('followUps.missed')} value={data.missed} highlight={data.missed > 0} />
           <Card className="p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               {t('followUps.window')}
             </p>
             <p className="mt-1 text-sm font-medium text-foreground" dir="ltr">
@@ -401,7 +401,7 @@ function Count({
 }) {
   return (
     <Card className={cn('p-4', highlight && 'border-warning/50')}>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-bold text-foreground" dir="ltr">
         {value}
       </p>

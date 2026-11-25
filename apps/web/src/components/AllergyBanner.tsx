@@ -51,7 +51,7 @@ export function AllergyBanner({ allergies }: { allergies: Allergy[] }) {
     >
       <p
         className={cn(
-          'flex items-center gap-2 text-sm font-bold uppercase tracking-wide',
+          'flex items-center gap-2 text-sm font-bold',
           worst === 'severe' ? 'text-destructive' : 'text-warning',
         )}
       >

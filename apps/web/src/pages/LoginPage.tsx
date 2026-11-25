@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '@/auth/authContext'
+import { useBranding } from '@/hooks/useBranding'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api'
 
@@ -12,6 +13,7 @@ import { ApiError } from '@/lib/api'
  */
 export function LoginPage() {
   const { t } = useTranslation()
+  const { data: branding } = useBranding()
   const { status, sessionEndedReason, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -52,14 +54,20 @@ export function LoginPage() {
   }
 
   const fieldClass =
-    'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+    'w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
 
   return (
-    <div className="grid min-h-svh place-items-center bg-background p-4">
+    <div className="grid min-h-svh place-items-center bg-muted p-4">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm space-y-4 rounded-xl border border-border p-6"
+        className="w-full max-w-sm space-y-5 rounded-xl border border-t-4 border-border border-t-primary bg-card p-6 sm:p-8"
       >
+        <div className="flex items-center gap-3 border-b border-border pb-4">
+          <img src={branding?.logo ?? '/favicon.svg'} alt="" className="size-9 shrink-0 object-contain" />
+          <div><strong className="font-semibold">REDMARS</strong>
+            {branding?.name && <p className="text-sm text-muted-foreground">{branding.name}</p>}
+          </div>
+        </div>
         <h1 className="text-xl font-semibold text-foreground">{t('auth.login.title')}</h1>
 
         {/* Why the last session ended, shown only if it ended on its own — not

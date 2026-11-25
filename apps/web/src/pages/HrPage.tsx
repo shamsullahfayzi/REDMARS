@@ -1027,7 +1027,7 @@ function Roster({ canEdit }: { canEdit: boolean }) {
       <div className="grid gap-4 md:grid-cols-3">
         {onDuty.data?.map((x) => (
           <Card key={x.employeeId} className="gap-1 p-4">
-            <p className="text-xs uppercase text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               On duty now
             </p>
             <p className="font-semibold">{x.employeeName}</p>
