@@ -58,12 +58,14 @@ export function InventoryPage() {
   if (!data) return <p>Loading inventory…</p>
   const filters = [
     { id: 'all', icon: Boxes, count: data.drugs.length },
+    { id: 'available', icon: Pill, count: data.drugs.filter(d => d.available > 0).length },
     { id: 'out', icon: PackageX, count: data.drugs.filter(d => d.available === 0).length },
     { id: 'low', icon: PackageMinus, count: data.drugs.filter(d => d.available > 0 && d.available <= d.reorderThreshold).length },
     { id: 'expiry', icon: CalendarClock, count: data.drugs.filter(d => expiryAlert(d, data.expiryLimit)).length },
   ]
   const term = search.trim().toLocaleLowerCase()
   const rows = data.drugs.filter(d => {
+    if (filter === 'available' && d.available <= 0) return false
     if (filter === 'out' && d.available !== 0) return false
     if (filter === 'low' && (d.available === 0 || d.available > d.reorderThreshold)) return false
     if (filter === 'expiry' && !expiryAlert(d, data.expiryLimit)) return false
@@ -81,7 +83,7 @@ export function InventoryPage() {
         <StockDetail key={drug.id} drug={drug} data={data} manage={roles.includes('admin') || roles.includes('pharmacist')} />
       </> : <>
         <h1 className="text-3xl font-semibold tracking-tight">{t('nav.inventory')}</h1>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {filters.map(({ id, icon: Icon, count }) => (
             <button key={id} type="button" aria-pressed={filter === id}
               onClick={() => { setFilter(id); setPage(1) }}

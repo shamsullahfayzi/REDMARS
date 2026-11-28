@@ -94,6 +94,7 @@
     }
   },
   "inventoryUi": {
+    "available": "In stock",
     "all": "All medications",
     "out": "Out of stock",
     "low": "Low stock",
