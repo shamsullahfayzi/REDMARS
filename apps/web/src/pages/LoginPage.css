@@ -1,0 +1,77 @@
+.login-scene {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 5vw, 5rem);
+  background:
+    radial-gradient(ellipse at 88% 8%, #d9ebe4, transparent 56%),
+    repeating-linear-gradient(125deg, transparent 0 28px, #13555a09 29px 30px),
+    #eef2ee;
+}
+
+.login-spread {
+  width: min(100%, 64rem);
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  border-radius: 1.6rem;
+  overflow: hidden;
+  box-shadow: 0 2rem 5rem -2.5rem #123f40a8;
+}
+
+.login-identity {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  align-items: center;
+  min-height: 32rem;
+  padding: clamp(2rem, 4vw, 4rem);
+  background: linear-gradient(135deg, #082f39 10%, #105357 64%, #27847c);
+  color: #fff;
+  overflow: hidden;
+}
+
+.login-identity::before,
+.login-identity::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  width: 140%;
+  height: 115%;
+  inset-inline-end: -68%;
+  top: -45%;
+  border-radius: 50%;
+  transform: rotate(-28deg);
+  background: repeating-radial-gradient(ellipse at center, transparent 0 9px, #b4e8d54a 10px, transparent 11px 16px);
+}
+
+.login-identity::after {
+  top: 73%;
+  inset-inline-end: -4%;
+  height: 80%;
+  opacity: .6;
+  transform: rotate(15deg);
+}
+
+.login-brand-content { display: grid; gap: 2rem; }
+.login-mark {
+  width: fit-content;
+  max-width: 100%;
+  padding: .85rem;
+  border-radius: 1rem;
+  background: white;
+}
+.login-mark img { display: block; width: auto; height: 7.5rem; max-width: 100%; object-fit: contain; }
+.login-product { width: fit-content; margin-block-end: .7rem; color: #c3e9df; font-size: .8rem; font-weight: 650; letter-spacing: .15em; }
+.login-hospital { font-size: clamp(1.8rem, 3vw, 2.8rem); line-height: 1.22; font-weight: 600; text-wrap: balance; overflow-wrap: anywhere; }
+.login-form { align-self: stretch; display: flex; flex-direction: column; justify-content: center; padding: clamp(2rem, 5vw, 4.5rem); min-width: 0; }
+@media (max-width: 43rem) {
+  .login-spread { grid-template-columns: minmax(0, 1fr); max-width: 29rem; }
+  .login-identity { min-height: 0; padding: 1.5rem; }
+  .login-brand-content { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 1rem; }
+  .login-mark { padding: .5rem; max-width: 32vw; }
+  .login-mark img { height: 4.5rem; }
+  .login-hospital { font-size: 1.35rem; }
+  .login-product { margin-block-end: .3rem; font-size: .7rem; }
+  .login-form { padding: 2rem 1.5rem; }
+}

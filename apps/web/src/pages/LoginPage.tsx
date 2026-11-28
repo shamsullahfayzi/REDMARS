@@ -5,6 +5,7 @@ import { useAuth } from '@/auth/authContext'
 import { useBranding } from '@/hooks/useBranding'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api'
+import './LoginPage.css'
 
 /**
  * The one unauthenticated screen. Every label is a translation key and every
@@ -54,71 +55,78 @@ export function LoginPage() {
   }
 
   const fieldClass =
-    'w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+    'min-h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
 
   return (
-    <div className="grid min-h-svh place-items-center bg-muted p-4">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm space-y-5 rounded-xl border border-t-4 border-border border-t-primary bg-card p-6 sm:p-8"
-      >
-        <div className="flex items-center gap-3 border-b border-border pb-4">
-          <img src={branding?.logo ?? '/favicon.svg'} alt="" className="size-9 shrink-0 object-contain" />
-          <div><strong className="font-semibold">REDMARS</strong>
-            {branding?.name && <p className="text-sm text-muted-foreground">{branding.name}</p>}
+    <main className="login-scene">
+      <div className="login-spread">
+        <header className="login-identity">
+          <div className="login-brand-content">
+            <div className="login-mark">
+              <img src={branding?.logo || '/favicon.svg'} alt="" onError={event => {
+                const image = event.currentTarget
+                if (image.getAttribute('src') !== '/favicon.svg') image.src = '/favicon.svg'
+              }} />
+            </div>
+            <div>
+              {branding?.name && <p className="login-product" dir="ltr">REDMARS</p>}
+              <p className="login-hospital" dir="auto">{branding?.name || 'REDMARS'}</p>
+            </div>
           </div>
-        </div>
-        <h1 className="text-xl font-semibold text-foreground">{t('auth.login.title')}</h1>
+        </header>
+        <form onSubmit={onSubmit} className="login-form space-y-5 bg-card text-card-foreground">
+          <h1 className="mb-8 text-3xl font-semibold tracking-tight">{t('auth.login.title')}</h1>
 
-        {/* Why the last session ended, shown only if it ended on its own — not
-            after a clean sign-out (which clears the reason). */}
-        {sessionEndedReason && !error && (
-          <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-            {t(`auth.sessionEnded.${sessionEndedReason}`)}
-          </p>
-        )}
+          {/* Why the last session ended, shown only if it ended on its own — not
+              after a clean sign-out (which clears the reason). */}
+          {sessionEndedReason && !error && (
+            <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+              {t(`auth.sessionEnded.${sessionEndedReason}`)}
+            </p>
+          )}
 
-        <div className="space-y-1.5">
-          <label htmlFor="username" className="text-sm font-medium text-foreground">
-            {t('auth.login.username')}
-          </label>
-          <input
-            id="username"
-            name="username"
-            autoComplete="username"
-            required
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            className={fieldClass}
-          />
-        </div>
+          <div className="space-y-1.5">
+            <label htmlFor="username" className="text-sm font-medium text-foreground">
+              {t('auth.login.username')}
+            </label>
+            <input
+              id="username"
+              name="username"
+              autoComplete="username"
+              required
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              className={fieldClass}
+            />
+          </div>
 
-        <div className="space-y-1.5">
-          <label htmlFor="password" className="text-sm font-medium text-foreground">
-            {t('auth.login.password')}
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className={fieldClass}
-          />
-        </div>
+          <div className="space-y-1.5">
+            <label htmlFor="password" className="text-sm font-medium text-foreground">
+              {t('auth.login.password')}
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className={fieldClass}
+            />
+          </div>
 
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
 
-        <Button type="submit" disabled={submitting} className="w-full">
-          {submitting ? t('auth.login.submitting') : t('auth.login.submit')}
-        </Button>
-      </form>
-    </div>
+          <Button type="submit" disabled={submitting} className="min-h-11 w-full">
+            {submitting ? t('auth.login.submitting') : t('auth.login.submit')}
+          </Button>
+        </form>
+      </div>
+    </main>
   )
 }
