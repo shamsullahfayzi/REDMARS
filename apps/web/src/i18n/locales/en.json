@@ -1036,6 +1036,7 @@
     "advice": "Advice",
     "rounding": "Whole-AFN rounding",
     "priceTitle": "Price this prescription",
+    "billPriceHint": "Edit each selling price for this bill before confirming. The inventory price stays the same.",
     "unitPriceFor": "Unit price for {{drug}}",
     "billTotal": "Bill total",
     "priceHint": "Enter a price for every drug before billing.",

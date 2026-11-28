@@ -338,6 +338,7 @@ function BillForm({ prescriptionId, items }: { prescriptionId: string; items: Ph
         </table>
       </div>
 
+      <p className="text-sm text-muted-foreground">{t('pharmacy.billPriceHint')}</p>
       {!billTotal.isInteger() && <p className="text-sm text-muted-foreground">{t('pharmacy.rounding')} · −{billTotal.minus(billTotal.floor()).toFixed(2)} AFN</p>}
       <div className="flex items-center justify-between border-t border-border pt-3">
         <span className="text-sm font-medium text-foreground">{t('pharmacy.billTotal')}</span>

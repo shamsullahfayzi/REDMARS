@@ -896,6 +896,17 @@ describe('Pharmacy queue (e2e)', () => {
     const batch = await prisma.pharmacyBatch.findUniqueOrThrow({
       where: { receiptKey: replacement.receiptKey },
     });
+    const adjustment = { reference: crypto.randomUUID(), delta: -2, reason: 'Damaged stock' };
+    const adjust = (body: typeof adjustment, role = 'pharm') => request(server)
+      .post(root + '/batches/' + batch.id + '/adjustments')
+      .set('Authorization', 'Bearer ' + tokens[role]).send(body);
+    await adjust(adjustment, 'doctor').expect(403);
+    await adjust({ ...adjustment, reason: ' ' }).expect(400);
+    const concurrent = await Promise.all([adjust(adjustment), adjust(adjustment)]);
+    expect(concurrent.map(r => r.status)).toEqual([201, 201]);
+    await adjust({ ...adjustment, reference: crypto.randomUUID() }).expect(409);
+    await adjust({ ...adjustment, delta: 2 }).expect(409);
+    await adjust({ ...adjustment, reference: crypto.randomUUID(), delta: 2, reason: 'Recount' }).expect(201);
     await request(server)
       .post(root + '/batches/' + batch.id + '/quarantine')
       .set('Authorization', 'Bearer ' + tokens.pharm)

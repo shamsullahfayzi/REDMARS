@@ -104,7 +104,6 @@ export class InventoryService {
         include: {
           alternatives: { select: { alternativeId: true } },
           stockBatches: {
-            where: { quantity: { gt: 0 } },
             orderBy: [{ expiresOn: 'asc' }, { id: 'asc' }],
             include: { supplier: { select: { name: true } } },
           },
@@ -241,6 +240,32 @@ export class InventoryService {
       await tx.pharmacyAlternative.deleteMany({ where: { drugId: id } });
       for (const alternativeId of ids)
         await tx.pharmacyAlternative.create({ data: { drugId: id, alternativeId } });
+    });
+    return { ok: true };
+  }
+
+  async adjust(facilityId: string, actorId: string, id: string, input: {
+    reference: string; delta: number; reason: string;
+  }) {
+    await this.prisma.db.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT b.id FROM pharmacy_batch b JOIN drug d ON d.id = b.drug_id
+        WHERE b.id = ${id} AND d.facility_id = ${facilityId} FOR UPDATE OF b`;
+      if (!locked.length) throw new NotFoundException('Batch not found');
+      const prior = await tx.pharmacyMovement.findUnique({ where: { id: input.reference } });
+      if (prior) {
+        if (prior.batchId === id && prior.actorId === actorId && prior.kind === 'adjustment'
+          && prior.quantity === input.delta && prior.reason === input.reason) return;
+        throw new ConflictException('Adjustment reference already used');
+      }
+      const updated = await tx.pharmacyBatch.updateMany({
+        where: { id, quantity: input.delta < 0 ? { gte: -input.delta } : { lte: 2147483647 - input.delta } },
+        data: { quantity: { increment: input.delta } },
+      });
+      if (!updated.count) throw new ConflictException('Adjustment exceeds the available stock or batch limit');
+      await tx.pharmacyMovement.create({
+        data: { id: input.reference, batchId: id, actorId, kind: 'adjustment', quantity: input.delta, reason: input.reason },
+      });
     });
     return { ok: true };
   }

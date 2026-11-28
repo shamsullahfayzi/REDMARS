@@ -269,6 +269,33 @@ function StockDetail({ drug, data, manage }: { drug: Drug; data: Dashboard; mana
               <ReceiptPrices pack={b.packaging} />
             </details>
           )}
+          {manage && (
+            <details>
+              <summary>Adjust stock</summary>
+              <form className="grid gap-3 sm:grid-cols-2" onSubmit={async e => {
+                e.preventDefault()
+                const form = e.currentTarget
+                const fields = new FormData(form)
+                const delta = Number(fields.get('quantity')) * Number(fields.get('direction'))
+                const reason = String(fields.get('reason')).trim()
+                const signature = JSON.stringify([delta, reason])
+                if (form.dataset.signature !== signature) {
+                  form.dataset.reference = crypto.randomUUID()
+                  form.dataset.signature = signature
+                }
+                if (await submit('/batches/' + b.id + '/adjustments',
+                  { reference: form.dataset.reference, delta, reason }, 'Stock adjusted.')) {
+                  delete form.dataset.signature
+                  form.reset()
+                }
+              }}>
+                <label>Action<select name="direction" className="block rounded border p-2"><option value="1">Add stock</option><option value="-1">Remove stock</option></select></label>
+                <label>Quantity ({drug.dispensingUnit || 'units'})<Input name="quantity" type="number" min="1" max="1000000000" step="1" required /></label>
+                <label>Reason<Input name="reason" required maxLength={250} placeholder="e.g. Damaged during handling" /></label>
+                <Button type="submit" className="self-end" disabled={action.isPending}>Save adjustment</Button>
+              </form>
+            </details>
+          )}
           {manage && !b.quarantined && b.quantity > 0 && (
             <details>
               <summary>Quarantine batch</summary>

@@ -70,6 +70,17 @@ export class InventoryController {
     return this.inventory.settings(req.auth!.facilityId, id, parse(stockSettingsSchema, body));
   }
 
+  @Post('batches/:id/adjustments')
+  @RequirePermission('inventory.manage')
+  adjust(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string, @Body() body: unknown) {
+    const input = parse(z.object({
+      reference: z.uuid(),
+      delta: z.number().int().min(-1000000000).max(1000000000).refine(n => n !== 0),
+      reason: z.string().trim().min(1).max(250),
+    }), body);
+    return this.inventory.adjust(req.auth!.facilityId, req.auth!.userId, id, input);
+  }
+
   @Post('batches/:id/quarantine')
   @RequirePermission('inventory.manage')
   quarantine(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string, @Body() body: unknown) {
