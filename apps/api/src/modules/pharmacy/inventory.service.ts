@@ -247,7 +247,7 @@ export class InventoryService {
   async adjust(facilityId: string, actorId: string, id: string, input: {
     reference: string; delta: number; reason: string;
   }) {
-    await this.prisma.db.$transaction(async (tx) => {
+    const save = () => this.prisma.db.$transaction(async (tx) => {
       const locked = await tx.$queryRaw<{ id: string }[]>`
         SELECT b.id FROM pharmacy_batch b JOIN drug d ON d.id = b.drug_id
         WHERE b.id = ${id} AND d.facility_id = ${facilityId} FOR UPDATE OF b`;
@@ -267,6 +267,17 @@ export class InventoryService {
         data: { id: input.reference, batchId: id, actorId, kind: 'adjustment', quantity: input.delta, reason: input.reason },
       });
     });
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await save();
+        break;
+      } catch (error) {
+        const serializationFailure = error instanceof Prisma.PrismaClientKnownRequestError
+          && error.code === 'P2010' && error.meta?.code === '40001';
+        if (!serializationFailure) throw error;
+        if (attempt >= 3) throw new ConflictException('Stock changed. Retry this adjustment.');
+      }
+    }
     return { ok: true };
   }
 
