@@ -22,7 +22,7 @@
   position: relative;
   isolation: isolate;
   display: grid;
-  align-items: center;
+  place-items: center;
   min-height: 32rem;
   padding: clamp(2rem, 4vw, 4rem);
   background: linear-gradient(135deg, #082f39 10%, #105357 64%, #27847c);
@@ -53,7 +53,6 @@
   transform: rotate(15deg);
 }
 
-.login-brand-content { display: grid; gap: 2rem; }
 .login-mark {
   width: fit-content;
   max-width: 100%;
@@ -61,17 +60,13 @@
   border-radius: 1rem;
   background: white;
 }
-.login-mark img { display: block; width: auto; height: 7.5rem; max-width: 100%; object-fit: contain; }
-.login-product { width: fit-content; margin-block-end: .7rem; color: #c3e9df; font-size: .8rem; font-weight: 650; letter-spacing: .15em; }
-.login-hospital { font-size: clamp(1.8rem, 3vw, 2.8rem); line-height: 1.22; font-weight: 600; text-wrap: balance; overflow-wrap: anywhere; }
+.login-mark img { display: block; width: auto; height: auto; max-height: 10rem; max-width: min(100%, 17rem); object-fit: contain; }
+.login-mark img[src='/favicon.svg'] { width: 10rem; }
 .login-form { align-self: stretch; display: flex; flex-direction: column; justify-content: center; padding: clamp(2rem, 5vw, 4.5rem); min-width: 0; }
 @media (max-width: 43rem) {
   .login-spread { grid-template-columns: minmax(0, 1fr); max-width: 29rem; }
   .login-identity { min-height: 0; padding: 1.5rem; }
-  .login-brand-content { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 1rem; }
-  .login-mark { padding: .5rem; max-width: 32vw; }
-  .login-mark img { height: 4.5rem; }
-  .login-hospital { font-size: 1.35rem; }
-  .login-product { margin-block-end: .3rem; font-size: .7rem; }
+  .login-mark { padding: .5rem; max-width: 70vw; }
+  .login-mark img { max-height: 5.5rem; }
   .login-form { padding: 2rem 1.5rem; }
 }

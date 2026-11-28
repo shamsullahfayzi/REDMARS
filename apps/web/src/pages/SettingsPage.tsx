@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
-import { brandingSchema } from '@redmars/shared'
+import { brandingSchema, hospitalLogoSchema } from '@redmars/shared'
 import { useBranding } from '@/hooks/useBranding'
 import { useAuth } from '@/auth/authContext'
 import { apiPatch } from '@/lib/api'
@@ -114,14 +114,19 @@ async function resizeLogo(file: File) {
   const image = await createImageBitmap(file)
   try {
     const canvas = document.createElement('canvas')
-    canvas.width = canvas.height = 96
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Canvas unavailable')
-    const scale = 96 / Math.max(image.width, image.height)
-    const w = image.width * scale,
-      h = image.height * scale
-    ctx.drawImage(image, (96 - w) / 2, (96 - h) / 2, w, h)
-    return canvas.toDataURL('image/png')
+    const longest = Math.max(image.width, image.height)
+    for (const limit of [512, 384, 256, 192, 128, 96]) {
+      const scale = Math.min(1, limit / longest)
+      canvas.width = Math.max(1, Math.round(image.width * scale))
+      canvas.height = Math.max(1, Math.round(image.height * scale))
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+      const png = canvas.toDataURL('image/png')
+      if (hospitalLogoSchema.safeParse(png).success) return png
+    }
+    throw new Error('Logo exceeds the branding size limit')
   } finally {
     image.close()
   }

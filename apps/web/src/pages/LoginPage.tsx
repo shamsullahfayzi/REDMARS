@@ -61,17 +61,11 @@ export function LoginPage() {
     <main className="login-scene">
       <div className="login-spread">
         <header className="login-identity">
-          <div className="login-brand-content">
-            <div className="login-mark">
-              <img src={branding?.logo || '/favicon.svg'} alt="" onError={event => {
-                const image = event.currentTarget
-                if (image.getAttribute('src') !== '/favicon.svg') image.src = '/favicon.svg'
-              }} />
-            </div>
-            <div>
-              {branding?.name && <p className="login-product" dir="ltr">REDMARS</p>}
-              <p className="login-hospital" dir="auto">{branding?.name || 'REDMARS'}</p>
-            </div>
+          <div className="login-mark">
+            <img src={branding?.logo || '/favicon.svg'} alt={branding?.name || 'REDMARS'} onError={event => {
+              const image = event.currentTarget
+              if (image.getAttribute('src') !== '/favicon.svg') image.src = '/favicon.svg'
+            }} />
           </div>
         </header>
         <form onSubmit={onSubmit} className="login-form space-y-5 bg-card text-card-foreground">
